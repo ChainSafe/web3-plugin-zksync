@@ -1,0 +1,42 @@
+{
+  "name": "web3-plugin-zksync",
+  "version": "1.0.0",
+  "description": "ZkSync plugin for web3.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "homepage": "https://github.com/web3/web3-plugin-zksync#readme",
+  "bugs": {
+    "url": "https://github.com/web3/web3-plugin-zksync/issues"
+  },
+  "scripts": {
+    "lint": "eslint '{src,test}/**/*.ts'",
+    "build": "tsc --project tsconfig.build.json",
+    "test": "jest --config=./test/jest.config.js"
+  },
+  "contributors": [
+    "ChainSafe <info@chainsafe.io>"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:web3/web3.js-plugin-template.git"
+  },
+  "dependencies": {
+    "hardhat": "^2.19.4"
+  },
+  "devDependencies": {
+    "@chainsafe/eslint-config": "^2.1.1",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.5",
+    "eslint": "8.56.0",
+    "jest": "^29.7.0",
+    "jest-extended": "^4.0.2",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "web3": "^4.4.0"
+  },
+  "peerDependencies": {
+    "web3": ">= 4.0.3"
+  }
+}
