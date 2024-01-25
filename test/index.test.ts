@@ -5,7 +5,7 @@ import config from "../src/hardhat.config";
 const EXAMPLE_ERC20_TOKEN = {
     address: "0xF38E1Ce18214DF71f4c2101eefA14dfC98000421",
     l1Address: "0x0000000000000000000000000000000000000000",
-    l2Address: '0x6265758E61DBA6869F2645C89694A78138Ae02A1',
+    l2Address: '0x6A910b989aC7BF30B1C359806F05Eae2992a465D',
     decimals: 18,
 }
 
@@ -20,7 +20,7 @@ describe("TemplatePlugin Tests", () => {
         let web3: Web3;
 
         beforeAll(() => {
-            web3 = new Web3(config.networks.zkSyncSepoliaTestnet.url);
+            web3 = new Web3(config.networks.zkSyncGoerliTestnet.url);
             web3.registerPlugin(new ZkSyncPlugin());
         });
 
@@ -28,9 +28,9 @@ describe("TemplatePlugin Tests", () => {
         it("should get bridge addresses", async () => {
             const res = await web3.zkSync.getDefaultBridgeAddresses();
 
-            expect(res.erc20L1).toBe('0x2ae09702f77a4940621572fbcdae2382d44a2cba')
-            expect(res.erc20L2).toBe('0x681a1afdc2e06776816386500d2d461a6c96cb45')
-            expect(res.wethL1).toBe('0xfe7d3fe7277523a43267dd910e1bc5d1d7e38668')
+            expect(res.erc20L1).toBe('0x927ddfcc55164a59e0f33918d13a2d559bc10ce7')
+            expect(res.erc20L2).toBe('0x00ff932a6d70e2b8f1eb4919e1e09c1923e7e57b')
+            expect(res.wethL1).toBe('0x0000000000000000000000000000000000000000')
             expect(res.wethL2).toBe('0x0000000000000000000000000000000000000000')
         });
         it("should get L1 token address", async () => {
