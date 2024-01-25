@@ -1,12 +1,12 @@
 {
-  "name": "web3-plugin-zksync",
+  "name": "web3-plugin-template",
   "version": "1.0.0",
-  "description": "ZkSync plugin for web3.js",
+  "description": "Template plugin to extend web3.js with additional methods",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "homepage": "https://github.com/web3/web3-plugin-zksync#readme",
+  "homepage": "https://github.com/web3/web3.js-plugin-template#readme",
   "bugs": {
-    "url": "https://github.com/web3/web3-plugin-zksync/issues"
+    "url": "https://github.com/web3/web3.js-plugin-template/issues"
   },
   "scripts": {
     "lint": "eslint '{src,test}/**/*.ts'",
@@ -22,19 +22,18 @@
     "url": "git@github.com:web3/web3.js-plugin-template.git"
   },
   "dependencies": {
-    "hardhat": "^2.19.4"
   },
   "devDependencies": {
-    "@chainsafe/eslint-config": "^2.1.1",
-    "@types/jest": "^29.5.11",
-    "@types/node": "^20.11.5",
-    "eslint": "8.56.0",
-    "jest": "^29.7.0",
-    "jest-extended": "^4.0.2",
-    "ts-jest": "^29.1.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3",
-    "web3": "^4.4.0"
+    "@chainsafe/eslint-config": "^2.0.0",
+    "@types/jest": "^29.5.2",
+    "@types/node": "^20.2.6",
+    "eslint": "8",
+    "jest": "^29.5.0",
+    "jest-extended": "^4.0.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.3",
+    "web3": "^4.2.2"
   },
   "peerDependencies": {
     "web3": ">= 4.0.3"

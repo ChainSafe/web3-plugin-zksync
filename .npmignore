@@ -1,6 +1,11 @@
+.babelrc
+.eslintignore
 .eslintrc.json
 .eslintrc.js
 .gitignore
+.lintstagedrc.json
+.nycrc
+.github
 .prettierrc.json
 .prettierignore
 *.log
@@ -8,10 +13,9 @@
 coverage/
 benchmark/
 .coverage/
+cypress/
 fixtures/
 tmp/
 logs/
 test/
 scripts/
-browsertest/
-examples/
