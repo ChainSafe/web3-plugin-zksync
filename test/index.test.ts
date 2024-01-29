@@ -1,6 +1,5 @@
 import {Web3, core} from "web3";
 import {ZkSyncPlugin, ZERO_ADDRESS} from "../src";
-import config from "../src/hardhat.config";
 
 const EXAMPLE_ERC20_TOKEN = {
     address: "0xF38E1Ce18214DF71f4c2101eefA14dfC98000421",
@@ -20,7 +19,7 @@ describe("TemplatePlugin Tests", () => {
         let web3: Web3;
 
         beforeAll(() => {
-            web3 = new Web3(config.networks.zkSyncGoerliTestnet.url);
+            web3 = new Web3('https://testnet.era.zksync.dev');
             web3.registerPlugin(new ZkSyncPlugin());
         });
 

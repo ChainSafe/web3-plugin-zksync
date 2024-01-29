@@ -1,4 +1,4 @@
-import {Web3PluginBase, Contract, Address, Web3} from "web3";
+import {Web3PluginBase, Contract, Address} from "web3";
 import {ERC20TokenAbi} from "./contracts/ERC20Token";
 import {ERC721TokenAbi} from "./contracts/ERC721Token";
 import {RpcMethods} from "./rpc.methods";
@@ -8,7 +8,6 @@ import {L2BridgeAbi} from "./contracts/L2Bridge";
 
 export class ZkSyncPlugin extends Web3PluginBase {
     public pluginNamespace = "zkSync";
-    public web3: Web3;
     public erc20BridgeL1: string
     public erc20BridgeL2: string
     public wethBridgeL1: string
@@ -20,8 +19,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
     constructor() {
         super();
-        this.web3 = new Web3();
-        this.web3.link(this)
 
         this.erc20BridgeL1 = ''
         this.erc20BridgeL2 = ''
