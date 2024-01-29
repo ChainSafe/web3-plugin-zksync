@@ -151,7 +151,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 // Module Augmentation
 declare module 'web3' {
-	interface Web3Context {
+	interface Web3 {
 		zkSync: ZkSyncPlugin;
 	}
 }

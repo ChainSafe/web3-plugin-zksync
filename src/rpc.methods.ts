@@ -9,7 +9,7 @@ import type {
 	WalletBalances,
 } from './types';
 
-// ZkSync methods described here https://docs.zksync.io/build/api.html
+// The ZkSync methods described here https://docs.zksync.io/build/api.html
 
 export class RpcMethods {
 	requestManager: Web3RequestManager<unknown>;
