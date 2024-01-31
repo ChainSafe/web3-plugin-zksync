@@ -1,4 +1,4 @@
-import type { Address, Bytes, Numbers } from 'web3';
+import type { Address, Bytes, HexString, Numbers } from 'web3';
 
 export interface BatchDetails {
 	number: number;
@@ -18,11 +18,11 @@ export interface BatchDetails {
 }
 
 export interface BlockDetails {
-	number: number;
-	timestamp: number;
-	l1BatchNumber: number;
-	l1TxCount: number;
-	l2TxCount: number;
+	number: bigint;
+	timestamp: bigint;
+	l1BatchNumber: bigint;
+	l1TxCount: bigint;
+	l2TxCount: bigint;
 	rootHash?: string;
 	status: string;
 	commitTxHash?: string;
@@ -78,7 +78,7 @@ export interface RawBlockTransaction {
 }
 
 export interface WalletBalances {
-	[key: string]: bigint;
+	[key: Address]: Numbers;
 }
 
 export interface TokenInfo {
@@ -93,4 +93,27 @@ export interface BridgeAddresses {
 	l2Erc20DefaultBridge: Address;
 	l1WethBridge: Address;
 	l2WethBridge: Address;
+}
+
+export interface L2ToL1Proof {
+	proof: HexString[];
+	id: Numbers;
+	root: HexString;
+}
+
+export interface Proof {
+	address: Address;
+	storageProof: {
+		index: Numbers;
+		key: HexString;
+		value: HexString;
+		proof: HexString[];
+	}[];
+}
+
+export interface EstimateFee {
+	gas_limit: Numbers;
+	gas_per_pubdata_limit: Numbers;
+	max_fee_per_gas: Numbers;
+	max_priority_fee_per_gas: Numbers;
 }

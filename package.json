@@ -1,6 +1,6 @@
 {
-  "name": "web3-plugin-zksync",
-  "version": "1.0.0",
+  "name": "@chainsafe/web3-plugin-zksync",
+  "version": "0.1.0",
   "description": "web3.js plugin for ZkSync",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -22,12 +22,13 @@
     "url": "git@github.com:web3/web3.js-plugin-template.git"
   },
   "dependencies": {
-    "hardhat": "^2.19.4"
+    "hardhat": "^2.19.4",
+    "web3-utils": "^4.1.1"
   },
   "devDependencies": {
     "@chainsafe/eslint-config": "^2.1.1",
     "@types/jest": "^29.5.11",
-    "@types/node": "^20.11.5",
+    "@types/node": "^20.11.10",
     "eslint": "8.56.0",
     "jest": "^29.7.0",
     "jest-extended": "^4.0.2",

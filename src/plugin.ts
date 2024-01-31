@@ -1,12 +1,13 @@
 import type { Address } from 'web3';
 import { Web3PluginBase, Contract } from 'web3';
+import { toBigInt } from 'web3-utils';
 import type { Web3RequestManager } from 'web3-core';
 import { ERC20TokenAbi } from './contracts/ERC20Token';
 import { ERC721TokenAbi } from './contracts/ERC721Token';
 import { RpcMethods } from './rpc.methods';
 import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
 import { L2BridgeAbi } from './contracts/L2Bridge';
-import type { TokenInfo } from './types';
+import type { TokenInfo, WalletBalances } from './types';
 
 export class ZkSyncPlugin extends Web3PluginBase {
 	public pluginNamespace = 'zkSync';
@@ -124,8 +125,13 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		}
 	}
 
-	async accountBalances(address: Address): Promise<{ [key: string]: bigint }> {
-		return this.rpc.getAllAccountBalances(address);
+	async accountBalances(address: Address): Promise<WalletBalances> {
+		const balances = await this.rpc.getAllAccountBalances(address);
+		const result: { [key: string]: bigint } = {};
+		for (const b of Object.keys(balances)) {
+			result[b] = toBigInt(balances[b] as bigint);
+		}
+		return result;
 	}
 
 	getERC20BalanceByAddress(tokenAddress: Address, address: Address): Promise<bigint> {
@@ -151,7 +157,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 // Module Augmentation
 declare module 'web3' {
-	interface Web3 {
+	interface Web3Context {
 		zkSync: ZkSyncPlugin;
 	}
 }
