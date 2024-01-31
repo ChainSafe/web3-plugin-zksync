@@ -1,3 +1,4 @@
+// https://docs.zksync.io/build/sdks/go/types/types.html#l2bridgecontracts
 export const L2BridgeAbi = [
 	{
 		inputs: [

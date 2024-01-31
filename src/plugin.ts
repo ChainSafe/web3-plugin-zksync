@@ -98,7 +98,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 					return l1WethToken;
 				}
 			} catch (e) {
-				console.error('Error getting L1 address for token', token, e);
+				throw new Error(
+					`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
+				);
 			}
 			const erc20Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
 			return erc20Bridge.methods.l1TokenAddress(token).call();
@@ -117,7 +119,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 					return l2WethToken;
 				}
 			} catch (e) {
-				console.error('Error getting L2 address for token', token, e);
+				throw new Error(
+					`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
+				);
 			}
 
 			const erc20Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
