@@ -203,7 +203,7 @@ export const getL1BatchDetailsData = {
 	input: 12345,
 	output: {
 		number: BigInt(12345),
-		timestamp: BigInt(1681063384),
+		timestamp: 1681063384,
 		l1TxCount: BigInt(9),
 		l2TxCount: BigInt(294),
 		rootHash: '0x994d2738f7ac89b45c8381a7816307b501c00b3127afc79e440dbf1b3e3b5a8c',

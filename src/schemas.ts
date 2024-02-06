@@ -11,7 +11,7 @@ export const BlockDetailsSchema = {
 			format: 'uint',
 		},
 		timestamp: {
-			format: 'uint',
+			type: 'number',
 		},
 		l1BatchNumber: {
 			format: 'uint',
@@ -55,7 +55,7 @@ export const BatchDetailsSchema = {
 			format: 'uint',
 		},
 		timestamp: {
-			format: 'uint',
+			type: 'number',
 		},
 		l1TxCount: { format: 'uint' },
 		l2TxCount: { format: 'uint' },
