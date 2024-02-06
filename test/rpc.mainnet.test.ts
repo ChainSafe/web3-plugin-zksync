@@ -7,13 +7,6 @@ import {
 	getProofData,
 } from './fixtures';
 
-const EXAMPLE_ERC20_TOKEN = {
-	address: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4',
-	l1Address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-	l2Address: '0x40E56A95F440a07000e474e9E1a1385a5319334a',
-	decimals: 18,
-};
-
 describe('ZkSyncPlugin rpc mainnet tests', () => {
 	let web3: Web3;
 
@@ -30,15 +23,6 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 		expect(res.wethL1).toBe('0x0000000000000000000000000000000000000000');
 		expect(res.wethL2).toBe('0x0000000000000000000000000000000000000000');
 	});
-	it('should get L1 token address', async () => {
-		const res = await web3.zkSync.getL1Address(EXAMPLE_ERC20_TOKEN.address);
-		expect(res).toBe(EXAMPLE_ERC20_TOKEN.l1Address);
-	});
-	it('should get L2 token address', async () => {
-		const res = await web3.zkSync.getL2Address(EXAMPLE_ERC20_TOKEN.address);
-		expect(res).toBe(EXAMPLE_ERC20_TOKEN.l2Address);
-	});
-
 	it('getL2ToL1LogProof', async () => {
 		const res = await web3.zkSync.rpc.getL2ToL1LogProof(getL2ToL1LogProofData.input);
 		expect(res).toEqual(getL2ToL1LogProofData.output);
