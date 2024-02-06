@@ -3,7 +3,6 @@ import { Web3PluginBase, Contract } from 'web3';
 import { toBigInt } from 'web3-utils';
 import type { Web3RequestManager } from 'web3-core';
 import { ERC20TokenAbi } from './contracts/ERC20Token';
-import { ERC721TokenAbi } from './contracts/ERC721Token';
 import { RpcMethods } from './rpc.methods';
 import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
 import { L2BridgeAbi } from './contracts/L2Bridge';
@@ -18,7 +17,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	public _rpc?: RpcMethods;
 	public _l2BridgeContracts: Record<Address, Contract<typeof L2BridgeAbi>>;
 	public _erc20Contracts: Record<Address, Contract<typeof ERC20TokenAbi>>;
-	public _erc721Contracts: Record<Address, Contract<typeof ERC721TokenAbi>>;
 
 	constructor() {
 		super();
@@ -29,7 +27,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this.wethBridgeL2 = '';
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
-		this._erc721Contracts = {};
 	}
 
 	get rpc(): RpcMethods {
@@ -55,14 +52,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 			this._erc20Contracts[address].link(this);
 		}
 		return this._erc20Contracts[address];
-	}
-
-	erc721(address: string): Contract<typeof ERC721TokenAbi> {
-		if (!this._erc721Contracts[address]) {
-			this._erc721Contracts[address] = new Contract(ERC721TokenAbi, address);
-			this._erc721Contracts[address].link(this);
-		}
-		return this._erc721Contracts[address];
 	}
 
 	async getDefaultBridgeAddresses(): Promise<{

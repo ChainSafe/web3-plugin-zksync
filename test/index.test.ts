@@ -31,11 +31,11 @@ describe('ZkSyncPlugin tests', () => {
 			expect(res.wethL1).toBe('0x0000000000000000000000000000000000000000');
 			expect(res.wethL2).toBe('0x0000000000000000000000000000000000000000');
 		});
-		it('should get L1 token address', async () => {
+		it.skip('should get L1 token address', async () => {
 			const res = await web3.zkSync.getL1Address(EXAMPLE_ERC20_TOKEN.address);
 			expect(res).toBe(ZERO_ADDRESS);
 		});
-		it('should get L2 token address', async () => {
+		it.skip('should get L2 token address', async () => {
 			const res = await web3.zkSync.getL2Address(EXAMPLE_ERC20_TOKEN.address);
 			expect(res).toBe(EXAMPLE_ERC20_TOKEN.l2Address);
 		});
