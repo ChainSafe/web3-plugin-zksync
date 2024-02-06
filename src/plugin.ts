@@ -96,11 +96,11 @@ export class ZkSyncPlugin extends Web3PluginBase {
 			return ETH_ADDRESS;
 		} else {
 			const bridgeAddresses = await this.getDefaultBridgeAddresses();
-			const l2WethBridge = this.getL2BridgeContract(bridgeAddresses.wethL2);
+			const l2Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
 			try {
-				const l1WethToken = await l2WethBridge.methods.l1TokenAddress(token).call();
-				if (l1WethToken !== ZERO_ADDRESS) {
-					return l1WethToken;
+				const l1Token = await l2Bridge.methods.l1TokenAddress(token).call();
+				if (l1Token !== ZERO_ADDRESS) {
+					return l1Token;
 				}
 			} catch (e) {
 				throw new Error(
@@ -121,9 +121,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 			return ETH_ADDRESS;
 		} else {
 			const bridgeAddresses = await this.getDefaultBridgeAddresses();
-			const l2WethBridge = this.getL2BridgeContract(bridgeAddresses.wethL2);
+			const l2Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
 			try {
-				const l2WethToken = await l2WethBridge.methods.l2TokenAddress(token).call();
+				const l2WethToken = await l2Bridge.methods.l2TokenAddress(token).call();
 				if (l2WethToken !== ZERO_ADDRESS) {
 					return l2WethToken;
 				}

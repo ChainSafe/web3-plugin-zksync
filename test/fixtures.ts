@@ -102,7 +102,7 @@ export const getBlockDetailsData = {
 	output: {
 		number: BigInt(1),
 		l1BatchNumber: BigInt(1),
-		timestamp: BigInt(1701420713),
+		timestamp: 1701420713,
 		l1TxCount: BigInt(4),
 		l2TxCount: BigInt(0),
 		rootHash: '0x086227fafad2bc4d08a122ebb690d958edcd43352d38d31646968480f496827c',
