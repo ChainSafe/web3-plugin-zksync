@@ -1,12 +1,10 @@
 import type { Address } from 'web3';
 import { Web3PluginBase, Contract } from 'web3';
-import { toBigInt } from 'web3-utils';
 import type { Web3RequestManager } from 'web3-core';
 import { ERC20TokenAbi } from './contracts/ERC20Token';
 import { RpcMethods } from './rpc.methods';
 import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
 import { L2BridgeAbi } from './contracts/L2Bridge';
-import type { TokenInfo, WalletBalances } from './types';
 
 export class ZkSyncPlugin extends Web3PluginBase {
 	public pluginNamespace = 'zkSync';
@@ -29,6 +27,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this._erc20Contracts = {};
 	}
 
+	/**
+	 * Get RPC methods instance
+	 */
 	get rpc(): RpcMethods {
 		if (!this._rpc) {
 			this._rpc = new RpcMethods(
@@ -38,6 +39,10 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		return this._rpc;
 	}
 
+	/**
+	 * Get L2 bridge contract instance
+	 * @param address - Contract address
+	 */
 	getL2BridgeContract(address: Address): Contract<typeof L2BridgeAbi> {
 		if (!this._l2BridgeContracts[address]) {
 			this._l2BridgeContracts[address] = new Contract(L2BridgeAbi, address);
@@ -46,6 +51,10 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		return this._l2BridgeContracts[address];
 	}
 
+	/**
+	 * Get the ERC20 contract instance
+	 * @param address - Contract address
+	 */
 	erc20(address: string): Contract<typeof ERC20TokenAbi> {
 		if (!this._erc20Contracts[address]) {
 			this._erc20Contracts[address] = new Contract(ERC20TokenAbi, address);
@@ -54,6 +63,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		return this._erc20Contracts[address];
 	}
 
+	/**
+	 * Get the default bridge addresses
+	 */
 	async getDefaultBridgeAddresses(): Promise<{
 		erc20L1: Address;
 		erc20L2: Address;
@@ -75,7 +87,11 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		};
 	}
 
-	async getL1Address(token: Address): Promise<string> {
+	/**
+	 * Get the L1 address of a token
+	 * @param token - The address of the token
+	 */
+	async getL1Address(token: Address): Promise<Address> {
 		if (token == ETH_ADDRESS) {
 			return ETH_ADDRESS;
 		} else {
@@ -96,6 +112,10 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		}
 	}
 
+	/**
+	 * Get the L2 address of a token
+	 * @param token - The address of the token
+	 */
 	async getL2Address(token: Address): Promise<string> {
 		if (token == ETH_ADDRESS) {
 			return ETH_ADDRESS;
@@ -116,35 +136,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 			const erc20Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
 			return erc20Bridge.methods.l2TokenAddress(token).call();
 		}
-	}
-
-	async accountBalances(address: Address): Promise<WalletBalances> {
-		const balances = await this.rpc.getAllAccountBalances(address);
-		const result: { [key: string]: bigint } = {};
-		for (const b of Object.keys(balances)) {
-			result[b] = toBigInt(balances[b] as bigint);
-		}
-		return result;
-	}
-
-	getERC20BalanceByAddress(tokenAddress: Address, address: Address): Promise<bigint> {
-		return this.erc20(tokenAddress).methods.balanceOf(address).call();
-	}
-
-	async getErc20TokenInfo(tokenAddress: Address): Promise<TokenInfo> {
-		const erc20Contract = this.erc20(tokenAddress);
-		const [name, symbol, decimals, totalSupply] = await Promise.all([
-			erc20Contract.methods.name().call(),
-			erc20Contract.methods.symbol().call(),
-			erc20Contract.methods.decimals().call(),
-			erc20Contract.methods.totalSupply().call(),
-		]);
-		return {
-			name,
-			symbol,
-			decimals: BigInt(decimals),
-			totalSupply: BigInt(totalSupply),
-		};
 	}
 }
 
