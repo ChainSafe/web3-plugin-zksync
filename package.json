@@ -1,5 +1,5 @@
 {
-  "name": "@chainsafe/web3-plugin-zksync",
+  "name": "web3-plugin-zksync",
   "version": "0.1.0",
   "description": "web3.js plugin for ZkSync",
   "main": "lib/index.js",
