@@ -40,4 +40,11 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 		const res = await web3.zkSync.rpc.getL1BatchDetails(getL1BatchDetailsData.input);
 		expect(res).toEqual(getL1BatchDetailsData.output);
 	});
+	it('bigint test', async () => {
+		const latestBatchIndex = await web3.zkSync.rpc.getL1BatchNumber();
+		console.log('latestBatchIndex', latestBatchIndex);
+		const latestBatchDetails = await web3.zkSync.rpc.getL1BatchDetails(latestBatchIndex);
+		const blockDetails = await web3.zkSync.rpc.getBlockDetails(latestBatchDetails.number);
+		expect(blockDetails.number).toBeDefined();
+	});
 });

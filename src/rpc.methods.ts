@@ -1,5 +1,5 @@
 import type { Web3RequestManager } from 'web3-core';
-import { format } from 'web3-utils';
+import { format, toNumber } from 'web3-utils';
 import type { Address, Bytes, HexString32Bytes, Numbers, TransactionWithSenderAPI } from 'web3';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
@@ -79,7 +79,7 @@ export class RpcMethods {
 		return format(
 			BatchDetailsSchema,
 			await this._send('zks_getL1BatchDetails', [
-				typeof number === 'bigint' ? number.toString() : number,
+				typeof number === 'number' ? number : Number(toNumber(number)),
 			]),
 			returnFormat,
 		) as BatchDetails;
@@ -102,7 +102,7 @@ export class RpcMethods {
 		return format(
 			BlockDetailsSchema,
 			await this._send('zks_getBlockDetails', [
-				typeof number === 'bigint' ? number.toString() : number,
+				typeof number === 'number' ? number : Number(toNumber(number)),
 			]),
 			returnFormat,
 		) as BlockDetails;
@@ -153,7 +153,7 @@ export class RpcMethods {
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<RawBlockTransaction[]> {
 		const result = await this._send('zks_getRawBlockTransactions', [
-			typeof number === 'bigint' ? number.toString() : number,
+			typeof number === 'number' ? number : Number(toNumber(number)),
 		]);
 		if (Array.isArray(result)) {
 			return result.map(tx => {
@@ -251,7 +251,7 @@ export class RpcMethods {
 		return format(
 			BytesArraySchema,
 			await this._send('zks_getL1BatchBlockRange', [
-				typeof number === 'bigint' ? number.toString() : number,
+				typeof number === 'number' ? number : Number(toNumber(number)),
 			]),
 			returnFormat,
 		) as Bytes[];
@@ -269,10 +269,14 @@ export class RpcMethods {
 	public async getProof(
 		address: Address,
 		keys: string[],
-		l1BatchNumber: number,
+		l1BatchNumber: Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Proof> {
-		const res = (await this._send('zks_getProof', [address, keys, l1BatchNumber])) as Proof;
+		const res = (await this._send('zks_getProof', [
+			address,
+			keys,
+			typeof l1BatchNumber === 'number' ? l1BatchNumber : Number(toNumber(l1BatchNumber)),
+		])) as Proof;
 		const result = format(ProofSchema, res, returnFormat) as Proof;
 		result.storageProof = [];
 		for (let i = 0; i < res.storageProof.length; i++) {
@@ -321,7 +325,9 @@ export class RpcMethods {
 		const params: [HexString32Bytes, number?] = [txHash];
 		if (l2ToL1LogIndex) {
 			params.push(
-				typeof l2ToL1LogIndex === 'bigint' ? Number(l2ToL1LogIndex) : l2ToL1LogIndex,
+				typeof l2ToL1LogIndex === 'number'
+					? l2ToL1LogIndex
+					: Number(toNumber(l2ToL1LogIndex)),
 			);
 		}
 		return format(
