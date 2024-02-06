@@ -1,4 +1,4 @@
-web3-plugin-template
+web3-plugin-zksync
 ===========
 
 This is a template for creating a repository for web3.js plugin.
