@@ -96,17 +96,20 @@ export class ZkSyncPlugin extends Web3PluginBase {
 			return ETH_ADDRESS;
 		} else {
 			const bridgeAddresses = await this.getDefaultBridgeAddresses();
-			const l2Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
-			try {
-				const l1Token = await l2Bridge.methods.l1TokenAddress(token).call();
-				if (l1Token !== ZERO_ADDRESS) {
-					return l1Token;
+			if (bridgeAddresses.wethL2 !== ZERO_ADDRESS) {
+				const l2Bridge = this.getL2BridgeContract(bridgeAddresses.wethL2);
+				try {
+					const l1Token = await l2Bridge.methods.l1TokenAddress(token).call();
+					if (l1Token !== ZERO_ADDRESS) {
+						return l1Token;
+					}
+				} catch (e) {
+					throw new Error(
+						`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
-			} catch (e) {
-				throw new Error(
-					`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
-				);
 			}
+
 			const erc20Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
 			return erc20Bridge.methods.l1TokenAddress(token).call();
 		}
@@ -121,16 +124,18 @@ export class ZkSyncPlugin extends Web3PluginBase {
 			return ETH_ADDRESS;
 		} else {
 			const bridgeAddresses = await this.getDefaultBridgeAddresses();
-			const l2Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
-			try {
-				const l2WethToken = await l2Bridge.methods.l2TokenAddress(token).call();
-				if (l2WethToken !== ZERO_ADDRESS) {
-					return l2WethToken;
+			if (bridgeAddresses.wethL2 !== ZERO_ADDRESS) {
+				const l2Bridge = this.getL2BridgeContract(bridgeAddresses.wethL2);
+				try {
+					const l2WethToken = await l2Bridge.methods.l2TokenAddress(token).call();
+					if (l2WethToken !== ZERO_ADDRESS) {
+						return l2WethToken;
+					}
+				} catch (e) {
+					throw new Error(
+						`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
-			} catch (e) {
-				throw new Error(
-					`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
-				);
 			}
 
 			const erc20Bridge = this.getL2BridgeContract(bridgeAddresses.erc20L2);
