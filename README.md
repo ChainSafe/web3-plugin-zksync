@@ -1,34 +1,26 @@
-web3-plugin-zksync
-===========
+# zkSync Plugin for Web3.js
 
-This is a template for creating a repository for web3.js plugin.
+Use [Web3.js](https://web3js.org/) to interact with [zkSync](https://zksync.io/) networks.
 
-How to use
-------------
+## Plugin Components
 
-1. Create your project out of this template.
+The plugin exposes the [zkSync JSON-RPC API](https://docs.zksync.io/build/api.html), implemented in
+[src/rpc.methods.ts](src/rpc.methods.ts), as well as the [types](src/types.ts) that are used to send
+and receive data using the JSON-RPC API. Smart contract definitions are located in the
+[src/contracts](src/contracts) folder. The plugin is implemented in [src/plugin.ts](src/plugin.ts).
 
-    You can do so by pressing on `Use this template` on the above right corner and then select `Create new Repositor`. Please, use the convention `web3-plugin-<name>` for your repo name.
-2. Update the `name` and `description` fileds at your `package.json`.
+## Contributing
 
-    Chose a name like: `@<organization>/web3-plugin-<name>` (or the less better `web3-plugin-<name>`).
-3. Update the code inside `src` folder.
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would
+like to change.
 
-4. Modify and add tests inside `test` folder.
+Please make sure to update [tests](test) as appropriate.
 
-5. Publish to the npm registry.
+## Template
 
-    You can publish with something like: `yarn build && npm publish --access public`.
+This plugin was created using the
+[Web3.js Plugin Template](https://github.com/web3/web3.js-plugin-template).
 
-Contributing
-------------
-
-Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
-
-License
--------
+## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
