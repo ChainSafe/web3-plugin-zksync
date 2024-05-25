@@ -1,10 +1,10 @@
 import type { Address } from 'web3';
 import { Web3PluginBase, Contract } from 'web3';
 import type { Web3RequestManager } from 'web3-core';
-import { ERC20TokenAbi } from './contracts/ERC20Token';
+import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
 import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
-import { L2BridgeAbi } from './contracts/L2Bridge';
+import { IL2BridgeABI } from './contracts/IL2Bridge';
 
 export class ZkSyncPlugin extends Web3PluginBase {
 	public pluginNamespace = 'zkSync';
@@ -13,8 +13,8 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	public wethBridgeL1: string;
 	public wethBridgeL2: string;
 	public _rpc?: RpcMethods;
-	public _l2BridgeContracts: Record<Address, Contract<typeof L2BridgeAbi>>;
-	public _erc20Contracts: Record<Address, Contract<typeof ERC20TokenAbi>>;
+	public _l2BridgeContracts: Record<Address, Contract<typeof IL2BridgeABI>>;
+	public _erc20Contracts: Record<Address, Contract<typeof IERC20ABI>>;
 
 	constructor() {
 		super();
@@ -32,9 +32,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 */
 	get rpc(): RpcMethods {
 		if (!this._rpc) {
-			this._rpc = new RpcMethods(
-				this.requestManager as unknown as Web3RequestManager<unknown>,
-			);
+			this._rpc = new RpcMethods(this.requestManager as unknown as Web3RequestManager<unknown>);
 		}
 		return this._rpc;
 	}
@@ -43,9 +41,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 * Get L2 bridge contract instance
 	 * @param address - Contract address
 	 */
-	getL2BridgeContract(address: Address): Contract<typeof L2BridgeAbi> {
+	getL2BridgeContract(address: Address): Contract<typeof IL2BridgeABI> {
 		if (!this._l2BridgeContracts[address]) {
-			this._l2BridgeContracts[address] = new Contract(L2BridgeAbi, address);
+			this._l2BridgeContracts[address] = new Contract(IL2BridgeABI, address);
 			this._l2BridgeContracts[address].link(this);
 		}
 		return this._l2BridgeContracts[address];
@@ -55,9 +53,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 * Get the ERC20 contract instance
 	 * @param address - Contract address
 	 */
-	erc20(address: string): Contract<typeof ERC20TokenAbi> {
+	erc20(address: string): Contract<typeof IERC20ABI> {
 		if (!this._erc20Contracts[address]) {
-			this._erc20Contracts[address] = new Contract(ERC20TokenAbi, address);
+			this._erc20Contracts[address] = new Contract(IERC20ABI, address);
 			this._erc20Contracts[address].link(this);
 		}
 		return this._erc20Contracts[address];
@@ -104,9 +102,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l1Token;
 					}
 				} catch (e) {
-					throw new Error(
-						`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
-					);
+					throw new Error(`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`);
 				}
 			}
 
@@ -132,9 +128,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l2WethToken;
 					}
 				} catch (e) {
-					throw new Error(
-						`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
-					);
+					throw new Error(`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`);
 				}
 			}
 
