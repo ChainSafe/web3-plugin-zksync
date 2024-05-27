@@ -1,7 +1,16 @@
 import type { Web3RequestManager } from 'web3-core';
 import { format, toNumber } from 'web3-utils';
-import type { Address, Bytes, HexString32Bytes, Numbers, TransactionWithSenderAPI } from 'web3';
-import { DEFAULT_RETURN_FORMAT } from 'web3';
+import type {
+	Address,
+	Bytes,
+	HexString32Bytes,
+	Numbers,
+	TransactionWithSenderAPI,
+} from 'web3-types';
+import {
+	DEFAULT_RETURN_FORMAT,
+	// Web3BaseProvider
+} from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
 import type {
 	BatchDetails,
@@ -9,7 +18,7 @@ import type {
 	BridgeAddresses,
 	EstimateFee,
 	L2ToL1Proof,
-	Proof,
+	StorageProof,
 	RawBlockTransaction,
 	TransactionDetails,
 	WalletBalances,
@@ -32,6 +41,7 @@ import {
 
 // The ZkSync methods described here https://docs.zksync.io/build/api.html
 
+// TODO: Think about inheritance from Web3Eth
 export class RpcMethods {
 	requestManager: Web3RequestManager<unknown>;
 
@@ -60,9 +70,7 @@ export class RpcMethods {
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
-	public async getL1BatchNumber(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<bigint> {
+	public async getL1BatchNumber(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<bigint> {
 		return format(IntSchema, await this._send('zks_L1BatchNumber', []), returnFormat) as bigint;
 	}
 
@@ -227,9 +235,7 @@ export class RpcMethods {
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
-	public async getMainContract(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Address> {
+	public async getMainContract(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<Address> {
 		return format(
 			AddressSchema,
 			await this._send('zks_getMainContract', []),
@@ -271,13 +277,13 @@ export class RpcMethods {
 		keys: string[],
 		l1BatchNumber: Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Proof> {
+	): Promise<StorageProof> {
 		const res = (await this._send('zks_getProof', [
 			address,
 			keys,
 			typeof l1BatchNumber === 'number' ? l1BatchNumber : Number(toNumber(l1BatchNumber)),
-		])) as Proof;
-		const result = format(ProofSchema, res, returnFormat) as Proof;
+		])) as StorageProof;
+		const result = format(ProofSchema, res, returnFormat) as StorageProof;
 		result.storageProof = [];
 		for (let i = 0; i < res.storageProof.length; i++) {
 			result.storageProof[i] = format(
@@ -325,9 +331,7 @@ export class RpcMethods {
 		const params: [HexString32Bytes, number?] = [txHash];
 		if (l2ToL1LogIndex) {
 			params.push(
-				typeof l2ToL1LogIndex === 'number'
-					? l2ToL1LogIndex
-					: Number(toNumber(l2ToL1LogIndex)),
+				typeof l2ToL1LogIndex === 'number' ? l2ToL1LogIndex : Number(toNumber(l2ToL1LogIndex)),
 			);
 		}
 		return format(
