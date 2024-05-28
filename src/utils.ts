@@ -244,11 +244,11 @@ export const REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT = 800;
  * consider adding the next few functions to web3.js:
  * */
 
-export const NumberToBytes = (number: web3Types.Numbers) =>
+export const numberToBytes = (number: web3Types.Numbers) =>
 	web3Utils.hexToBytes(web3Utils.numberToHex(number));
 
-export function concat(strings: web3Types.Bytes[]): string {
-	return '0x' + strings.map(d => web3Utils.toHex(d).substring(2)).join('');
+export function concat(bytes: web3Types.Bytes[]): string {
+	return '0x' + bytes.map(d => web3Utils.toHex(d).substring(2)).join('');
 }
 
 export function contractFunctionId(value: string): string {
@@ -532,30 +532,30 @@ export async function checkBaseCost(
 // 	const maxPriorityFeePerGas = transaction.maxPriorityFeePerGas || maxFeePerGas;
 
 // 	const fields: any[] = [
-// 		NumberToBytes(transaction.nonce || 0),
-// 		NumberToBytes(maxPriorityFeePerGas),
-// 		NumberToBytes(maxFeePerGas),
-// 		NumberToBytes(transaction.gasLimit || 0),
+// 		numberToBytes(transaction.nonce || 0),
+// 		numberToBytes(maxPriorityFeePerGas),
+// 		numberToBytes(maxFeePerGas),
+// 		numberToBytes(transaction.gasLimit || 0),
 // 		transaction.to ? web3Utils.toChecksumAddress(transaction.to) : '0x',
-// 		NumberToBytes(transaction.value || 0),
+// 		numberToBytes(transaction.value || 0),
 // 		transaction.data || '0x',
 // 	];
 
 // 	if (signature) {
 // 		const sig = ethers.Signature.from(signature);
-// 		fields.push(NumberToBytes(sig.yParity));
-// 		fields.push(NumberToBytes(sig.r));
-// 		fields.push(NumberToBytes(sig.s));
+// 		fields.push(numberToBytes(sig.yParity));
+// 		fields.push(numberToBytes(sig.r));
+// 		fields.push(numberToBytes(sig.s));
 // 	} else {
-// 		fields.push(NumberToBytes(transaction.chainId));
+// 		fields.push(numberToBytes(transaction.chainId));
 // 		fields.push('0x');
 // 		fields.push('0x');
 // 	}
-// 	fields.push(NumberToBytes(transaction.chainId));
+// 	fields.push(numberToBytes(transaction.chainId));
 // 	fields.push(web3Utils.toChecksumAddress(from));
 
 // 	// Add meta
-// 	fields.push(NumberToBytes(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
+// 	fields.push(numberToBytes(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
 // 	fields.push((meta.factoryDeps ?? []).map(dep => web3Utils.toHex(dep)));
 
 // 	if (meta.customSignature && web3Utils.bytesToUint8Array(meta.customSignature).length === 0) {
