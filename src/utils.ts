@@ -356,9 +356,9 @@ export function getHashedL2ToL1Msg(
 	const encodedMsg = new Uint8Array([
 		0, // l2ShardId
 		1, // isService
-		...web3Utils.hexToBytes(web3Utils.padLeft(web3Utils.toHex(txNumberInBlock), 2)),
+		...web3Utils.hexToBytes(web3Utils.padLeft(web3Utils.toHex(txNumberInBlock), 2 * 2)),
 		...web3Utils.hexToBytes(L1_MESSENGER_ADDRESS),
-		...web3Utils.hexToBytes(web3Utils.padLeft(sender, 32)),
+		...web3Utils.hexToBytes(web3Utils.padLeft(sender, 32 * 2)),
 		...web3Utils.hexToBytes(web3Utils.keccak256(msg)),
 	]);
 
@@ -424,7 +424,7 @@ export function create2Address(
 	const prefix = web3Utils.keccak256(web3Utils.utf8ToBytes('zksyncCreate2'));
 	const inputHash = web3Utils.keccak256(input);
 	const addressBytes = web3Utils
-		.keccak256(concat([prefix, web3Utils.padLeft(sender, 32), salt, bytecodeHash, inputHash]))
+		.keccak256(concat([prefix, web3Utils.padLeft(sender, 32 * 2), salt, bytecodeHash, inputHash]))
 		.slice(26);
 	return web3Utils.toChecksumAddress(addressBytes);
 }
@@ -446,8 +446,8 @@ export function createAddress(sender: web3.Address, senderNonce: web3Types.Numbe
 		.keccak256(
 			concat([
 				prefix,
-				web3Utils.padLeft(sender, 32),
-				web3Utils.padLeft(web3Utils.toHex(senderNonce), 32),
+				web3Utils.padLeft(sender, 32 * 2),
+				web3Utils.padLeft(web3Utils.toHex(senderNonce), 32 * 2),
 			]),
 		)
 		.slice(26);
@@ -605,8 +605,10 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
 		throw new Error(`Bytecode can not be longer than ${MAX_BYTECODE_LEN_BYTES} bytes!`);
 	}
 
-	const hashStr = sha256(Buffer.from(bytecodeAsArray));
+	const hashStr = web3Utils.toHex(sha256(Buffer.from(bytecodeAsArray)));
+	console.log('hashStr:', hashStr);
 	const hash = web3Utils.bytesToUint8Array(hashStr);
+	console.log('hash:', hash);
 
 	// Note that the length of the bytecode
 	// should be provided in 32-byte words.
@@ -618,7 +620,7 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
 	// The bytecode should always take the first 2 bytes of the bytecode hash,
 	// so we pad it from the left in case the length is smaller than 2 bytes.
 	const bytecodeLengthPadded = web3Utils.bytesToUint8Array(
-		web3Utils.padLeft(bytecodeLengthInWords, 2),
+		web3Utils.padLeft(bytecodeLengthInWords, 2 * 2),
 	);
 
 	const codeHashVersion = new Uint8Array([1, 0]);
@@ -757,8 +759,8 @@ export function getSignature(transaction: any, ethSignature?: EthereumSignature)
 		throw new Error('No signature provided!');
 	}
 
-	const r = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.r), 32));
-	const s = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.s), 32));
+	const r = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.r), 32 * 2));
+	const s = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.s), 32 * 2));
 	const v = ethSignature.v;
 
 	return new Uint8Array([...r, ...s, v]);
@@ -849,7 +851,7 @@ const ADDRESS_MODULO = 2n ** 160n;
 export function applyL1ToL2Alias(address: string): string {
 	return web3Utils.padLeft(
 		web3Utils.toHex((BigInt(address) + BigInt(L1_TO_L2_ALIAS_OFFSET)) % ADDRESS_MODULO),
-		20,
+		20 * 2,
 	);
 }
 
@@ -872,7 +874,7 @@ export function undoL1ToL2Alias(address: string): string {
 	if (result < 0n) {
 		result += ADDRESS_MODULO;
 	}
-	return web3Utils.padLeft(web3Utils.toHex(result), 20);
+	return web3Utils.padLeft(web3Utils.toHex(result), 20 * 2);
 }
 
 // /**

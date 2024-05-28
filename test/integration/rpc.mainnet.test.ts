@@ -1,11 +1,11 @@
 import { Web3 } from 'web3';
-import { ZkSyncPlugin } from '../src';
+import { ZkSyncPlugin } from '../../src';
 import {
 	estimateData,
 	getL1BatchDetailsData,
 	getL2ToL1LogProofData,
 	getProofData,
-} from './fixtures';
+} from '../fixtures';
 
 describe('ZkSyncPlugin rpc mainnet tests', () => {
 	let web3: Web3;
