@@ -6,6 +6,7 @@ import {
 	ADDRESS1,
 	// ADDRESS2
 } from '../utils';
+import * as constants from '../../src/constants';
 
 describe('utils', () => {
 	describe('#getHashedL2ToL1Msg()', () => {
@@ -21,17 +22,17 @@ describe('utils', () => {
 
 	describe('#isETH()', () => {
 		it('should return true for legacy L1 ETH address', async () => {
-			const result = utils.isETH(utils.LEGACY_ETH_ADDRESS);
+			const result = utils.isETH(constants.LEGACY_ETH_ADDRESS);
 			expect(result).toBeTruthy();
 		});
 
 		it('should return true for L1 ETH address', async () => {
-			const result = utils.isETH(utils.ETH_ADDRESS_IN_CONTRACTS);
+			const result = utils.isETH(constants.ETH_ADDRESS_IN_CONTRACTS);
 			expect(result).toBeTruthy();
 		});
 
 		it('should return true for L2 ETH address', async () => {
-			const result = utils.isETH(utils.L2_BASE_TOKEN_ADDRESS);
+			const result = utils.isETH(constants.L2_BASE_TOKEN_ADDRESS);
 			expect(result).toBeTruthy();
 		});
 	});
@@ -214,7 +215,7 @@ describe('utils', () => {
 				utils.hashBytecode(`0x${'00020000000000020009000000000002'.repeat(2)}`);
 			} catch (e) {
 				expect((e as Error).message).toBe(
-					`Bytecode can not be longer than ${utils.MAX_BYTECODE_LEN_BYTES} bytes`,
+					`Bytecode can not be longer than ${constants.MAX_BYTECODE_LEN_BYTES} bytes`,
 				);
 			}
 		});
