@@ -240,10 +240,11 @@ export const DEFAULT_GAS_PER_PUBDATA_LIMIT = 50_000;
 export const REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT = 800;
 
 /**
+ * ------------------------------------------------------------
  * consider adding the next few functions to web3.js:
  * */
 
-export const NumberToByes = (number: web3Types.Numbers) =>
+export const NumberToBytes = (number: web3Types.Numbers) =>
 	web3Utils.hexToBytes(web3Utils.numberToHex(number));
 
 export function concat(strings: web3Types.Bytes[]): string {
@@ -283,6 +284,11 @@ function recoverSignerAddress(
 	const recoveredAddress = `0x${web3Utils.keccak256(web3Utils.bytesToHex(recoveredPublicKey)).slice(-40)}`;
 	return recoveredAddress;
 }
+
+/**
+ * ------------------------------------------------------------
+ * End of the function section that would be added to web3.js
+ */
 
 /**
  * Returns true if token represents ETH on L1 or L2.
@@ -526,30 +532,30 @@ export async function checkBaseCost(
 // 	const maxPriorityFeePerGas = transaction.maxPriorityFeePerGas || maxFeePerGas;
 
 // 	const fields: any[] = [
-// 		NumberToByes(transaction.nonce || 0),
-// 		NumberToByes(maxPriorityFeePerGas),
-// 		NumberToByes(maxFeePerGas),
-// 		NumberToByes(transaction.gasLimit || 0),
+// 		NumberToBytes(transaction.nonce || 0),
+// 		NumberToBytes(maxPriorityFeePerGas),
+// 		NumberToBytes(maxFeePerGas),
+// 		NumberToBytes(transaction.gasLimit || 0),
 // 		transaction.to ? web3Utils.toChecksumAddress(transaction.to) : '0x',
-// 		NumberToByes(transaction.value || 0),
+// 		NumberToBytes(transaction.value || 0),
 // 		transaction.data || '0x',
 // 	];
 
 // 	if (signature) {
 // 		const sig = ethers.Signature.from(signature);
-// 		fields.push(NumberToByes(sig.yParity));
-// 		fields.push(NumberToByes(sig.r));
-// 		fields.push(NumberToByes(sig.s));
+// 		fields.push(NumberToBytes(sig.yParity));
+// 		fields.push(NumberToBytes(sig.r));
+// 		fields.push(NumberToBytes(sig.s));
 // 	} else {
-// 		fields.push(NumberToByes(transaction.chainId));
+// 		fields.push(NumberToBytes(transaction.chainId));
 // 		fields.push('0x');
 // 		fields.push('0x');
 // 	}
-// 	fields.push(NumberToByes(transaction.chainId));
+// 	fields.push(NumberToBytes(transaction.chainId));
 // 	fields.push(web3Utils.toChecksumAddress(from));
 
 // 	// Add meta
-// 	fields.push(NumberToByes(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
+// 	fields.push(NumberToBytes(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
 // 	fields.push((meta.factoryDeps ?? []).map(dep => web3Utils.toHex(dep)));
 
 // 	if (meta.customSignature && web3Utils.bytesToUint8Array(meta.customSignature).length === 0) {
