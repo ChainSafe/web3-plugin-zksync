@@ -149,3 +149,24 @@ export const DEFAULT_GAS_PER_PUBDATA_LIMIT = 50_000;
  * @constant
  */
 export const REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT = 800;
+
+/**
+ * All typed data conforming to the EIP712 standard within zkSync Era.
+ */
+export const EIP712_TYPES = {
+	Transaction: [
+	  {name: 'txType', type: 'uint256'},
+	  {name: 'from', type: 'uint256'},
+	  {name: 'to', type: 'uint256'},
+	  {name: 'gasLimit', type: 'uint256'},
+	  {name: 'gasPerPubdataByteLimit', type: 'uint256'},
+	  {name: 'maxFeePerGas', type: 'uint256'},
+	  {name: 'maxPriorityFeePerGas', type: 'uint256'},
+	  {name: 'paymaster', type: 'uint256'},
+	  {name: 'nonce', type: 'uint256'},
+	  {name: 'value', type: 'uint256'},
+	  {name: 'data', type: 'bytes'},
+	  {name: 'factoryDeps', type: 'bytes32[]'},
+	  {name: 'paymasterInput', type: 'bytes'},
+	],
+  };

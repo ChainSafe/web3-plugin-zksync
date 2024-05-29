@@ -5,7 +5,15 @@ export type { Bytes, HexString, Numbers } from 'web3-types';
 // // TODO: // is it needed to be re-exported from web3
 // import { watchTransactionForConfirmations } from 'web3-eth/lib/types/utils/watch_transaction_for_confirmations.js';
 
-import { Bytes, HexString, Numbers, Transaction, EIP1193Provider } from 'web3-types';
+import {
+	Bytes,
+	HexString,
+	Numbers,
+	Transaction,
+	EIP1193Provider,
+	TransactionWithSenderAPI,
+	TransactionReceipt,
+} from 'web3-types';
 
 import {
 	//  FeeMarketEIP1559Transaction,
@@ -533,27 +541,27 @@ export interface L2ToL1Log {
 	logIndex: number;
 }
 
-// /**
-//  * A `TransactionRequest` is an extension of {@link ethers.TransactionRequest} with additional features for interacting
-//  * with zkSync Era.
-//  */
-// export interface TransactionRequest extends EthersTransactionRequest {
-// 	/** The custom data for EIP712 transaction metadata. */
-// 	customData?: null | Eip712Meta;
-// }
+/**
+ * A `TransactionRequest` is an extension of {@link ethers.TransactionRequest} with additional features for interacting
+ * with zkSync Era.
+ */
+export declare type TransactionRequest = TransactionWithSenderAPI & {
+	/** The custom data for EIP712 transaction metadata. */
+	customData?: null | Eip712Meta;
+};
 
-// /**
-//  * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
-//  * that waits to commit a L1 transaction, including when given on optional confirmation number.
-//  */
-// export interface PriorityOpResponse extends TransactionResponse {
-// 	/**
-// 	 * Waits for the L1 transaction to be committed, including waiting for the specified number of confirmations.
-// 	 * @param confirmation The number of confirmations to wait for. Defaults to 1.
-// 	 * @returns A promise that resolves to the transaction receipt once committed.
-// 	 */
-// 	waitL1Commit(confirmation?: number): Promise<ethers.TransactionReceipt>;
-// }
+/**
+ * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
+ * that waits to commit a L1 transaction, including when given on optional confirmation number.
+ */
+export interface PriorityOpResponse extends Transaction {
+	/**
+	 * Waits for the L1 transaction to be committed, including waiting for the specified number of confirmations.
+	 * @param confirmation The number of confirmations to wait for. Defaults to 1.
+	 * @returns A promise that resolves to the transaction receipt once committed.
+	 */
+	waitL1Commit(confirmation?: number): Promise<TransactionReceipt>;
+}
 
 /** A map containing accounts and their balances. */
 export type BalancesMap = { [key: string]: bigint };

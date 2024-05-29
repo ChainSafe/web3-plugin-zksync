@@ -11,6 +11,7 @@ import * as web3Utils from 'web3-utils';
 import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
+import * as web3Contract from 'web3-eth-contract';
 
 import {
 	DeploymentInfo,
@@ -45,9 +46,11 @@ import {
 	EIP1271_MAGIC_VALUE,
 	L1_FEE_ESTIMATION_COEF_NUMERATOR,
 	L1_FEE_ESTIMATION_COEF_DENOMINATOR,
+	// EIP712_TX_TYPE,
+	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-// import { RpcMethods } from './rpc.methods'; // to be used instead of the one at zksync-ethers: Provider from ./provider
+import { RpcMethods } from './rpc.methods'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -99,7 +102,7 @@ export const L1BridgeContract = new web3.Contract(IL1BridgeABI);
  * The web3.js Contract instance for the `IL2Bridge` interface, which is utilized for transferring ERC20 tokens from L2 to L1.
  * @constant
  */
-export const L2Bridge = new web3.Contract(IL2BridgeABI);
+export const L2BridgeContract = new web3.Contract(IL2BridgeABI);
 
 /**
  * The web3.js Contract instance for the `INonceHolder` interface, which is utilized for managing deployment nonces.
@@ -112,8 +115,12 @@ export const NonceHolderContract = new web3.Contract(INonceHolderABI);
  * consider adding the next few functions to web3.js:
  * */
 
-export const numberToBytes = (number: web3Types.Numbers) =>
-	web3Utils.hexToBytes(web3Utils.numberToHex(number));
+export const toBytes = (number: web3Types.Numbers | Uint8Array) =>
+	web3Utils.hexToBytes(
+		typeof number === 'number' || typeof number === 'bigint'
+			? web3Utils.numberToHex(number)
+			: web3Utils.bytesToHex(number),
+	);
 
 export function concat(bytes: web3Types.Bytes[]): string {
 	return '0x' + bytes.map(d => web3Utils.toHex(d).substring(2)).join('');
@@ -123,9 +130,10 @@ export function contractFunctionId(value: string): string {
 	return web3Utils.keccak256(web3Utils.utf8ToBytes(value));
 }
 
+// TODO: needs to test for the first parameter being Eip712TypedData
 function recoverSignerAddress(
 	messageOrData: string | web3Types.Eip712TypedData,
-	signature: string | EthereumSignature,
+	signature: SignatureLike,
 ) {
 	let message;
 	if (typeof messageOrData !== 'string') {
@@ -134,23 +142,85 @@ function recoverSignerAddress(
 		message = messageOrData;
 	}
 
-	const r = web3Accounts.toUint8Array(
-		(signature as EthereumSignature).r ?? (signature as string).slice(0, 66),
-	);
-	const s = web3Accounts.toUint8Array(
-		(signature as EthereumSignature).s ?? `0x${(signature as string).slice(66, 130)}`,
-	);
-	const v = BigInt(
-		(signature as EthereumSignature).v ??
-			web3Utils.hexToNumber(`0x${(signature as string).slice(130, 132)}`),
-	);
+	if (typeof signature === 'string') {
+		return web3Accounts.recover(message, signature);
+	}
 
-	const recoveredPublicKey = web3Utils.bytesToHex(
-		web3Accounts.ecrecover(web3Accounts.toUint8Array(message), v, r, s),
-	);
+	const r = web3Utils.toHex(signature.r);
+	const s = web3Utils.toHex(signature.s);
+	const v = web3Utils.toHex(signature.v);
 
-	const recoveredAddress = `0x${web3Utils.keccak256(web3Utils.bytesToHex(recoveredPublicKey)).slice(-40)}`;
+	const recoveredAddress = web3Accounts.recover(message, v, r, s);
 	return recoveredAddress;
+}
+
+export class SignatureObject {
+	public r: Uint8Array;
+	public s: Uint8Array;
+	public v: bigint;
+
+	constructor(r: Uint8Array, s: Uint8Array, v: web3Types.Numbers);
+	constructor(signature: string | SignatureLike);
+	constructor(
+		rOrSignature: string | Uint8Array | SignatureLike,
+		s?: Uint8Array,
+		v?: web3Types.Numbers,
+	) {
+		if (typeof rOrSignature === 'string') {
+			if (rOrSignature.length !== 132) {
+				throw new Error('Invalid signature length');
+			}
+			// Initialize with a single string parameter
+			const signature = rOrSignature as string;
+			this.r = web3Accounts.toUint8Array(signature.slice(0, 66));
+			this.s = web3Accounts.toUint8Array(`0x${signature.slice(66, 130)}`);
+			this.v = BigInt(web3Utils.hexToNumber(`0x${signature.slice(130, 132)}`));
+		} else if (
+			(rOrSignature as EthereumSignature).r &&
+			(rOrSignature as EthereumSignature).s &&
+			(rOrSignature as EthereumSignature).v
+		) {
+			const ethereumSignature = rOrSignature as EthereumSignature;
+			this.r = web3Utils.bytesToUint8Array(ethereumSignature.r);
+			this.s = web3Utils.bytesToUint8Array(ethereumSignature.s);
+			this.v = BigInt(ethereumSignature.v);
+		} else {
+			const signature = { r: rOrSignature as Uint8Array, s: s, v: v };
+			// Initialize with individual parameters
+			this.r = signature.r!;
+			this.s = signature.s!;
+			this.v = BigInt(signature.v!);
+		}
+	}
+
+	public toString() {
+		return `${this.r}${this.s.slice(2)}${web3Utils.toHex(this.v).slice(2)}`;
+	}
+}
+
+export type SignatureLike = SignatureObject | EthereumSignature | string;
+
+/**
+ *  eip-191 message prefix
+ */
+export const MessagePrefix: string = '\x19Ethereum Signed Message:\n';
+
+/**
+ * Has the message according to eip-191
+ * @param message - message to hash
+ * @returns hash of the message
+ */
+export function hashMessage(message: Uint8Array | string): string {
+	if (typeof message === 'string') {
+		message = web3Accounts.toUint8Array(message);
+	}
+	return web3Utils.keccak256(
+		concat([
+			web3Accounts.toUint8Array(MessagePrefix),
+			web3Accounts.toUint8Array(String(message.length)),
+			message,
+		]),
+	);
 }
 
 /**
@@ -383,10 +453,7 @@ export async function checkBaseCost(
 //  * );
 //  * // serializedTx = "0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0"
 //  */
-// export function serializeEip712(
-// 	transaction: TransactionLike,
-// 	signature?: ethers.SignatureLike,
-// ): string {
+// export function serializeEip712(transaction: TransactionLike, signature?: SignatureLike): string {
 // 	if (!transaction.chainId) {
 // 		throw Error("Transaction chainId isn't set!");
 // 	}
@@ -400,30 +467,30 @@ export async function checkBaseCost(
 // 	const maxPriorityFeePerGas = transaction.maxPriorityFeePerGas || maxFeePerGas;
 
 // 	const fields: any[] = [
-// 		numberToBytes(transaction.nonce || 0),
-// 		numberToBytes(maxPriorityFeePerGas),
-// 		numberToBytes(maxFeePerGas),
-// 		numberToBytes(transaction.gasLimit || 0),
+// 		toBytes(transaction.nonce || 0),
+// 		toBytes(maxPriorityFeePerGas),
+// 		toBytes(maxFeePerGas),
+// 		toBytes(transaction.gasLimit || 0),
 // 		transaction.to ? web3Utils.toChecksumAddress(transaction.to) : '0x',
-// 		numberToBytes(transaction.value || 0),
+// 		toBytes(transaction.value || 0),
 // 		transaction.data || '0x',
 // 	];
 
 // 	if (signature) {
-// 		const sig = ethers.Signature.from(signature);
-// 		fields.push(numberToBytes(sig.yParity));
-// 		fields.push(numberToBytes(sig.r));
-// 		fields.push(numberToBytes(sig.s));
+// 		const sig = new SignatureObject(signature);
+// 		fields.push(toBytes(sig.yParity));
+// 		fields.push(toBytes(sig.r));
+// 		fields.push(toBytes(sig.s));
 // 	} else {
-// 		fields.push(numberToBytes(transaction.chainId));
+// 		fields.push(toBytes(transaction.chainId));
 // 		fields.push('0x');
 // 		fields.push('0x');
 // 	}
-// 	fields.push(numberToBytes(transaction.chainId));
+// 	fields.push(toBytes(transaction.chainId));
 // 	fields.push(web3Utils.toChecksumAddress(from));
 
 // 	// Add meta
-// 	fields.push(numberToBytes(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
+// 	fields.push(toBytes(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
 // 	fields.push((meta.factoryDeps ?? []).map(dep => web3Utils.toHex(dep)));
 
 // 	if (meta.customSignature && web3Utils.bytesToUint8Array(meta.customSignature).length === 0) {
@@ -603,12 +670,7 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
 // 	}
 
 // 	if (!transaction.customData?.customSignature) {
-// 		// TODO: either try to use a string or a signature object
-// 		// const signatureStr = `${ethSignature.r}${ethSignature.s.slice(2)}${ethSignature.v.slice(2)}`;
-// 		// or maybe try to use @noble/curves (but it does not deal with `v`):
-// 		// import { SignatureType } from '@noble/curves';
-// 		// new secp256k1.Signature(ethSignature.r, ethSignature.s, ethSignature.v);
-// 		transaction.signature = ethers.Signature.from(ethSignature);
+// 		transaction.signature = new SignatureObject(ethSignature).toString();
 // 	}
 
 // 	transaction.hash = eip712TxHash(transaction, ethSignature);
@@ -743,67 +805,59 @@ export function undoL1ToL2Alias(address: string): string {
 	return web3Utils.padLeft(web3Utils.toHex(result), 20 * 2);
 }
 
-// /**
-//  * Returns the data needed for correct initialization of an L1 token counterpart on L2.
-//  *
-//  * @param l1TokenAddress The token address on L1.
-//  * @param provider The client that is able to work with contracts on a read-write basis.
-//  * @returns The encoded bytes which contains token name, symbol and decimals.
-//  */
-// export async function getERC20DefaultBridgeData(
-// 	l1TokenAddress: string,
-// 	context: web3.Web3Context,  // or maybe use RpcMethods?
-// ): Promise<string> {
-// 	if (isAddressEq(l1TokenAddress, LEGACY_ETH_ADDRESS)) {
-// 		l1TokenAddress = ETH_ADDRESS_IN_CONTRACTS;
-// 	}
-// 	const token = IERC20__factory.connect(l1TokenAddress, context);
+/**
+ * Returns the data needed for correct initialization of an L1 token counterpart on L2.
+ *
+ * @param l1TokenAddress The token address on L1.
+ * @param provider The client that is able to work with contracts on a read-write basis.
+ * @returns The encoded bytes which contains token name, symbol and decimals.
+ */
+export async function getERC20DefaultBridgeData(
+	l1TokenAddress: string,
+	context: web3.Web3Context, // or maybe use RpcMethods?
+): Promise<string> {
+	if (isAddressEq(l1TokenAddress, LEGACY_ETH_ADDRESS)) {
+		l1TokenAddress = ETH_ADDRESS_IN_CONTRACTS;
+	}
+	const token = new web3Contract.Contract(IERC20ABI, l1TokenAddress, context);
 
-// 	const name = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS) ? 'Ether' : await token.name();
-// 	const symbol = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
-// 		? 'ETH'
-// 		: await token.symbol();
-// 	const decimals = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
-// 		? 18
-// 		: await token.decimals();
+	const name = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
+		? 'Ether'
+		: await token.methods.name().call();
+	const symbol = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
+		? 'ETH'
+		: await token.methods.symbol().call();
+	const decimals = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
+		? 18
+		: await token.methods.decimals().call();
 
-// 	const coder = new AbiCoder();
+	return web3Abi.encodeParameters(['string', 'string', 'uint256'], [name, symbol, decimals]);
+}
 
-// 	const nameBytes = coder.encode(['string'], [name]);
-// 	const symbolBytes = coder.encode(['string'], [symbol]);
-// 	const decimalsBytes = coder.encode(['uint256'], [decimals]);
-
-// 	return coder.encode(['bytes', 'bytes', 'bytes'], [nameBytes, symbolBytes, decimalsBytes]);
-// }
-
-// /**
-//  * Returns the calldata sent by an L1 ERC20 bridge to its L2 counterpart during token bridging.
-//  *
-//  * @param l1TokenAddress The token address on L1.
-//  * @param l1Sender The sender address on L1.
-//  * @param l2Receiver The recipient address on L2.
-//  * @param amount The gas fee for the number of tokens to bridge.
-//  * @param bridgeData Additional bridge data.
-//  *
-//  * @example
-//  *
-//  *
-//  */
-// export async function getERC20BridgeCalldata(
-// 	l1TokenAddress: string,
-// 	l1Sender: string,
-// 	l2Receiver: string,
-// 	amount: web3Types.Numbers,
-// 	bridgeData: web3Types.Bytes,
-// ): Promise<string> {
-// 	return L2_BRIDGE_ABI.encodeFunctionData('finalizeDeposit', [
-// 		l1Sender,
-// 		l2Receiver,
-// 		l1TokenAddress,
-// 		amount,
-// 		bridgeData,
-// 	]);
-// }
+/**
+ * Returns the calldata sent by an L1 ERC20 bridge to its L2 counterpart during token bridging.
+ *
+ * @param l1TokenAddress The token address on L1.
+ * @param l1Sender The sender address on L1.
+ * @param l2Receiver The recipient address on L2.
+ * @param amount The gas fee for the number of tokens to bridge.
+ * @param bridgeData Additional bridge data.
+ *
+ * @example
+ *
+ *
+ */
+export async function getERC20BridgeCalldata(
+	l1TokenAddress: string,
+	l1Sender: string,
+	l2Receiver: string,
+	amount: web3Types.Numbers,
+	bridgeData: web3Types.Bytes,
+): Promise<string> {
+	return L2BridgeContract.methods
+		.finalizeDeposit(l1Sender, l2Receiver, l1TokenAddress, amount, bridgeData)
+		.encodeABI();
+}
 
 /**
  * Validates signatures from non-contract account addresses (EOA).
@@ -834,7 +888,7 @@ export function undoL1ToL2Alias(address: string): string {
 function isECDSASignatureCorrect(
 	address: string,
 	msgHash: string,
-	signature: EthereumSignature,
+	signature: SignatureLike,
 ): boolean {
 	try {
 		return isAddressEq(address, recoverSignerAddress(msgHash, signature));
@@ -865,7 +919,7 @@ async function isEIP1271SignatureCorrect(
 	context: web3.Web3Context, // or maybe use RpcMethods?
 	address: string,
 	msgHash: string,
-	signature: EthereumSignature,
+	signature: SignatureLike,
 ): Promise<boolean> {
 	const accountContract = new web3.Contract(IERC1271ABI, address, context);
 
@@ -891,7 +945,7 @@ async function isSignatureCorrect(
 	context: web3.Web3Context, // or maybe use RpcMethods?
 	address: string,
 	msgHash: string,
-	signature: EthereumSignature,
+	signature: SignatureLike,
 ): Promise<boolean> {
 	const code = await web3.eth.getCode(context, address, undefined, web3Types.DEFAULT_RETURN_FORMAT);
 	const isContractAccount = web3Utils.bytesToUint8Array(code).length !== 0;
@@ -903,151 +957,159 @@ async function isSignatureCorrect(
 	}
 }
 
-// /**
-//  * Returns whether the account abstraction message signature is correct.
-//  * Signature can be created using EIP1271 or ECDSA.
-//  *
-//  * @param provider The provider.
-//  * @param address The sender address.
-//  * @param message The hash of the message.
-//  * @param signature The Ethers signature.
-//  *
-//  * @example
-//  *
-//  * import { Wallet, utils, Provider } from "zksync-ethers";
-//  *
-//  * const ADDRESS = "<WALLET_ADDRESS>";
-//  * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
-//  * const context = Provider.getDefaultProvider(types.Network.Sepolia);
-//  *
-//  * const message = "Hello, world!";
-//  * const signature = await new Wallet(PRIVATE_KEY).signMessage(message);
-//  * // ethers.Wallet can be used as well
-//  * // const signature =  await new ethers.Wallet(PRIVATE_KEY).signMessage(message);
-//  *
-//  * const isValidSignature = await utils.isMessageSignatureCorrect(context, ADDRESS, message, signature);
-//  * // isValidSignature = true
-//  */
-// export async function isMessageSignatureCorrect(
-// 	context: web3.Web3Context, // or maybe use RpcMethods?
-// 	address: string,
-// 	message: Uint8Array | string,
-// 	signature: SignatureLike,
-// ): Promise<boolean> {
-// 	// TODO: needs to implement this (similar to web3Abi.getEncodedEip712Data but for stings and Uint8Array)
-// 	const msgHash = ethers.getMessage(message);
-// 	return await isSignatureCorrect(context, address, msgHash, signature);
-// }
+/**
+ * Returns whether the account abstraction message signature is correct.
+ * Signature can be created using EIP1271 or ECDSA.
+ *
+ * @param provider The provider.
+ * @param address The sender address.
+ * @param message The hash of the message.
+ * @param signature The Ethers signature.
+ *
+ * @example
+ *
+ * import { Wallet, utils, Provider } from "zksync-ethers";
+ *
+ * const ADDRESS = "<WALLET_ADDRESS>";
+ * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
+ * const context = Provider.getDefaultProvider(types.Network.Sepolia);
+ *
+ * const message = "Hello, world!";
+ * const signature = await new Wallet(PRIVATE_KEY).signMessage(message);
+ * // ethers.Wallet can be used as well
+ * // const signature =  await new ethers.Wallet(PRIVATE_KEY).signMessage(message);
+ *
+ * const isValidSignature = await utils.isMessageSignatureCorrect(context, ADDRESS, message, signature);
+ * // isValidSignature = true
+ */
+export async function isMessageSignatureCorrect(
+	context: web3.Web3Context, // or maybe use RpcMethods?
+	address: string,
+	message: Uint8Array | string,
+	signature: SignatureLike,
+): Promise<boolean> {
+	const msgHash = web3Accounts.hashMessage(
+		typeof message === 'string' ? message : web3Utils.bytesToHex(message),
+	);
+	return await isSignatureCorrect(context, address, msgHash, signature);
+}
 
-// /**
-//  * Returns whether the account abstraction EIP712 signature is correct.
-//  *
-//  * @param context The web3 context.
-//  * @param address The sender address.
-//  * @param domain The domain data.
-//  * @param types A map of records pointing from field name to field type.
-//  * @param value A single record value.
-//  * @param signature The Ethers signature.
-//  *
-//  * @example
-//  *
-//  * import { Wallet, utils, Provider, EIP712Signer } from "zksync-ethers";
-//  *
-//  * const ADDRESS = "<WALLET_ADDRESS>";
-//  * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
-//  * const context = Provider.getDefaultProvider(types.Network.Sepolia);
-//  *
-//  * const tx: types.TransactionRequest = {
-//  *   type: 113,
-//  *   chainId: 270,
-//  *   from: ADDRESS,
-//  *   to: "0xa61464658AfeAf65CccaaFD3a512b69A83B77618",
-//  *   value: BigInt(7_000_000),
-//  * };
-//  *
-//  * const eip712Signer = new EIP712Signer(
-//  *   new Wallet(PRIVATE_KEY), // or new ethers.Wallet(PRIVATE_KEY),
-//  *   Number((await context.getNetwork()).chainId)
-//  * );
-//  *
-//  * const signature = await eip712Signer.sign(tx);
-//  *
-//  * const isValidSignature = await utils.isTypedDataSignatureCorrect(context, ADDRESS, await eip712Signer.getDomain(), utils.EIP712_TYPES, EIP712Signer.getSignInput(tx), signature);
-//  * // isValidSignature = true
-//  */
-// export async function isTypedDataSignatureCorrect(
-// 	context: web3.Web3Context, // or maybe use RpcMethods?
-// 	address: string,
-// 	domain: ethers.TypedDataDomain,
-// 	types: Record<string, Array<ethers.TypedDataField>>,
-// 	value: Record<string, any>,
-// 	signature: EthereumSignature,
-// ): Promise<boolean> {
-// 	const msgHash = ethers.TypedDataEncoder.hash(domain, types, value);
-// 	return await isSignatureCorrect(context, address, msgHash, signature);
-// }
+/**
+ * Returns whether the account abstraction EIP712 signature is correct.
+ *
+ * @param context The web3 context.
+ * @param address The sender address.
+ * @param domain The domain data.
+ * @param types A map of records pointing from field name to field type.
+ * @param value A single record value.
+ * @param signature The Ethers signature.
+ *
+ * @example
+ *
+ * import { Wallet, utils, constants, Provider, EIP712Signer } from "zksync-ethers";
+ *
+ * const ADDRESS = "<WALLET_ADDRESS>";
+ * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
+ * const context = Provider.getDefaultProvider(types.Network.Sepolia);
+ *
+ * const tx: types.TransactionRequest = {
+ *   type: 113,
+ *   chainId: 270,
+ *   from: ADDRESS,
+ *   to: "0xa61464658AfeAf65CccaaFD3a512b69A83B77618",
+ *   value: BigInt(7_000_000),
+ * };
+ *
+ * const eip712Signer = new EIP712Signer(
+ *   new Wallet(PRIVATE_KEY), // or new ethers.Wallet(PRIVATE_KEY),
+ *   Number((await context.getNetwork()).chainId)
+ * );
+ *
+ * const signature = await eip712Signer.sign(tx);
+ *
+ * const isValidSignature = await utils.isTypedDataSignatureCorrect(context, ADDRESS, await eip712Signer.getDomain(), constants.EIP712_TYPES, 'Transaction', EIP712Signer.getSignInput(tx), signature);
+ * // isValidSignature = true
+ */
+export async function isTypedDataSignatureCorrect(
+	context: web3.Web3Context, // or maybe use RpcMethods?
+	address: string,
+	domain: Extract<web3Types.Eip712TypedData, 'domain'>,
+	types: Extract<web3Types.Eip712TypedData, 'types'>,
+	primaryType: Extract<web3Types.Eip712TypedData, 'primaryType'>,
+	value: Record<string, any>,
+	signature: EthereumSignature,
+): Promise<boolean> {
+	const data: web3Types.Eip712TypedData = {
+		domain,
+		types,
+		primaryType,
+		message: value,
+	};
+	const msgHash = web3Abi.getEncodedEip712Data(data);
+	return await isSignatureCorrect(context, address, msgHash, signature);
+}
 
-// /**
-//  * Returns an estimation of the L2 gas required for token bridging via the default ERC20 bridge.
-//  *
-//  * @param providerL1 The Ethers provider for the L1 network.
-//  * @param providerL2 The zkSync provider for the L2 network.
-//  * @param token The address of the token to be bridged.
-//  * @param amount The deposit amount.
-//  * @param to The recipient address on the L2 network.
-//  * @param from The sender address on the L1 network.
-//  * @param gasPerPubdataByte The current gas per byte of pubdata.
-//  *
-//  * @see
-//  * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#default-bridges Default bridges documentation}.
-//  *
-//  * @example
-//  *
-//  *
-//  */
-// export async function estimateDefaultBridgeDepositL2Gas(
-// 	providerL1: Web3Eth,
-// 	providerL2: Provider,
-// 	token: web3.Address,
-// 	amount: web3Types.Numbers,
-// 	to: web3.Address,
-// 	from?: web3.Address,
-// 	gasPerPubdataByte?: web3Types.Numbers,
-// ): Promise<bigint> {
-// 	// If the `from` address is not provided, we use a random address, because
-// 	// due to storage slot aggregation, the gas estimation will depend on the address
-// 	// and so estimation for the zero address may be smaller than for the sender.
-// 	from ??= web3Accounts.create().address;
-// 	if (await providerL2.isBaseToken(token)) {
-// 		return await providerL2.estimateL1ToL2Execute({
-// 			contractAddress: to,
-// 			gasPerPubdataByte: gasPerPubdataByte,
-// 			caller: from,
-// 			calldata: '0x',
-// 			l2Value: amount,
-// 		});
-// 	} else {
-// 		const bridgeAddresses = await providerL2.getDefaultBridgeAddresses();
+/**
+ * Returns an estimation of the L2 gas required for token bridging via the default ERC20 bridge.
+ *
+ * @param providerL1 The Ethers provider for the L1 network.
+ * @param providerL2 The zkSync provider for the L2 network.
+ * @param token The address of the token to be bridged.
+ * @param amount The deposit amount.
+ * @param to The recipient address on the L2 network.
+ * @param from The sender address on the L1 network.
+ * @param gasPerPubdataByte The current gas per byte of pubdata.
+ *
+ * @see
+ * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#default-bridges Default bridges documentation}.
+ *
+ * @example
+ *
+ *
+ */
+export async function estimateDefaultBridgeDepositL2Gas(
+	providerL1: web3.Web3Eth,
+	providerL2: RpcMethods,
+	token: web3.Address,
+	amount: web3Types.Numbers,
+	to: web3.Address,
+	from?: web3.Address,
+	gasPerPubdataByte?: web3Types.Numbers,
+): Promise<web3Types.Numbers> {
+	// If the `from` address is not provided, we use a random address, because
+	// due to storage slot aggregation, the gas estimation will depend on the address
+	// and so estimation for the zero address may be smaller than for the sender.
+	from ??= web3Accounts.create().address;
+	if (await providerL2.isBaseToken(token)) {
+		return await providerL2.estimateL1ToL2Execute({
+			contractAddress: to,
+			gasPerPubdataByte: gasPerPubdataByte,
+			caller: from,
+			calldata: '0x',
+			l2Value: amount,
+		});
+	} else {
+		const bridgeAddresses = await providerL2.getDefaultBridgeAddresses();
 
-// 		const value = 0;
-// 		const l1BridgeAddress = bridgeAddresses.sharedL1;
-// 		const l2BridgeAddress = bridgeAddresses.sharedL2;
-// 		const bridgeData = await getERC20DefaultBridgeData(token, providerL1);
+		const value = 0;
+		const l1BridgeAddress = bridgeAddresses.sharedL1;
+		const l2BridgeAddress = bridgeAddresses.sharedL2;
+		const bridgeData = await getERC20DefaultBridgeData(token, providerL1);
 
-// 		return await estimateCustomBridgeDepositL2Gas(
-// 			providerL2,
-// 			l1BridgeAddress,
-// 			l2BridgeAddress,
-// 			isAddressEq(token, LEGACY_ETH_ADDRESS) ? ETH_ADDRESS_IN_CONTRACTS : token,
-// 			amount,
-// 			to,
-// 			bridgeData,
-// 			from,
-// 			gasPerPubdataByte,
-// 			value,
-// 		);
-// 	}
-// }
+		return await estimateCustomBridgeDepositL2Gas(
+			providerL2,
+			l1BridgeAddress,
+			l2BridgeAddress,
+			isAddressEq(token, LEGACY_ETH_ADDRESS) ? ETH_ADDRESS_IN_CONTRACTS : token,
+			amount,
+			to,
+			bridgeData,
+			from,
+			gasPerPubdataByte,
+			value,
+		);
+	}
+}
 
 /**
  * Scales the provided gas limit using a coefficient to ensure acceptance of L1->L2 transactions.
@@ -1069,48 +1131,48 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
 	);
 }
 
-// /**
-//  * Returns an estimation of the L2 gas required for token bridging via the custom ERC20 bridge.
-//  *
-//  * @param providerL2 The zkSync provider for the L2 network.
-//  * @param l1BridgeAddress The address of the custom L1 bridge.
-//  * @param l2BridgeAddress The address of the custom L2 bridge.
-//  * @param token The address of the token to be bridged.
-//  * @param amount The deposit amount.
-//  * @param to The recipient address on the L2 network.
-//  * @param bridgeData Additional bridge data.
-//  * @param from The sender address on the L1 network.
-//  * @param gasPerPubdataByte The current gas per byte of pubdata.
-//  * @param l2Value The `msg.value` of L2 transaction.
-//  *
-//  * @see
-//  * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#custom-bridges-on-l1-and-l2 Custom bridges documentation}.
-//  *
-//  * @example
-//  *
-//  *
-//  */
-// export async function estimateCustomBridgeDepositL2Gas(
-// 	providerL2: RpcMethods,
-// 	l1BridgeAddress: web3.Address,
-// 	l2BridgeAddress: web3.Address,
-// 	token: web3.Address,
-// 	amount: web3Types.Numbers,
-// 	to: web3.Address,
-// 	bridgeData: web3Types.Bytes,
-// 	from: web3.Address,
-// 	gasPerPubdataByte?: web3Types.Numbers,
-// 	l2Value?: web3Types.Numbers,
-// ): Promise<bigint> {
-// 	const calldata = await getERC20BridgeCalldata(token, from, to, amount, bridgeData);
-// 	return await providerL2.estimateL1ToL2Execute({
-// 		caller: applyL1ToL2Alias(l1BridgeAddress),
-// 		contractAddress: l2BridgeAddress,
-// 		gasPerPubdataByte: gasPerPubdataByte,
-// 		calldata: calldata,
-// 		l2Value: l2Value,
-// 	});
-// }
+/**
+ * Returns an estimation of the L2 gas required for token bridging via the custom ERC20 bridge.
+ *
+ * @param providerL2 The zkSync provider for the L2 network.
+ * @param l1BridgeAddress The address of the custom L1 bridge.
+ * @param l2BridgeAddress The address of the custom L2 bridge.
+ * @param token The address of the token to be bridged.
+ * @param amount The deposit amount.
+ * @param to The recipient address on the L2 network.
+ * @param bridgeData Additional bridge data.
+ * @param from The sender address on the L1 network.
+ * @param gasPerPubdataByte The current gas per byte of pubdata.
+ * @param l2Value The `msg.value` of L2 transaction.
+ *
+ * @see
+ * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#custom-bridges-on-l1-and-l2 Custom bridges documentation}.
+ *
+ * @example
+ *
+ *
+ */
+export async function estimateCustomBridgeDepositL2Gas(
+	providerL2: RpcMethods,
+	l1BridgeAddress: web3.Address,
+	l2BridgeAddress: web3.Address,
+	token: web3.Address,
+	amount: web3Types.Numbers,
+	to: web3.Address,
+	bridgeData: web3Types.Bytes,
+	from: web3.Address,
+	gasPerPubdataByte?: web3Types.Numbers,
+	l2Value?: web3Types.Numbers,
+): Promise<web3Types.Numbers> {
+	const calldata = await getERC20BridgeCalldata(token, from, to, amount, bridgeData);
+	return await providerL2.estimateL1ToL2Execute({
+		caller: applyL1ToL2Alias(l1BridgeAddress),
+		contractAddress: l2BridgeAddress,
+		gasPerPubdataByte: gasPerPubdataByte,
+		calldata: calldata,
+		l2Value: l2Value,
+	});
+}
 
 /**
  * Creates a JSON string from an object, including support for serializing bigint types.
