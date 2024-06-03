@@ -1,3 +1,6 @@
+import { Web3 } from 'web3';
+import * as web3Accounts from 'web3-eth-accounts';
+
 import {
 	// types,
 	utils,
@@ -277,4 +280,20 @@ describe('utils', () => {
 	// 		expect(result).toEqual(tx);
 	// 	});
 	// });
+	describe('#isMessageSignatureCorrect()', () => {
+		it.only('should return true if signature made by a private key was correct', async () => {
+			const wallet = web3Accounts.create();
+			const ADDRESS = wallet.address;
+			const message = 'Hello, world!';
+			const signature = wallet.sign(message).signature;
+			const web3 = new Web3();
+			const isValidSignature = await utils.isMessageSignatureCorrect(
+				web3,
+				ADDRESS,
+				message,
+				signature,
+			);
+			expect(isValidSignature).toBe(true);
+		});
+	});
 });
