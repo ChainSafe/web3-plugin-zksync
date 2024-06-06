@@ -1,4 +1,4 @@
-import * as web3Types from 'web3-types';
+import type * as web3Types from 'web3-types';
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -155,18 +155,18 @@ export const REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT = 800;
  */
 export const EIP712_TYPES = {
 	Transaction: [
-	  {name: 'txType', type: 'uint256'},
-	  {name: 'from', type: 'uint256'},
-	  {name: 'to', type: 'uint256'},
-	  {name: 'gasLimit', type: 'uint256'},
-	  {name: 'gasPerPubdataByteLimit', type: 'uint256'},
-	  {name: 'maxFeePerGas', type: 'uint256'},
-	  {name: 'maxPriorityFeePerGas', type: 'uint256'},
-	  {name: 'paymaster', type: 'uint256'},
-	  {name: 'nonce', type: 'uint256'},
-	  {name: 'value', type: 'uint256'},
-	  {name: 'data', type: 'bytes'},
-	  {name: 'factoryDeps', type: 'bytes32[]'},
-	  {name: 'paymasterInput', type: 'bytes'},
+		{ name: 'txType', type: 'uint256' },
+		{ name: 'from', type: 'uint256' },
+		{ name: 'to', type: 'uint256' },
+		{ name: 'gasLimit', type: 'uint256' },
+		{ name: 'gasPerPubdataByteLimit', type: 'uint256' },
+		{ name: 'maxFeePerGas', type: 'uint256' },
+		{ name: 'maxPriorityFeePerGas', type: 'uint256' },
+		{ name: 'paymaster', type: 'uint256' },
+		{ name: 'nonce', type: 'uint256' },
+		{ name: 'value', type: 'uint256' },
+		{ name: 'data', type: 'bytes' },
+		{ name: 'factoryDeps', type: 'bytes32[]' },
+		{ name: 'paymasterInput', type: 'bytes' },
 	],
-  };
+};

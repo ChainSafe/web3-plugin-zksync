@@ -13,10 +13,12 @@ import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Contract from 'web3-eth-contract';
 
-import {
+import type {
 	DeploymentInfo,
 	// Eip712Meta,
 	EthereumSignature,
+} from './types';
+import {
 	// PaymasterParams,
 	PriorityOpTree,
 	PriorityQueueType,
@@ -50,7 +52,7 @@ import {
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import { RpcMethods } from './rpc.methods'; // to be used instead of the one at zksync-ethers: Provider from ./provider
+import type { RpcMethods } from './rpc.methods'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -171,7 +173,7 @@ export class SignatureObject {
 				throw new Error('Invalid signature length');
 			}
 			// Initialize with a single string parameter
-			const signature = rOrSignature as string;
+			const signature = rOrSignature;
 			this.r = web3Accounts.toUint8Array(signature.slice(0, 66));
 			this.s = web3Accounts.toUint8Array(`0x${signature.slice(66, 130)}`);
 			this.v = BigInt(web3Utils.hexToNumber(`0x${signature.slice(130, 132)}`));
@@ -319,7 +321,8 @@ export function getDeployedContracts(receipt: web3Types.TransactionReceipt): Dep
 			.filter(
 				log =>
 					log.topics &&
-					log.topics[0] === contractFunctionId('ContractDeployed(address,bytes32,address)') &&
+					log.topics[0] ===
+						contractFunctionId('ContractDeployed(address,bytes32,address)') &&
 					log.address &&
 					isAddressEq(log.address, CONTRACT_DEPLOYER_ADDRESS),
 			)
@@ -362,7 +365,9 @@ export function create2Address(
 	const prefix = web3Utils.keccak256(web3Utils.utf8ToBytes('zksyncCreate2'));
 	const inputHash = web3Utils.keccak256(input);
 	const addressBytes = web3Utils
-		.keccak256(concat([prefix, web3Utils.padLeft(sender, 32 * 2), salt, bytecodeHash, inputHash]))
+		.keccak256(
+			concat([prefix, web3Utils.padLeft(sender, 32 * 2), salt, bytecodeHash, inputHash]),
+		)
 		.slice(26);
 	return web3Utils.toChecksumAddress(addressBytes);
 }
@@ -421,94 +426,6 @@ export async function checkBaseCost(
 		);
 	}
 }
-
-// /**
-//  * Serializes an EIP712 transaction and includes a signature if provided.
-//  *
-//  * @param transaction The transaction that needs to be serialized.
-//  * @param signature Ethers signature to be included in the transaction.
-//  * @throws {Error} Throws an error if:
-//  * - `transaction.customData.customSignature` is an empty string. The transaction should be signed, and the `transaction.customData.customSignature` field should be populated with the signature. It should not be specified if the transaction is not signed.
-//  * - `transaction.chainId` is not provided.
-//  * - `transaction.from` is not provided.
-//  *
-//  * @example Serialize EIP712 transaction without signature.
-//  *
-//  * const serializedTx = utils.serializeEip712({ chainId: 270, from: "0x36615Cf349d7F6344891B1e7CA7C72883F5dc049" }, null);
-//  *
-//  * // serializedTx = "0x71ea8080808080808082010e808082010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0"
-//  *
-//  * @example Serialize EIP712 transaction with signature.
-//  *
-//  * const signature = ethers.Signature.from("0x73a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aaf87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a");
-//  *
-//  * const serializedTx = utils.serializeEip712(
-//  *   {
-//  *     chainId: 270,
-//  *     from: "0x36615Cf349d7F6344891B1e7CA7C72883F5dc049",
-//  *     to: "0xa61464658AfeAf65CccaaFD3a512b69A83B77618",
-//  *     value: 1_000_000,
-//  *   },
-//  *   signature
-//  * );
-//  * // serializedTx = "0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0"
-//  */
-// export function serializeEip712(transaction: TransactionLike, signature?: SignatureLike): string {
-// 	if (!transaction.chainId) {
-// 		throw Error("Transaction chainId isn't set!");
-// 	}
-
-// 	if (!transaction.from) {
-// 		throw new Error('Explicitly providing `from` field is required for EIP712 transactions!');
-// 	}
-// 	const from = transaction.from;
-// 	const meta: Eip712Meta = transaction.customData ?? {};
-// 	const maxFeePerGas = transaction.maxFeePerGas || transaction.gasPrice || 0;
-// 	const maxPriorityFeePerGas = transaction.maxPriorityFeePerGas || maxFeePerGas;
-
-// 	const fields: any[] = [
-// 		toBytes(transaction.nonce || 0),
-// 		toBytes(maxPriorityFeePerGas),
-// 		toBytes(maxFeePerGas),
-// 		toBytes(transaction.gasLimit || 0),
-// 		transaction.to ? web3Utils.toChecksumAddress(transaction.to) : '0x',
-// 		toBytes(transaction.value || 0),
-// 		transaction.data || '0x',
-// 	];
-
-// 	if (signature) {
-// 		const sig = new SignatureObject(signature);
-// 		fields.push(toBytes(sig.yParity));
-// 		fields.push(toBytes(sig.r));
-// 		fields.push(toBytes(sig.s));
-// 	} else {
-// 		fields.push(toBytes(transaction.chainId));
-// 		fields.push('0x');
-// 		fields.push('0x');
-// 	}
-// 	fields.push(toBytes(transaction.chainId));
-// 	fields.push(web3Utils.toChecksumAddress(from));
-
-// 	// Add meta
-// 	fields.push(toBytes(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
-// 	fields.push((meta.factoryDeps ?? []).map(dep => web3Utils.toHex(dep)));
-
-// 	if (meta.customSignature && web3Utils.bytesToUint8Array(meta.customSignature).length === 0) {
-// 		throw new Error('Empty signatures are not supported!');
-// 	}
-// 	fields.push(meta.customSignature || '0x');
-
-// 	if (meta.paymasterParams) {
-// 		fields.push([
-// 			meta.paymasterParams.paymaster,
-// 			web3Utils.toHex(meta.paymasterParams.paymasterInput),
-// 		]);
-// 	} else {
-// 		fields.push([]);
-// 	}
-
-// 	return concat([new Uint8Array([EIP712_TX_TYPE]), RLP.encode(fields)]);
-// }
 
 /**
  * Returns the hash of the given bytecode.
@@ -687,8 +604,12 @@ export function getSignature(transaction: any, ethSignature?: EthereumSignature)
 		throw new Error('No signature provided!');
 	}
 
-	const r = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.r), 32 * 2));
-	const s = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.s), 32 * 2));
+	const r = web3Utils.bytesToUint8Array(
+		web3Utils.padLeft(web3Utils.toHex(ethSignature.r), 32 * 2),
+	);
+	const s = web3Utils.bytesToUint8Array(
+		web3Utils.padLeft(web3Utils.toHex(ethSignature.s), 32 * 2),
+	);
 	const v = ethSignature.v;
 
 	return new Uint8Array([...r, ...s, v]);
@@ -947,7 +868,12 @@ async function isSignatureCorrect(
 	msgHash: string,
 	signature: SignatureLike,
 ): Promise<boolean> {
-	const code = await web3.eth.getCode(context, address, undefined, web3Types.DEFAULT_RETURN_FORMAT);
+	const code = await web3.eth.getCode(
+		context,
+		address,
+		undefined,
+		web3Types.DEFAULT_RETURN_FORMAT,
+	);
 	const isContractAccount = web3Utils.bytesToUint8Array(code).length !== 0;
 
 	if (!isContractAccount) {

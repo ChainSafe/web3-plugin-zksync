@@ -1,11 +1,9 @@
-export type { Bytes, HexString, Numbers } from 'web3-types';
-
 // import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
 
 // // TODO: // is it needed to be re-exported from web3
 // import { watchTransactionForConfirmations } from 'web3-eth/lib/types/utils/watch_transaction_for_confirmations.js';
 
-import {
+import type {
 	Bytes,
 	HexString,
 	Numbers,
@@ -15,7 +13,7 @@ import {
 	TransactionReceipt,
 } from 'web3-types';
 
-import {
+import type {
 	//  FeeMarketEIP1559Transaction,
 	FeeMarketEIP1559TxData,
 	//  TxOptions
@@ -30,7 +28,9 @@ import {
 // 	isAddressEq,
 // } from './utils';
 
-import { RpcMethods } from './rpc.methods';
+import type { RpcMethods } from './rpc.methods';
+
+export type { Bytes, HexString, Numbers } from 'web3-types';
 export interface TransactionOverrides extends Omit<Transaction, 'to' | 'data' | 'input'> {}
 
 export const ZeroAddress: Address = '0x0000000000000000000000000000000000000000';
@@ -701,17 +701,17 @@ export interface TransactionDetails {
 /** Represents the full deposit fee containing fees for both L1 and L2 transactions. */
 export interface FullDepositFee {
 	/** The maximum fee per gas for L1 transaction. */
-	maxFeePerGas?: BigInt;
+	maxFeePerGas?: bigint;
 	/** The maximum priority fee per gas for L1 transaction. */
-	maxPriorityFeePerGas?: BigInt;
+	maxPriorityFeePerGas?: bigint;
 	/** The gas price for L2 transaction. */
-	gasPrice?: BigInt;
+	gasPrice?: bigint;
 	/** The base cost of the deposit transaction on L2. */
-	baseCost: BigInt;
+	baseCost: bigint;
 	/** The gas limit for L1 transaction. */
-	l1GasLimit: BigInt;
+	l1GasLimit: bigint;
 	/** The gas limit for L2 transaction. */
-	l2GasLimit: BigInt;
+	l2GasLimit: bigint;
 }
 
 /** Represents a raw block transaction. */

@@ -1,6 +1,6 @@
 import type { Web3RequestManager } from 'web3-core';
 import * as web3Utils from 'web3-utils';
-import * as web3Types from 'web3-types';
+import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import {
 	DEFAULT_RETURN_FORMAT,
@@ -105,7 +105,9 @@ export class RpcMethods {
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
-	public async getL1BatchNumber(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<bigint> {
+	public async getL1BatchNumber(
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<bigint> {
 		return web3Utils.format(
 			IntSchema,
 			await this._send('zks_L1BatchNumber', []),
@@ -204,7 +206,11 @@ export class RpcMethods {
 		]);
 		if (Array.isArray(result)) {
 			return result.map(tx => {
-				return web3Utils.format(RawBlockTransactionSchema, tx, returnFormat) as RawBlockTransaction;
+				return web3Utils.format(
+					RawBlockTransactionSchema,
+					tx,
+					returnFormat,
+				) as RawBlockTransaction;
 			});
 		}
 		return [];
@@ -404,7 +410,9 @@ export class RpcMethods {
 		const res = (await this._send('zks_getProof', [
 			address,
 			keys,
-			typeof l1BatchNumber === 'number' ? l1BatchNumber : Number(web3Utils.toNumber(l1BatchNumber)),
+			typeof l1BatchNumber === 'number'
+				? l1BatchNumber
+				: Number(web3Utils.toNumber(l1BatchNumber)),
 		])) as StorageProof;
 		const result = web3Utils.format(ProofSchema, res, returnFormat) as StorageProof;
 		result.storageProof = [];

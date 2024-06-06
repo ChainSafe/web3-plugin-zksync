@@ -1,10 +1,12 @@
 import type { Address } from 'web3';
 import { Web3PluginBase, Contract } from 'web3';
 import type { Web3RequestManager } from 'web3-core';
+import { TransactionFactory } from 'web3-eth-accounts';
 import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
 import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
+import { EIP712Transaction, EIP712_TX_TYPE } from './eip712/EIP712Transaction';
 
 export class ZkSyncPlugin extends Web3PluginBase {
 	public pluginNamespace = 'zkSync';
@@ -25,6 +27,8 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this.wethBridgeL2 = '';
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
+		// @ts-ignore
+		TransactionFactory.registerTransactionType(EIP712_TX_TYPE, EIP712Transaction);
 	}
 
 	/**
@@ -32,7 +36,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 */
 	get rpc(): RpcMethods {
 		if (!this._rpc) {
-			this._rpc = new RpcMethods(this.requestManager as unknown as Web3RequestManager<unknown>);
+			this._rpc = new RpcMethods(
+				this.requestManager as unknown as Web3RequestManager<unknown>,
+			);
 		}
 		return this._rpc;
 	}
@@ -102,7 +108,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l1Token;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
@@ -128,7 +136,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l2WethToken;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
