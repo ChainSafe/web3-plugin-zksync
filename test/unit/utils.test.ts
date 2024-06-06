@@ -296,4 +296,72 @@ describe('utils', () => {
 			expect(isValidSignature).toBe(true);
 		});
 	});
+
+	describe('#isTypedDataSignatureCorrect()', () => {
+		// TODO: Needs investigation
+		it.skip('should return true if correct', async () => {
+			// const wallet = web3Accounts.create();
+			// const ADDRESS = wallet.address;
+			// const PRIVATE_KEY = wallet.privateKey;
+
+			const ADDRESS = '0x99F3629e38c617cb619682f721Aaf9F61a3DE3d3';
+			const PRIVATE_KEY = '0x5b032dc95add073bbacb2a2cbe0d667855cca807abe1461c72257b7ee0d7d334';
+			console.log('ADDRESS', ADDRESS);
+			console.log('PRIVATE_KEY', PRIVATE_KEY);
+
+			const web3 = new Web3();
+
+			const tx = {
+				type: 113,
+				chainId: 300,
+				from: ADDRESS,
+				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
+				value: BigInt(7_000_000),
+			};
+
+			// const eip712Signer = new EIP712Signer(new Wallet(PRIVATE_KEY), web3.config.chainId);
+
+			// const signInput = EIP712Signer.getSignInput(tx);
+
+			const signInput = {
+				txType: 113,
+				from: '0x99F3629e38c617cb619682f721Aaf9F61a3DE3d3',
+				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
+				gasLimit: 0n,
+				gasPerPubdataByteLimit: 50000,
+				maxFeePerGas: 0n,
+				maxPriorityFeePerGas: 0n,
+				paymaster: '0x0000000000000000000000000000000000000000',
+				nonce: 0,
+				value: 7000000n,
+				data: '0x',
+				factoryDeps: [],
+				paymasterInput: '0x',
+			};
+			const domain = {
+				name: 'zkSync',
+				version: '2',
+				chainId: tx.chainId,
+			};
+			console.log('domain', domain);
+
+			// const signature = await eip712Signer.sign(tx);
+
+			const signature =
+				'0x14920a5306c8b739fd2fbdd6bb933c54c05391ab9454741b5fa1132c31c6f35d4f8a716939e43df6eb660b5298d8354d08710a0d94e8d0c14dc88032cac5deda1b';
+			console.log('signature\n\t', signature);
+
+			const isValidSignature = await utils.isTypedDataSignatureCorrect(
+				web3,
+				ADDRESS,
+				domain,
+				constants.EIP712_TYPES,
+				signInput,
+				signature,
+			);
+			console.log('isValidSignature', isValidSignature);
+			expect(isValidSignature).toBe(true);
+		});
+	});
+	
 });
