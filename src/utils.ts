@@ -139,7 +139,7 @@ function recoverSignerAddress(
 ) {
 	let message;
 	if (typeof messageOrData !== 'string') {
-		message = web3Abi.getEncodedEip712Data(messageOrData, true);
+		message = web3Abi.getEncodedEip712Data(messageOrData);
 	} else {
 		message = messageOrData;
 	}
@@ -321,8 +321,7 @@ export function getDeployedContracts(receipt: web3Types.TransactionReceipt): Dep
 			.filter(
 				log =>
 					log.topics &&
-					log.topics[0] ===
-						contractFunctionId('ContractDeployed(address,bytes32,address)') &&
+					log.topics[0] === contractFunctionId('ContractDeployed(address,bytes32,address)') &&
 					log.address &&
 					isAddressEq(log.address, CONTRACT_DEPLOYER_ADDRESS),
 			)
@@ -365,9 +364,7 @@ export function create2Address(
 	const prefix = web3Utils.keccak256(web3Utils.utf8ToBytes('zksyncCreate2'));
 	const inputHash = web3Utils.keccak256(input);
 	const addressBytes = web3Utils
-		.keccak256(
-			concat([prefix, web3Utils.padLeft(sender, 32 * 2), salt, bytecodeHash, inputHash]),
-		)
+		.keccak256(concat([prefix, web3Utils.padLeft(sender, 32 * 2), salt, bytecodeHash, inputHash]))
 		.slice(26);
 	return web3Utils.toChecksumAddress(addressBytes);
 }
@@ -604,12 +601,8 @@ export function getSignature(transaction: any, ethSignature?: EthereumSignature)
 		throw new Error('No signature provided!');
 	}
 
-	const r = web3Utils.bytesToUint8Array(
-		web3Utils.padLeft(web3Utils.toHex(ethSignature.r), 32 * 2),
-	);
-	const s = web3Utils.bytesToUint8Array(
-		web3Utils.padLeft(web3Utils.toHex(ethSignature.s), 32 * 2),
-	);
+	const r = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.r), 32 * 2));
+	const s = web3Utils.bytesToUint8Array(web3Utils.padLeft(web3Utils.toHex(ethSignature.s), 32 * 2));
 	const v = ethSignature.v;
 
 	return new Uint8Array([...r, ...s, v]);
@@ -781,38 +774,37 @@ export async function getERC20BridgeCalldata(
 }
 
 /**
- * Validates signatures from non-contract account addresses (EOA).
- * Provides similar functionality to `ethers.js` but returns `true`
+ * Validates signatures from non-contract account addresses (EOA: Externally Owned Account).
+ * Provides similar functionality to `new Web3().eth.accounts.recover(message, v, r, s)` but returns `true`
  * if the validation process succeeds, otherwise returns `false`.
  *
  * Called from {@link isSignatureCorrect} for non-contract account addresses.
  *
  * @param address The address which signs the `msgHash`.
- * @param msgHash The hash of the message.
+ * @param message The message which its hash had been signed early.
  * @param signature The Ethers signature.
  *
  * @example
  *
- * import { Wallet, utils } from "zksync-ethers";
+ * import * as web3Accounts from 'web3-eth-accounts';
  *
- * const ADDRESS = "<WALLET_ADDRESS>";
- * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
+ * const wallet = web3Accounts.create();
+ * const ADDRESS = wallet.address;
+ * const PRIVATE_KEY = wallet.privateKey;
  *
  * const message = "Hello, world!";
- * const signature = await new Wallet(PRIVATE_KEY).signMessage(message);
- * // ethers.Wallet can be used as well
- * // const signature =  await new ethers.Wallet(PRIVATE_KEY).signMessage(message);
  *
+ * const signature = web3Accounts.sign(message, PRIVATE_KEY).signature;
  * const isValidSignature = await utils.isECDSASignatureCorrect(ADDRESS, message, signature);
  * // isValidSignature = true
  */
 function isECDSASignatureCorrect(
 	address: string,
-	msgHash: string,
+	message: string | web3Types.Eip712TypedData,
 	signature: SignatureLike,
 ): boolean {
 	try {
-		return isAddressEq(address, recoverSignerAddress(msgHash, signature));
+		return isAddressEq(address, recoverSignerAddress(message, signature));
 	} catch {
 		// In case ECDSA signature verification has thrown an error,
 		// we simply consider the signature as incorrect.
@@ -859,26 +851,32 @@ async function isEIP1271SignatureCorrect(
  *
  * @param context The web3 context.
  * @param address The sender address.
- * @param msgHash The hash of the message.
+ * @param message The message which its hash had been signed early.
  * @param signature The Ethers signature.
  */
 async function isSignatureCorrect(
 	context: web3.Web3Context, // or maybe use RpcMethods?
 	address: string,
-	msgHash: string,
+	message: string | web3Types.Eip712TypedData,
 	signature: SignatureLike,
 ): Promise<boolean> {
-	const code = await web3.eth.getCode(
-		context,
-		address,
-		undefined,
-		web3Types.DEFAULT_RETURN_FORMAT,
-	);
-	const isContractAccount = web3Utils.bytesToUint8Array(code).length !== 0;
+	let isContractAccount;
+	if (context.provider) {
+		const code = await web3.eth.getCode(
+			context,
+			address,
+			undefined,
+			web3Types.DEFAULT_RETURN_FORMAT,
+		);
+		isContractAccount = web3Utils.bytesToUint8Array(code).length !== 0;
+	}
 
 	if (!isContractAccount) {
-		return isECDSASignatureCorrect(address, msgHash, signature);
+		return isECDSASignatureCorrect(address, message, signature);
 	} else {
+		const msgHash = web3Accounts.hashMessage(
+			typeof message === 'string' ? message : web3Utils.bytesToHex(message as unknown as string),
+		);
 		return await isEIP1271SignatureCorrect(context, address, msgHash, signature);
 	}
 }
@@ -894,18 +892,22 @@ async function isSignatureCorrect(
  *
  * @example
  *
- * import { Wallet, utils, Provider } from "zksync-ethers";
+ * import { Web3 } from 'web3';
+ * import * as web3Accounts from 'web3-eth-accounts';
  *
- * const ADDRESS = "<WALLET_ADDRESS>";
- * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
- * const context = Provider.getDefaultProvider(types.Network.Sepolia);
+ * const wallet = web3Accounts.create();
+ * const ADDRESS = wallet.address;
+ * const PRIVATE_KEY = wallet.privateKey;
+ * const context = new Web3('some-rpc-url');
  *
  * const message = "Hello, world!";
  * const signature = await new Wallet(PRIVATE_KEY).signMessage(message);
- * // ethers.Wallet can be used as well
- * // const signature =  await new ethers.Wallet(PRIVATE_KEY).signMessage(message);
- *
- * const isValidSignature = await utils.isMessageSignatureCorrect(context, ADDRESS, message, signature);
+ * const isValidSignature = await utils.isMessageSignatureCorrect(
+ * 			web3,
+ * 			ADDRESS,
+ * 			message,
+ * 			signature,
+ * 		);
  * // isValidSignature = true
  */
 export async function isMessageSignatureCorrect(
@@ -914,10 +916,7 @@ export async function isMessageSignatureCorrect(
 	message: Uint8Array | string,
 	signature: SignatureLike,
 ): Promise<boolean> {
-	const msgHash = web3Accounts.hashMessage(
-		typeof message === 'string' ? message : web3Utils.bytesToHex(message),
-	);
-	return await isSignatureCorrect(context, address, msgHash, signature);
+	return await isSignatureCorrect(context, address, web3Utils.toHex(message), signature);
 }
 
 /**
@@ -932,7 +931,7 @@ export async function isMessageSignatureCorrect(
  *
  * @example
  *
- * import { Wallet, utils, constants, Provider, EIP712Signer } from "zksync-ethers";
+ * import { Wallet, utils, constants, Provider, EIP712Signer } from "web3-plugin-zksync";
  *
  * const ADDRESS = "<WALLET_ADDRESS>";
  * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
@@ -947,7 +946,7 @@ export async function isMessageSignatureCorrect(
  * };
  *
  * const eip712Signer = new EIP712Signer(
- *   new Wallet(PRIVATE_KEY), // or new ethers.Wallet(PRIVATE_KEY),
+ *   new Wallet(PRIVATE_KEY), // or web3Accounts.privateKeyToAccount(PRIVATE_KEY),
  *   Number((await context.getNetwork()).chainId)
  * );
  *
@@ -959,20 +958,22 @@ export async function isMessageSignatureCorrect(
 export async function isTypedDataSignatureCorrect(
 	context: web3.Web3Context, // or maybe use RpcMethods?
 	address: string,
-	domain: Extract<web3Types.Eip712TypedData, 'domain'>,
-	types: Extract<web3Types.Eip712TypedData, 'types'>,
-	primaryType: Extract<web3Types.Eip712TypedData, 'primaryType'>,
+	domain: web3Types.Eip712TypedData['domain'],
+	types: web3Types.Eip712TypedData['types'],
 	value: Record<string, any>,
-	signature: EthereumSignature,
+	signature: SignatureLike,
 ): Promise<boolean> {
 	const data: web3Types.Eip712TypedData = {
 		domain,
 		types,
-		primaryType,
+		primaryType: 'Transaction',
 		message: value,
 	};
-	const msgHash = web3Abi.getEncodedEip712Data(data);
-	return await isSignatureCorrect(context, address, msgHash, signature);
+	// could be also:
+	// const message = web3Abi.getEncodedEip712Data(data);
+	// return await isSignatureCorrect(context, address, message, signature);
+
+	return await isSignatureCorrect(context, address, data, signature);
 }
 
 /**
