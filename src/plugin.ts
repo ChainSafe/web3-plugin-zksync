@@ -26,7 +26,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	public _rpc?: RpcMethods;
 	public _l2BridgeContracts: Record<Address, Contract<typeof IL2BridgeABI>>;
 	public _erc20Contracts: Record<Address, Contract<typeof IERC20ABI>>;
-	Contracts: {
+	public Contracts: {
 		/**
 		 * The web3.js Contract instance for the `ZkSync` interface.
 		 */
@@ -74,67 +74,33 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this.wethBridgeL2 = '';
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
+		this.Contracts = {
+			ZkSyncMainContract: new Contract(IZkSyncABI, ''),
+			BridgehubContract: new Contract(IBridgehubABI, ''),
+			ContractDeployerContract: new Contract(IContractDeployerABI, ''),
+			L1MessengerContract: new Contract(IL1MessengerABI, ''),
+			IERC20Contract: new Contract(IERC20ABI, ''),
+			IERC1271Contract: new Contract(IERC1271ABI, ''),
+			L1BridgeContract: new Contract(IL1BridgeABI, ''),
+			L2BridgeContract: new Contract(IL2BridgeABI, ''),
+			NonceHolderContract: new Contract(INonceHolderABI, ''),
+		};
 
-		this.initializeContractsInstances();
+		this.fillContractsAddresses();
 	}
 
-	private async initializeContractsInstances() {
-		// TODO: optionally fetch and set the contract addresses from the Adapter once methods like getBridgehubContract and getDefaultBridgeAddresses are implemented
-		this.Contracts = {
-			/**
-			 * The web3.js Contract instance for the `ZkSync` interface.
-			 * @constant
-			 */
-			ZkSyncMainContract: new Contract(IZkSyncABI),
-
-			/**
-			 * The ABI of the `Bridgehub` interface.
-			 * @constant
-			 */
-			BridgehubContract: new Contract(IBridgehubABI),
-
-			/**
-			 * The web3.js Contract instance for the `IContractDeployer` interface, which is utilized for deploying smart contracts.
-			 * @constant
-			 */
-			ContractDeployerContract: new Contract(IContractDeployerABI),
-
-			/**
-			 * The web3.js Contract instance for the `IL1Messenger` interface, which is utilized for sending messages from the L2 to L1.
-			 * @constant
-			 */
-			L1MessengerContract: new Contract(IL1MessengerABI),
-
-			/**
-			 * The web3.js Contract instance for the `IERC20` interface, which is utilized for interacting with ERC20 tokens.
-			 * @constant
-			 */
-			IERC20Contract: new Contract(IERC20ABI),
-
-			/**
-			 * The web3.js Contract instance for the `IERC1271` interface, which is utilized for signature validation by contracts.
-			 * @constant
-			 */
-			IERC1271Contract: new Contract(IERC1271ABI),
-
-			/**
-			 * The web3.js Contract instance for the `IL1Bridge` interface, which is utilized for transferring ERC20 tokens from L1 to L2.
-			 * @constant
-			 */
-			L1BridgeContract: new Contract(IL1BridgeABI),
-
-			/**
-			 * The web3.js Contract instance for the `IL2Bridge` interface, which is utilized for transferring ERC20 tokens from L2 to L1.
-			 * @constant
-			 */
-			L2BridgeContract: new Contract(IL2BridgeABI),
-
-			/**
-			 * The web3.js Contract instance for the `INonceHolder` interface, which is utilized for managing deployment nonces.
-			 * @constant
-			 */
-			NonceHolderContract: new Contract(INonceHolderABI),
-		};
+	private async fillContractsAddresses() {
+		// TODO: optionally fetch and set the contract addresses from the Adapter,
+		// nonce methods like getBridgehubContract and getDefaultBridgeAddresses are implemented.
+		// this.Contracts.ZkSyncMainContract.options.address =
+		// this.Contracts.BridgehubContract.options.address =
+		// this.Contracts.ContractDeployerContract.options.address =
+		// this.Contracts.L1MessengerContract.options.address =
+		// this.Contracts.IERC20Contract.options.address =
+		// this.Contracts.IERC1271Contract.options.address =
+		// this.Contracts.L1BridgeContract.options.address =
+		// this.Contracts.L2BridgeContract.options.address =
+		// this.Contracts.NonceHolderContract.options.address =
 	}
 
 	public link(parentContext: Web3Context): void {

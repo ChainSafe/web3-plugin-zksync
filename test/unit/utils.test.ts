@@ -281,7 +281,7 @@ describe('utils', () => {
 	// 	});
 	// });
 	describe('#isMessageSignatureCorrect()', () => {
-		it.only('should return true if signature made by a private key was correct', async () => {
+		it('should return true if signature made by a private key was correct', async () => {
 			const wallet = web3Accounts.create();
 			const ADDRESS = wallet.address;
 			const message = 'Hello, world!';
