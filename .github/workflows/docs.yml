@@ -27,15 +27,15 @@ jobs:
       matrix:
         node: [18, 20]
     name: Build Docs
-        runs-on: ubuntu-latest
-        steps:
-          - uses: actions/checkout@v4
-          - uses: actions/setup-node@v4
-            with:
-              node-version: ${{ matrix.node }}
-              cache: yarn
-          - run: yarn install
-          - run: npx typedoc src/index.ts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+      - run: yarn install
+      - run: npx typedoc src/index.ts
   # Single deploy job since we're just deploying
   deploy:
     environment:
@@ -43,14 +43,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
+          # Upload docs
           path: 'docs'
       - name: Deploy to GitHub Pages
         id: deployment
