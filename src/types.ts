@@ -393,15 +393,6 @@ export interface zkSyncTxData extends FeeMarketEIP1559TxData {
 // }
 
 // /**
-//  * A `TransactionLike` is an extension of {@link ethers.TransactionLike} with additional features for interacting
-//  * with zkSync Era.
-//  */
-// export interface TransactionLike extends ethers.TransactionLike {
-// 	/** The custom data for EIP712 transaction metadata. */
-// 	customData?: null | Eip712Meta;
-// }
-
-// /**
 //  * A `Transaction` is an extension of {@link ethers.Transaction} with additional features for interacting
 //  * with zkSync Era.
 //  */

@@ -66,6 +66,8 @@ export type Eip712TxData = FeeMarketEIP1559TxData & {
 	/** The custom data for EIP712 transaction metadata. */
 	customData?: null | Eip712Meta;
 	from?: Address;
+	hash?: string;
+	signature?: string;
 };
 
 export const EIP712_TYPES = {

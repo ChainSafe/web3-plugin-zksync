@@ -125,7 +125,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 */
 	get rpc(): RpcMethods {
 		if (!this._rpc) {
-			this._rpc = new RpcMethods(this.requestManager as unknown as Web3RequestManager<unknown>);
+			this._rpc = new RpcMethods(
+				this.requestManager as unknown as Web3RequestManager<unknown>,
+			);
 		}
 		return this._rpc;
 	}
@@ -195,7 +197,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l1Token;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
@@ -221,7 +225,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l2WethToken;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
