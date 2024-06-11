@@ -1,5 +1,5 @@
 // import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
-
+import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
 // // TODO: // is it needed to be re-exported from web3
 // import { watchTransactionForConfirmations } from 'web3-eth/lib/types/utils/watch_transaction_for_confirmations.js';
 
@@ -13,11 +13,10 @@ import type {
 	TransactionReceipt,
 } from 'web3-types';
 
-import type {
-	//  FeeMarketEIP1559Transaction,
-	FeeMarketEIP1559TxData,
-	//  TxOptions
-} from 'web3-eth-accounts';
+// import type {
+//  FeeMarketEIP1559Transaction,
+//  TxOptions
+// } from 'web3-eth-accounts';
 
 // import {
 // 	EIP712_TX_TYPE,
@@ -832,3 +831,71 @@ export interface EstimateFee {
 	max_fee_per_gas: Numbers;
 	max_priority_fee_per_gas: Numbers;
 }
+
+export interface TypedDataDomain {
+	/**
+	 *  The human-readable name of the signing domain.
+	 */
+	name?: null | string;
+
+	/**
+	 *  The major version of the signing domain.
+	 */
+	version?: null | string;
+
+	/**
+	 *  The chain ID of the signing domain.
+	 */
+	chainId?: null | Numbers;
+
+	/**
+	 *  The the address of the contract that will verify the signature.
+	 */
+	verifyingContract?: null | string;
+
+	/**
+	 *  A salt used for purposes decided by the specific domain.
+	 */
+	salt?: null | Bytes;
+}
+
+/**
+ *  A specific field of a structured [[link-eip-712]] type.
+ */
+export interface TypedDataField {
+	/**
+	 *  The field name.
+	 */
+	name: string;
+
+	/**
+	 *  The type of the field.
+	 */
+	type: string;
+}
+
+export type Eip712TxData = FeeMarketEIP1559TxData & {
+	/** The custom data for EIP712 transaction metadata. */
+	customData?: null | Eip712Meta;
+	from?: Address;
+	hash?: string;
+	signature?: string;
+};
+
+export const EIP712_TYPES = {
+	Transaction: [
+		{ name: 'txType', type: 'uint256' },
+		{ name: 'from', type: 'uint256' },
+		{ name: 'to', type: 'uint256' },
+		{ name: 'gasLimit', type: 'uint256' },
+		{ name: 'gasPerPubdataByteLimit', type: 'uint256' },
+		{ name: 'maxFeePerGas', type: 'uint256' },
+		{ name: 'maxPriorityFeePerGas', type: 'uint256' },
+		{ name: 'paymaster', type: 'uint256' },
+		{ name: 'nonce', type: 'uint256' },
+		{ name: 'value', type: 'uint256' },
+		{ name: 'data', type: 'bytes' },
+		{ name: 'factoryDeps', type: 'bytes32[]' },
+		{ name: 'paymasterInput', type: 'bytes' },
+	],
+};

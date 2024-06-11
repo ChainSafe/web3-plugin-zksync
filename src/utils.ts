@@ -16,7 +16,13 @@ import { RLP } from '@ethereumjs/rlp'; // to be used instead of the one at zksyn
 import { bytesToHex, toBigInt, toHex } from 'web3-utils';
 import type { Address } from 'web3';
 import type { Bytes, Eip712TypedData } from 'web3-types';
-import type { DeploymentInfo, Eip712Meta, EthereumSignature, PaymasterParams } from './types';
+import type {
+	DeploymentInfo,
+	Eip712Meta,
+	Eip712TxData,
+	EthereumSignature,
+	PaymasterParams,
+} from './types';
 import {
 	// PaymasterParams,
 	PriorityOpTree,
@@ -55,7 +61,6 @@ import {
 } from './constants';
 
 import type { RpcMethods } from './rpc.methods';
-import type { Eip712TxData } from './eip712/types';
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -527,6 +532,7 @@ export const getSignInput = (transaction: Eip712TxData) => {
 		transaction.customData?.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT,
 	);
 	return {
+		chainId: transaction.chainId ? toHex(transaction.chainId) : undefined,
 		txType: transaction.type || EIP712_TX_TYPE,
 		from: transaction.from ? toHex(transaction.from) : undefined,
 		to: transaction.to ? toHex(transaction.to) : undefined,
@@ -704,7 +710,9 @@ export function serializeEip712(transaction: Eip712TxData, signature?: Signature
 			? new Uint8Array()
 			: toBytes(transaction.gasLimit!),
 		transaction.to ? web3Utils.toChecksumAddress(toHex(transaction.to)) : '0x',
-		toHex(transaction.value || 0) === '0x0' ? new Uint8Array() : toBytes(nonce),
+		toHex(transaction.value || 0) === '0x0'
+			? new Uint8Array()
+			: toBytes(toHex(transaction.value || 0)),
 		toHex(transaction.data || '0x'),
 	];
 
@@ -739,6 +747,8 @@ export function serializeEip712(transaction: Eip712TxData, signature?: Signature
 	} else {
 		fields.push([]);
 	}
+
+	console.log(fields);
 
 	return concat([new Uint8Array([EIP712_TX_TYPE]), RLP.encode(fields)]);
 }

@@ -1,5 +1,4 @@
 import type { Web3Context, Web3RequestManager } from 'web3-core';
-import { TransactionFactory } from 'web3-eth-accounts';
 import type { Address } from 'web3-types';
 import { Contract } from 'web3-eth-contract';
 import { Web3PluginBase } from 'web3-core';
@@ -7,9 +6,7 @@ import { Web3PluginBase } from 'web3-core';
 import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
 import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
-
 import { IL2BridgeABI } from './contracts/IL2Bridge';
-import { EIP712Transaction, EIP712_TX_TYPE } from './eip712/EIP712Transaction';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
 import { IContractDeployerABI } from './contracts/IContractDeployer';
@@ -75,8 +72,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this.wethBridgeL2 = '';
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
-		// @ts-ignore
-		TransactionFactory.registerTransactionType(EIP712_TX_TYPE, EIP712Transaction);
 		this.Contracts = {
 			ZkSyncMainContract: new Contract(IZkSyncABI, ''),
 			BridgehubContract: new Contract(IBridgehubABI, ''),

@@ -175,3 +175,7 @@ export const EIP712_TYPES = {
 		{ name: 'paymasterInput', type: 'bytes' },
 	],
 };
+
+export const MAX_INTEGER = BigInt(
+	'0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+);
