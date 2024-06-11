@@ -15,7 +15,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-export const ERC20TokenAbi = [
+export const IERC20ABI = [
 	{
 		inputs: [{ internalType: 'uint256', name: 'initialSupply', type: 'uint256' }],
 		stateMutability: 'nonpayable',

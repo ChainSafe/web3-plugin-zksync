@@ -1,5 +1,5 @@
 import { Web3 } from 'web3';
-import { ZkSyncPlugin } from '../src';
+import { ZkSyncPlugin } from '../../src';
 
 const EXAMPLE_ERC20_TOKEN = {
 	address: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4',

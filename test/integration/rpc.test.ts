@@ -1,11 +1,11 @@
 import { Web3 } from 'web3';
-import { ZkSyncPlugin } from '../src';
+import { ZkSyncPlugin } from '../../src';
 import {
 	getBlockDetailsData,
 	getBridgeContractsData,
 	getRawBlockTransactionsData,
 	getTransactionDetailsData,
-} from './fixtures';
+} from '../fixtures';
 
 describe('ZkSyncPlugin rpc tests', () => {
 	let web3: Web3;
@@ -38,9 +38,7 @@ describe('ZkSyncPlugin rpc tests', () => {
 		expect(res).toBeDefined();
 	});
 	it('getRawBlockTransactions', async () => {
-		const res = await web3.zkSync.rpc.getRawBlockTransactions(
-			getRawBlockTransactionsData.input,
-		);
+		const res = await web3.zkSync.rpc.getRawBlockTransactions(getRawBlockTransactionsData.input);
 		expect(res).toEqual(getRawBlockTransactionsData.output);
 	});
 	it('getMainContract', async () => {
