@@ -1,11 +1,9 @@
 import { Web3 } from 'web3';
 import * as web3Accounts from 'web3-eth-accounts';
-
 import type { types } from '../../src';
 import { utils } from '../../src';
 import { ADDRESS1, ADDRESS2 } from '../utils';
 import * as constants from '../../src/constants';
-import { getSignInput, serializeEip712 } from '../../src/utils';
 
 describe('utils', () => {
 	describe('#getHashedL2ToL1Msg()', () => {
@@ -160,11 +158,11 @@ describe('utils', () => {
 		it.only('should return a serialized transaction with provided signature', async () => {
 			const tx =
 				'0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
-
-			const signature =
-				'0x73a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aaf87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a';
-
-			// wallet.sign(message).signature;
+			const signature = new utils.SignatureObject(
+				'0x73a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aaf87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a',
+			);
+			const recoveredTx = utils.parseEip712(tx);
+			console.log('recoveredTx', recoveredTx);
 			// const signature = s.toString();
 			const result = utils.serializeEip712(
 				{
@@ -322,7 +320,7 @@ describe('utils', () => {
 
 			// const eip712Signer = new EIP712Signer(new Wallet(PRIVATE_KEY), web3.config.chainId);
 
-			const signInput = getSignInput(tx);
+			const signInput = utils.getSignInput(tx);
 
 			// const signInput = {
 			// 	txType: 113,
@@ -352,7 +350,7 @@ describe('utils', () => {
 			// const hash = eip712TxHash(tx);
 			// console.log('typedData', hash);
 
-			const signature = serializeEip712(signInput);
+			const signature = utils.serializeEip712(signInput);
 			console.log('signature', signature);
 			// const signature = await web3.eth.signTypedData(account.address, typedData);
 

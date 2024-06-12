@@ -176,9 +176,9 @@ export class SignatureObject {
 		v?: web3Types.Numbers,
 	) {
 		if (typeof rOrSignature === 'string') {
-			if (rOrSignature.length !== 132) {
-				throw new Error('Invalid signature length');
-			}
+			// if (rOrSignature.length !== 132) {
+			// 	throw new Error('Invalid signature length');
+			// }
 			// Initialize with a single string parameter
 			const signature = rOrSignature;
 			this.r = web3Accounts.toUint8Array(signature.slice(0, 66));
@@ -710,18 +710,16 @@ export function serializeEip712(transaction: Eip712TxData, signature?: Signature
 			? new Uint8Array()
 			: toBytes(transaction.gasLimit!),
 		transaction.to ? web3Utils.toChecksumAddress(toHex(transaction.to)) : '0x',
-		toHex(transaction.value || 0) === '0x0'
-			? new Uint8Array()
-			: toBytes(toHex(transaction.value || 0)),
+		toHex(transaction.value || 0) === '0x0' ? new Uint8Array() : toHex(transaction.value || 0),
 		toHex(transaction.data || '0x'),
 	];
 
 	if (signature) {
 		const sig = new SignatureObject(signature);
 		// fields.push(toBytes(sig.yParity));
-		fields.push(toBytes(Number(sig.v) === 27 ? 0 : 1));
-		fields.push(toBytes(sig.r));
-		fields.push(toBytes(sig.s));
+		fields.push(toHex(Number(sig.v) === 27 ? 0 : 1));
+		fields.push(toHex(sig.r));
+		fields.push(toHex(sig.s));
 	} else {
 		fields.push(toHex(transaction.chainId));
 		fields.push('0x');
