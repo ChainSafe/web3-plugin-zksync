@@ -3,7 +3,7 @@ import * as web3Types from 'web3-types';
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 /**
- * The address of the L1 `ETH` token.
+ * The address of the L1 `ETH` token. This is a small change.
  * @constant
  */
 export const ETH_ADDRESS: web3Types.Address = '0x0000000000000000000000000000000000000000';
