@@ -1,5 +1,6 @@
 import { Web3 } from 'web3';
 import * as web3Accounts from 'web3-eth-accounts';
+import * as web3Abi from 'web3-eth-abi';
 import type { types } from '../../src';
 import { utils } from '../../src';
 import { ADDRESS1, ADDRESS2 } from '../utils';
@@ -115,7 +116,7 @@ describe('utils', () => {
 	describe('#serializeEip712()', () => {
 		it('should throw an error when `tx.chainId` is not specified', () => {
 			try {
-				utils.serializeEip712({});
+				utils.Eip712.serialize({});
 			} catch (e) {
 				expect((e as Error).message).toBe("Transaction chainId isn't set!");
 			}
@@ -123,7 +124,7 @@ describe('utils', () => {
 
 		it('should throw an error when `tx.from` is not specified', () => {
 			try {
-				utils.serializeEip712({ chainId: 270 });
+				utils.Eip712.serialize({ chainId: 270 });
 			} catch (e) {
 				expect((e as Error).message).toBe(
 					'Explicitly providing `from` field is required for EIP712 transactions!',
@@ -133,7 +134,7 @@ describe('utils', () => {
 
 		it('should throw an error when `tx.customData.customSignature` is empty string', () => {
 			try {
-				utils.serializeEip712({
+				utils.Eip712.serialize({
 					chainId: 270,
 					from: ADDRESS1,
 					customData: {
@@ -148,30 +149,24 @@ describe('utils', () => {
 		it('should return a serialized transaction with populated default values', () => {
 			const tx =
 				'0x71ea8080808080808082010e808082010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
-			const result = utils.serializeEip712({
+			const result = utils.Eip712.serialize({
 				chainId: 270,
 				from: ADDRESS1,
 			});
 			expect(result).toBe(tx);
 		});
 
-		it.only('should return a serialized transaction with provided signature', async () => {
+		it('should return a serialized transaction with provided signature', async () => {
 			const tx =
 				'0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
-			const signature = new utils.SignatureObject(
-				'0x73a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aaf87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a',
-			);
-			const recoveredTx = utils.parseEip712(tx);
-			console.log('recoveredTx', recoveredTx);
-			// const signature = s.toString();
-			const result = utils.serializeEip712(
+			const result = utils.Eip712.serialize(
 				{
 					chainId: 270,
 					from: ADDRESS1,
 					to: ADDRESS2,
 					value: 1_000_000,
 				},
-				signature,
+				'0x73a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aaf87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a',
 			);
 			expect(result).toBe(tx);
 		});
@@ -247,7 +242,7 @@ describe('utils', () => {
 
 			const serializedTx =
 				'0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
-			const result = utils.parseEip712(serializedTx);
+			const result = utils.Eip712.fromSerializedTx(serializedTx);
 			expect(result).toEqual(tx);
 		});
 
@@ -275,16 +270,16 @@ describe('utils', () => {
 			const serializedTx =
 				'0x71f83e8080808094a61464658afeaf65cccaafd3a512b69a83b77618808082010e808082010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
 
-			const result = utils.parseEip712(serializedTx);
+			const result = utils.Eip712.fromSerializedTx(serializedTx);
 			expect(result).toEqual(tx);
 		});
 	});
 	describe('#isMessageSignatureCorrect()', () => {
 		it('should return true if signature made by a private key was correct', async () => {
-			const wallet = web3Accounts.create();
-			const ADDRESS = wallet.address;
+			const account = web3Accounts.create();
+			const ADDRESS = account.address;
 			const message = 'Hello, world!';
-			const signature = wallet.sign(message).signature;
+			const signature = utils.Eip712.sign(message, account.privateKey).signature;
 			const web3 = new Web3();
 			const isValidSignature = await utils.isMessageSignatureCorrect(
 				web3,
@@ -297,79 +292,39 @@ describe('utils', () => {
 	});
 
 	describe('#isTypedDataSignatureCorrect()', () => {
-		// TODO: Needs investigation
-		it.skip('should return true if correct', async () => {
-			// const account = web3Accounts.create();
-			// const ADDRESS = account.address;
-			// const PRIVATE_KEY = account.privateKey;
-
+		it('should return true if correct', async () => {
 			const PRIVATE_KEY =
 				'0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110';
-
-			const account = web3Accounts.privateKeyToAccount(PRIVATE_KEY);
-
-			const web3 = new Web3('https://mainnet.era.zksync.io');
-
+			const ADDRESS = '0x36615Cf349d7F6344891B1e7CA7C72883F5dc049';
 			const tx = {
 				type: 113,
 				chainId: 270,
-				from: account.address,
+				from: ADDRESS,
 				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 7_000_000n,
 			};
 
-			// const eip712Signer = new EIP712Signer(new Wallet(PRIVATE_KEY), web3.config.chainId);
+			const typedDataStruct = utils.Eip712.txTypedData(tx);
 
-			const signInput = utils.getSignInput(tx);
+			const message = web3Abi.getEncodedEip712Data(typedDataStruct);
 
-			// const signInput = {
-			// 	txType: 113,
-			// 	from: '0x99F3629e38c617cb619682f721Aaf9F61a3DE3d3',
-			// 	to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
-			// 	gasLimit: 0n,
-			// 	gasPerPubdataByteLimit: 50000,
-			// 	maxFeePerGas: 0n,
-			// 	maxPriorityFeePerGas: 0n,
-			// 	paymaster: '0x0000000000000000000000000000000000000000',
-			// 	nonce: 0,
-			// 	value: 7000000n,
-			// 	data: '0x',
-			// 	factoryDeps: [],
-			// 	paymasterInput: '0x',
-			// };
-			const domain = {
-				name: 'zkSync',
-				version: '2',
-				chainId: tx.chainId,
-			};
-			console.log('domain', domain);
-			web3.eth.accounts.wallet.add(account);
+			const web3 = new Web3('http://localhost:8545');
+			const acc = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);
+			web3.eth.accounts.wallet.add(acc);
+			// const signature = web3.eth.accounts.wallet.sign(message, true);
+			const signature = utils.Eip712.sign(message, PRIVATE_KEY);
 
-			console.log('account', account);
-			console.log('signInput', signInput);
-			// const hash = eip712TxHash(tx);
-			// console.log('typedData', hash);
-
-			const signature = utils.serializeEip712(signInput);
-			console.log('signature', signature);
-			// const signature = await web3.eth.signTypedData(account.address, typedData);
-
-			// const signature =
-			// 	'0x14920a5306c8b739fd2fbdd6bb933c54c05391ab9454741b5fa1132c31c6f35d4f8a716939e43df6eb660b5298d8354d08710a0d94e8d0c14dc88032cac5deda1b';
-			//  '0x71f8418080808094a61464658afeaf65cccaafd3a512b69a83b77618836acfc08082012c808082012c9434a535b103a4641ae33bb774a5922765a9ac2a6282c350c080c0'
-			console.log('signature\n\t', signature);
-			expect(signature).toBe(
-				'0x14920a5306c8b739fd2fbdd6bb933c54c05391ab9454741b5fa1132c31c6f35d4f8a716939e43df6eb660b5298d8354d08710a0d94e8d0c14dc88032cac5deda1b',
+			expect(signature.signature).toBe(
+				'0x5ea12f3d54a1624d7e7f5161dbf6ab746c3335e643b2966264e740cf8e10e9b64b0251fb79d9a5b11730387085a0d58f105926f72e20242ecb274639991939ca1b',
 			);
 			const isValidSignature = await utils.isTypedDataSignatureCorrect(
 				web3,
-				account.address,
-				domain,
+				ADDRESS,
+				typedDataStruct.domain,
 				constants.EIP712_TYPES,
-				signInput,
-				signature,
+				utils.Eip712.getSignInput(tx),
+				signature.signature,
 			);
-			console.log('isValidSignature', isValidSignature);
 			expect(isValidSignature).toBe(true);
 		});
 	});

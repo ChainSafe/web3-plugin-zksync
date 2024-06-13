@@ -11,18 +11,8 @@ import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Contract from 'web3-eth-contract';
-
-import { RLP } from '@ethereumjs/rlp'; // to be used instead of the one at zksync-ethers: Provider from ./provider
-import { bytesToHex, toBigInt, toHex } from 'web3-utils';
-import type { Address } from 'web3';
-import type { Bytes, Eip712TypedData } from 'web3-types';
-import type {
-	DeploymentInfo,
-	Eip712Meta,
-	Eip712TxData,
-	EthereumSignature,
-	PaymasterParams,
-} from './types';
+import type { Bytes } from 'web3-types';
+import type { DeploymentInfo, EthereumSignature } from './types';
 import {
 	// PaymasterParams,
 	PriorityOpTree,
@@ -52,15 +42,13 @@ import {
 	EIP1271_MAGIC_VALUE,
 	L1_FEE_ESTIMATION_COEF_NUMERATOR,
 	L1_FEE_ESTIMATION_COEF_DENOMINATOR,
-	EIP712_TX_TYPE,
-	EIP712_TYPES,
-	DEFAULT_GAS_PER_PUBDATA_LIMIT,
-	ZERO_ADDRESS,
 	// EIP712_TX_TYPE,
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
 import type { RpcMethods } from './rpc.methods';
+
+export * from './Eip712';
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -140,7 +128,6 @@ export function contractFunctionId(value: string): string {
 	return web3Utils.keccak256(web3Utils.utf8ToBytes(value));
 }
 
-// TODO: needs to test for the first parameter being Eip712TypedData
 function recoverSignerAddress(
 	messageOrData: string | web3Types.Eip712TypedData,
 	signature: SignatureLike,
@@ -153,16 +140,31 @@ function recoverSignerAddress(
 	}
 
 	if (typeof signature === 'string') {
-		return web3Accounts.recover(message, signature);
+		return web3Accounts.recover(message, signature, undefined, undefined, undefined, true);
 	}
 
 	const r = web3Utils.toHex(signature.r);
 	const s = web3Utils.toHex(signature.s);
 	const v = web3Utils.toHex(signature.v);
 
-	return web3Accounts.recover(message, v, r, s);
+	return web3Accounts.recover(message, v, r, s, undefined, true);
 }
+function _getBytes(value: Bytes): Uint8Array {
+	if (value instanceof Uint8Array) {
+		return value;
+	}
 
+	if (typeof value === 'string' && value.match(/^0x([0-9a-f][0-9a-f])*$/i)) {
+		const result = new Uint8Array((value.length - 2) / 2);
+		let offset = 2;
+		for (let i = 0; i < result.length; i++) {
+			result[i] = parseInt(value.substring(offset, offset + 2), 16);
+			offset += 2;
+		}
+		return result;
+	}
+	throw new Error('Invalid BytesLike value');
+}
 export class SignatureObject {
 	public r: Uint8Array;
 	public s: Uint8Array;
@@ -176,14 +178,26 @@ export class SignatureObject {
 		v?: web3Types.Numbers,
 	) {
 		if (typeof rOrSignature === 'string') {
-			// if (rOrSignature.length !== 132) {
-			// 	throw new Error('Invalid signature length');
-			// }
-			// Initialize with a single string parameter
-			const signature = rOrSignature;
-			this.r = web3Accounts.toUint8Array(signature.slice(0, 66));
-			this.s = web3Accounts.toUint8Array(`0x${signature.slice(66, 130)}`);
-			this.v = BigInt(web3Utils.hexToNumber(`0x${signature.slice(130, 132)}`));
+			const bytes: Uint8Array = _getBytes(rOrSignature);
+
+			if (bytes.length === 64) {
+				const r = bytes.slice(0, 32);
+				const s = bytes.slice(32, 64);
+				const v = BigInt(s[0] & 0x80 ? 28 : 27);
+				s[0] &= 0x7f;
+				this.r = r;
+				this.s = s;
+				this.v = v;
+			} else if (bytes.length === 65) {
+				const r = bytes.slice(0, 32);
+				const s = bytes.slice(32, 64);
+				const v = BigInt(SignatureObject.getNormalizedV(bytes[64]));
+				this.r = r;
+				this.s = s;
+				this.v = v;
+			} else {
+				throw new Error('Invalid signature length');
+			}
 		} else if (
 			(rOrSignature as EthereumSignature).r &&
 			(rOrSignature as EthereumSignature).s &&
@@ -201,7 +215,26 @@ export class SignatureObject {
 			this.v = BigInt(signature.v!);
 		}
 	}
+	static getNormalizedV(v: number): 27 | 28 {
+		if (v === 0 || v === 27) {
+			return 27;
+		}
+		if (v === 1 || v === 28) {
+			return 28;
+		}
 
+		// Otherwise, EIP-155 v means odd is 27 and even is 28
+		return v & 1 ? 27 : 28;
+	}
+	concat(datas: ReadonlyArray<Bytes>): string {
+		return '0x' + datas.map(d => web3Utils.toHex(d).substring(2)).join('');
+	}
+	get yParity(): 0 | 1 {
+		return this.v === 27n ? 0 : 1;
+	}
+	public get serialized(): string {
+		return this.concat([this.r, this.s, this.yParity ? '0x1c' : '0x1b']);
+	}
 	public toString() {
 		return `${this.r}${this.s.slice(2)}${web3Utils.toHex(this.v).slice(2)}`;
 	}
@@ -485,270 +518,6 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
 	hash.set(bytecodeLengthPadded, 2);
 
 	return hash;
-}
-
-function handleAddress(value?: Uint8Array): string | null {
-	if (!value) {
-		return null;
-	}
-	const hexValue = bytesToHex(value);
-	if (hexValue === '0x') {
-		return null;
-	}
-
-	return web3Utils.toChecksumAddress(hexValue);
-}
-
-function handleNumber(value?: Uint8Array): bigint {
-	if (!value) {
-		return 0n;
-	}
-	const hexValue = bytesToHex(value);
-	if (hexValue === '0x') {
-		return 0n;
-	}
-	return toBigInt(hexValue);
-}
-function arrayToPaymasterParams(arr: Uint8Array): PaymasterParams | undefined {
-	if (arr.length === 0) {
-		return undefined;
-	}
-	if (arr.length !== 2) {
-		throw new Error(
-			`Invalid paymaster parameters, expected to have length of 2, found ${arr.length}!`,
-		);
-	}
-
-	return {
-		paymaster: web3Utils.toChecksumAddress(toHex(arr[0])),
-		paymasterInput: web3Utils.bytesToUint8Array(toHex(arr[1])),
-	};
-}
-
-export const getSignInput = (transaction: Eip712TxData) => {
-	const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0n);
-	const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
-	const gasPerPubdataByteLimit = toHex(
-		transaction.customData?.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT,
-	);
-	return {
-		chainId: transaction.chainId ? toHex(transaction.chainId) : undefined,
-		txType: transaction.type || EIP712_TX_TYPE,
-		from: transaction.from ? toHex(transaction.from) : undefined,
-		to: transaction.to ? toHex(transaction.to) : undefined,
-		gasLimit: transaction.gasLimit || 0,
-		gasPerPubdataByteLimit: gasPerPubdataByteLimit,
-		customData: transaction.customData,
-		maxFeePerGas,
-		maxPriorityFeePerGas,
-		paymaster: transaction.customData?.paymasterParams?.paymaster || ZERO_ADDRESS,
-		nonce: transaction.nonce || 0,
-		value: transaction.value || toHex(0),
-		data: transaction.data || '0x',
-		factoryDeps:
-			transaction.customData?.factoryDeps?.map((dep: Bytes) => hashBytecode(dep)) || [],
-		paymasterInput: transaction.customData?.paymasterParams?.paymasterInput || '0x',
-	};
-};
-
-export function eip712TxTypedData(transaction: Eip712TxData): Eip712TypedData {
-	return {
-		types: EIP712_TYPES,
-		primaryType: 'Transaction',
-		domain: {
-			name: 'zkSync',
-			version: '2',
-			chainId: Number(transaction.chainId),
-		},
-		message: getSignInput(transaction),
-	};
-}
-/**
- * Returns the hash of an EIP712 transaction.
- *
- * @param transaction The EIP-712 transaction.
- * @param ethSignature The ECDSA signature of the transaction.
- *
- * @example
- *
- *
- */
-export function eip712TxHash(transaction: Eip712TxData, ethSignature?: EthereumSignature): string {
-	const bytes: string[] = [];
-
-	const typedDataStruct = eip712TxTypedData(transaction);
-
-	bytes.push(web3Abi.getEncodedEip712Data(typedDataStruct, true));
-	bytes.push(web3Utils.keccak256(getSignature(typedDataStruct.message, ethSignature)));
-	return web3Utils.keccak256(concat(bytes));
-}
-/**
- * Parses an EIP712 transaction from a payload.
- *
- * @param payload The payload to parse.
- *
- * @example
- *
- *
- * const serializedTx =
- *   "0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0";
- * const tx: types.TransactionLike = utils.parseEip712(serializedTx);
- * /*
- * tx: types.Eip712TxData = {
- *   type: 113,
- *   nonce: 0,
- *   maxPriorityFeePerGas: BigInt(0),
- *   maxFeePerGas: BigInt(0),
- *   gasLimit: BigInt(0),
- *   to: "0xa61464658AfeAf65CccaaFD3a512b69A83B77618",
- *   value: BigInt(1000000),
- *   data: "0x",
- *   chainId: BigInt(270),
- *   from: "0x36615Cf349d7F6344891B1e7CA7C72883F5dc049",
- *   customData: {
- *     gasPerPubdata: BigInt(50000),
- *     factoryDeps: [],
- *     customSignature: "0x",
- *     paymasterParams: null,
- *   },
- *   hash: "0x9ed410ce33179ac1ff6b721060605afc72d64febfe0c08cacab5a246602131ee",
- * };
- * *\/
- */
-
-export function parseEip712(payload: web3Types.Bytes): Eip712TxData {
-	const bytes = web3Utils.bytesToUint8Array(payload);
-
-	// try using: RLP.decode
-	const raw = RLP.decode(bytes.slice(1)) as Array<Uint8Array>;
-	const transaction: Eip712TxData = {
-		type: EIP712_TX_TYPE,
-		nonce: handleNumber(raw[0]),
-		maxPriorityFeePerGas: handleNumber(raw[1]),
-		maxFeePerGas: handleNumber(raw[2]),
-		gasLimit: handleNumber(raw[3]),
-		to: handleAddress(raw[4]) as Address,
-		value: handleNumber(raw[5]),
-		data: bytesToHex(raw[6]),
-		chainId: handleNumber(raw[10]),
-		from: handleAddress(raw[11]) as Address,
-		customData: {
-			gasPerPubdata: handleNumber(raw[12]),
-			factoryDeps: raw[13] as unknown as string[],
-			customSignature: bytesToHex(raw[14]),
-			paymasterParams: arrayToPaymasterParams(raw[15]),
-		},
-	};
-	const ethSignature = {
-		v: Number(handleNumber(raw[7])),
-		r: raw[8],
-		s: raw[9],
-	};
-
-	if (
-		(web3Utils.toHex(ethSignature.r) === '0x' || web3Utils.toHex(ethSignature.s) === '0x') &&
-		!transaction.customData?.customSignature
-	) {
-		return transaction;
-	}
-
-	if (ethSignature.v !== 0 && ethSignature.v !== 1 && !transaction.customData?.customSignature) {
-		throw new Error('Failed to parse signature!');
-	}
-
-	if (!transaction.customData?.customSignature) {
-		transaction.signature = new SignatureObject(ethSignature).toString();
-	}
-
-	transaction.hash = eip712TxHash(transaction, ethSignature);
-
-	return transaction;
-}
-
-export function getSignature(
-	transaction: Eip712TxData,
-	ethSignature?: EthereumSignature,
-): Uint8Array {
-	if (transaction?.customData?.customSignature && transaction.customData.customSignature.length) {
-		return web3Utils.bytesToUint8Array(transaction.customData.customSignature);
-	}
-
-	if (!ethSignature) {
-		throw new Error('No signature provided!');
-	}
-
-	const r = web3Utils.bytesToUint8Array(
-		web3Utils.padLeft(web3Utils.toHex(ethSignature.r), 32 * 2),
-	);
-	const s = web3Utils.bytesToUint8Array(
-		web3Utils.padLeft(web3Utils.toHex(ethSignature.s), 32 * 2),
-	);
-	const v = ethSignature.v;
-
-	return new Uint8Array([...r, ...s, v]);
-}
-
-export function serializeEip712(transaction: Eip712TxData, signature?: SignatureLike): string {
-	if (!transaction.chainId) {
-		throw Error("Transaction chainId isn't set!");
-	}
-
-	if (!transaction.from) {
-		throw new Error('Explicitly providing `from` field is required for EIP712 transactions!');
-	}
-	const from = transaction.from;
-	const meta: Eip712Meta = transaction.customData ?? {};
-	const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0);
-	const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
-
-	const nonce = toHex(transaction.nonce || 0);
-	const fields: Array<Uint8Array | Uint8Array[] | string | number | string[]> = [
-		nonce === '0x0' ? new Uint8Array() : toBytes(nonce),
-		maxPriorityFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxPriorityFeePerGas),
-		maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
-		toHex(transaction.gasLimit || 0) === '0x0'
-			? new Uint8Array()
-			: toBytes(transaction.gasLimit!),
-		transaction.to ? web3Utils.toChecksumAddress(toHex(transaction.to)) : '0x',
-		toHex(transaction.value || 0) === '0x0' ? new Uint8Array() : toHex(transaction.value || 0),
-		toHex(transaction.data || '0x'),
-	];
-
-	if (signature) {
-		const sig = new SignatureObject(signature);
-		// fields.push(toBytes(sig.yParity));
-		fields.push(toHex(Number(sig.v) === 27 ? 0 : 1));
-		fields.push(toHex(sig.r));
-		fields.push(toHex(sig.s));
-	} else {
-		fields.push(toHex(transaction.chainId));
-		fields.push('0x');
-		fields.push('0x');
-	}
-	fields.push(toHex(transaction.chainId));
-	fields.push(web3Utils.toChecksumAddress(from));
-
-	// Add meta
-	fields.push(toHex(meta.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT));
-	fields.push((meta.factoryDeps ?? []).map(dep => web3Utils.toHex(dep)));
-
-	if (meta.customSignature && web3Utils.bytesToUint8Array(meta.customSignature).length === 0) {
-		throw new Error('Empty signatures are not supported!');
-	}
-	fields.push(meta.customSignature || '0x');
-
-	if (meta.paymasterParams) {
-		fields.push([
-			meta.paymasterParams.paymaster,
-			web3Utils.toHex(meta.paymasterParams.paymasterInput),
-		]);
-	} else {
-		fields.push([]);
-	}
-
-	console.log(fields);
-
-	return concat([new Uint8Array([EIP712_TX_TYPE]), RLP.encode(fields)]);
 }
 
 /**
@@ -1089,17 +858,14 @@ export async function isTypedDataSignatureCorrect(
 	value: Record<string, any>,
 	signature: SignatureLike,
 ): Promise<boolean> {
-	const data: web3Types.Eip712TypedData = {
+	const typedDataStruct: web3Types.Eip712TypedData = {
 		domain,
 		types,
 		primaryType: 'Transaction',
 		message: value,
 	};
-	// could be also:
-	const message = web3Abi.getEncodedEip712Data(data);
-	return isSignatureCorrect(context, address, message, signature);
 
-	// return isSignatureCorrect(context, address, data, signature);
+	return isSignatureCorrect(context, address, typedDataStruct, signature);
 }
 
 /**
