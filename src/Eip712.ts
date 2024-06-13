@@ -252,13 +252,9 @@ export class EIP712 {
 
 		if (signature) {
 			const signatureObject = new SignatureObject(signature);
-
 			fields.push(toHex(Number(signatureObject.v) === 27 ? 0 : 1));
 			fields.push(toHex(signatureObject.r));
 			fields.push(toHex(signatureObject.s));
-
-			// const sig = new SignatureObject(signature);
-			// fields.push(toBytes(sig.yParity));
 		} else {
 			fields.push(toHex(transaction.chainId));
 			fields.push('0x');

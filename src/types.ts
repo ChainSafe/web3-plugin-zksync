@@ -13,20 +13,6 @@ import type {
 	TransactionReceipt,
 } from 'web3-types';
 
-// import type {
-//  FeeMarketEIP1559Transaction,
-//  TxOptions
-// } from 'web3-eth-accounts';
-
-// import {
-// 	EIP712_TX_TYPE,
-// 	parseEip712,
-// 	serializeEip712,
-// 	sleep,
-// 	eip712TxHash,
-// 	isAddressEq,
-// } from './utils';
-
 import type { RpcMethods } from './rpc.methods';
 
 export type { Bytes, HexString, Numbers } from 'web3-types';
