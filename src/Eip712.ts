@@ -5,7 +5,6 @@ import * as web3Utils from 'web3-utils';
 import * as web3Acccounts from 'web3-eth-accounts';
 import { RLP } from '@ethereumjs/rlp';
 import type { Address } from 'web3';
-import * as ethereumCryptography from 'ethereum-cryptography/secp256k1';
 import {
 	DEFAULT_GAS_PER_PUBDATA_LIMIT,
 	EIP712_TX_TYPE,
@@ -54,7 +53,7 @@ function arrayToPaymasterParams(arr: Uint8Array): PaymasterParams | undefined {
 	};
 }
 
-export class Eip712 {
+export class EIP712 {
 	static getSignInput(transaction: Eip712TxData) {
 		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0n);
 		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
@@ -89,7 +88,7 @@ export class Eip712 {
 				version: '2',
 				chainId: Number(transaction.chainId),
 			},
-			message: Eip712.getSignInput(transaction),
+			message: EIP712.getSignInput(transaction),
 		};
 	}
 	/**
@@ -105,10 +104,10 @@ export class Eip712 {
 	static txHash(transaction: Eip712TxData, ethSignature?: EthereumSignature): string {
 		const bytes: string[] = [];
 
-		const typedDataStruct = Eip712.txTypedData(transaction);
+		const typedDataStruct = EIP712.txTypedData(transaction);
 
 		bytes.push(web3Abi.getEncodedEip712Data(typedDataStruct, true));
-		bytes.push(web3Utils.keccak256(Eip712.getSignature(typedDataStruct.message, ethSignature)));
+		bytes.push(web3Utils.keccak256(EIP712.getSignature(typedDataStruct.message, ethSignature)));
 		return web3Utils.keccak256(concat(bytes));
 	}
 	/**
@@ -193,7 +192,7 @@ export class Eip712 {
 			transaction.signature = new SignatureObject(ethSignature).toString();
 		}
 
-		transaction.hash = Eip712.txHash(transaction, ethSignature);
+		transaction.hash = EIP712.txHash(transaction, ethSignature);
 
 		return transaction;
 	}
@@ -295,24 +294,35 @@ export class Eip712 {
 	static sign(hash: string, PRIVATE_KEY: string) {
 		return web3Acccounts.sign(hash, PRIVATE_KEY, true);
 	}
-	static computePublicKey(key: Bytes, compressed?: boolean): string {
-		let bytes = toBytes(key);
+}
 
-		// private key
-		if (bytes.length === 32) {
-			const pubKey = ethereumCryptography.secp256k1.getPublicKey(bytes, !!compressed);
-			return toHex(pubKey);
-		}
+export class EIP712Signer {
+	private eip712Domain: Eip712TypedData['domain'];
+	private web3Account: web3Acccounts.Web3Account;
+	private chainId: number;
+	constructor(web3Account: web3Acccounts.Web3Account, chainId: number) {
+		this.web3Account = web3Account;
+		this.chainId = Number(web3Utils.toNumber(chainId));
+		this.eip712Domain = {
+			name: 'zkSync',
+			version: '2',
+			chainId: Number(this.chainId),
+		};
+	}
 
-		// raw public key; use uncompressed key with 0x04 prefix
-		if (bytes.length === 64) {
-			const pub = new Uint8Array(65);
-			pub[0] = 0x04;
-			pub.set(bytes, 1);
-			bytes = pub;
-		}
+	sign(tx: Eip712TxData): web3Acccounts.SignResult {
+		const typedDataStruct = EIP712.txTypedData({
+			chainId: this.chainId,
+			...tx,
+		});
+		const message = web3Abi.getEncodedEip712Data(typedDataStruct);
+		return EIP712.sign(message, this.web3Account.privateKey);
+	}
 
-		const point = ethereumCryptography.secp256k1.ProjectivePoint.fromHex(bytes);
-		return toHex(point.toRawBytes(compressed));
+	/**
+	 * Returns zkSync Era EIP712 domain.
+	 */
+	getDomain(): Eip712TypedData['domain'] {
+		return this.eip712Domain;
 	}
 }

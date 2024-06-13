@@ -1,10 +1,10 @@
 import { Web3 } from 'web3';
 import * as web3Accounts from 'web3-eth-accounts';
-import * as web3Abi from 'web3-eth-abi';
 import type { types } from '../../src';
 import { utils } from '../../src';
 import { ADDRESS1, ADDRESS2 } from '../utils';
 import * as constants from '../../src/constants';
+import { EIP712Signer } from '../../src/Eip712';
 
 describe('utils', () => {
 	describe('#getHashedL2ToL1Msg()', () => {
@@ -116,7 +116,7 @@ describe('utils', () => {
 	describe('#serializeEip712()', () => {
 		it('should throw an error when `tx.chainId` is not specified', () => {
 			try {
-				utils.Eip712.serialize({});
+				utils.EIP712.serialize({});
 			} catch (e) {
 				expect((e as Error).message).toBe("Transaction chainId isn't set!");
 			}
@@ -124,7 +124,7 @@ describe('utils', () => {
 
 		it('should throw an error when `tx.from` is not specified', () => {
 			try {
-				utils.Eip712.serialize({ chainId: 270 });
+				utils.EIP712.serialize({ chainId: 270 });
 			} catch (e) {
 				expect((e as Error).message).toBe(
 					'Explicitly providing `from` field is required for EIP712 transactions!',
@@ -134,7 +134,7 @@ describe('utils', () => {
 
 		it('should throw an error when `tx.customData.customSignature` is empty string', () => {
 			try {
-				utils.Eip712.serialize({
+				utils.EIP712.serialize({
 					chainId: 270,
 					from: ADDRESS1,
 					customData: {
@@ -149,7 +149,7 @@ describe('utils', () => {
 		it('should return a serialized transaction with populated default values', () => {
 			const tx =
 				'0x71ea8080808080808082010e808082010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
-			const result = utils.Eip712.serialize({
+			const result = utils.EIP712.serialize({
 				chainId: 270,
 				from: ADDRESS1,
 			});
@@ -159,7 +159,7 @@ describe('utils', () => {
 		it('should return a serialized transaction with provided signature', async () => {
 			const tx =
 				'0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
-			const result = utils.Eip712.serialize(
+			const result = utils.EIP712.serialize(
 				{
 					chainId: 270,
 					from: ADDRESS1,
@@ -242,7 +242,7 @@ describe('utils', () => {
 
 			const serializedTx =
 				'0x71f87f8080808094a61464658afeaf65cccaafd3a512b69a83b77618830f42408001a073a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aa02f87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a82010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
-			const result = utils.Eip712.fromSerializedTx(serializedTx);
+			const result = utils.EIP712.fromSerializedTx(serializedTx);
 			expect(result).toEqual(tx);
 		});
 
@@ -270,7 +270,7 @@ describe('utils', () => {
 			const serializedTx =
 				'0x71f83e8080808094a61464658afeaf65cccaafd3a512b69a83b77618808082010e808082010e9436615cf349d7f6344891b1e7ca7c72883f5dc04982c350c080c0';
 
-			const result = utils.Eip712.fromSerializedTx(serializedTx);
+			const result = utils.EIP712.fromSerializedTx(serializedTx);
 			expect(result).toEqual(tx);
 		});
 	});
@@ -279,7 +279,7 @@ describe('utils', () => {
 			const account = web3Accounts.create();
 			const ADDRESS = account.address;
 			const message = 'Hello, world!';
-			const signature = utils.Eip712.sign(message, account.privateKey).signature;
+			const signature = utils.EIP712.sign(message, account.privateKey).signature;
 			const web3 = new Web3();
 			const isValidSignature = await utils.isMessageSignatureCorrect(
 				web3,
@@ -303,16 +303,12 @@ describe('utils', () => {
 				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 7_000_000n,
 			};
-
-			const typedDataStruct = utils.Eip712.txTypedData(tx);
-
-			const message = web3Abi.getEncodedEip712Data(typedDataStruct);
-
+			const eip712Signer = new EIP712Signer(
+				web3Accounts.privateKeyToAccount(PRIVATE_KEY),
+				270,
+			);
+			const signature = eip712Signer.sign(tx);
 			const web3 = new Web3('http://localhost:8545');
-			const acc = web3.eth.accounts.privateKeyToAccount(PRIVATE_KEY);
-			web3.eth.accounts.wallet.add(acc);
-			// const signature = web3.eth.accounts.wallet.sign(message, true);
-			const signature = utils.Eip712.sign(message, PRIVATE_KEY);
 
 			expect(signature.signature).toBe(
 				'0x5ea12f3d54a1624d7e7f5161dbf6ab746c3335e643b2966264e740cf8e10e9b64b0251fb79d9a5b11730387085a0d58f105926f72e20242ecb274639991939ca1b',
@@ -320,9 +316,9 @@ describe('utils', () => {
 			const isValidSignature = await utils.isTypedDataSignatureCorrect(
 				web3,
 				ADDRESS,
-				typedDataStruct.domain,
+				eip712Signer.getDomain(),
 				constants.EIP712_TYPES,
-				utils.Eip712.getSignInput(tx),
+				utils.EIP712.getSignInput(tx),
 				signature.signature,
 			);
 			expect(isValidSignature).toBe(true);
