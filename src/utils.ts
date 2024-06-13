@@ -149,22 +149,7 @@ function recoverSignerAddress(
 
 	return web3Accounts.recover(message, v, r, s, undefined, true);
 }
-function _getBytes(value: Bytes): Uint8Array {
-	if (value instanceof Uint8Array) {
-		return value;
-	}
 
-	if (typeof value === 'string' && value.match(/^0x([0-9a-f][0-9a-f])*$/i)) {
-		const result = new Uint8Array((value.length - 2) / 2);
-		let offset = 2;
-		for (let i = 0; i < result.length; i++) {
-			result[i] = parseInt(value.substring(offset, offset + 2), 16);
-			offset += 2;
-		}
-		return result;
-	}
-	throw new Error('Invalid BytesLike value');
-}
 export class SignatureObject {
 	public r: Uint8Array;
 	public s: Uint8Array;
@@ -178,7 +163,7 @@ export class SignatureObject {
 		v?: web3Types.Numbers,
 	) {
 		if (typeof rOrSignature === 'string') {
-			const bytes: Uint8Array = _getBytes(rOrSignature);
+			const bytes: Uint8Array = web3Utils.hexToBytes(rOrSignature);
 
 			if (bytes.length === 64) {
 				const r = bytes.slice(0, 32);
