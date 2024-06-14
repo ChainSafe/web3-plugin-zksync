@@ -1,8 +1,7 @@
-import { Web3 } from 'web3';
 import * as web3Accounts from 'web3-eth-accounts';
-import { utils } from '../../src';
+import { Web3 } from '../../../web3.js/packages/web3';
 import * as constants from '../../src/constants';
-import { EIP712Signer } from '../../src/Eip712';
+import * as utils from '../../src/utils';
 
 describe('utils', () => {
 	describe('#isTypedDataSignatureCorrect()', () => {
@@ -17,14 +16,13 @@ describe('utils', () => {
 				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 7_000_000n,
 			};
-			const eip712Signer = new EIP712Signer(
+			const eip712Signer = new utils.EIP712Signer(
 				web3Accounts.privateKeyToAccount(PRIVATE_KEY),
 				270,
 			);
-			const signature = eip712Signer.sign(tx);
+			const signature = eip712Signer.sign(tx) as utils.SignatureObject;
 			const web3 = new Web3('http://localhost:8545');
-
-			expect(signature.signature).toBe(
+			expect(signature.serialized).toBe(
 				'0x5ea12f3d54a1624d7e7f5161dbf6ab746c3335e643b2966264e740cf8e10e9b64b0251fb79d9a5b11730387085a0d58f105926f72e20242ecb274639991939ca1b',
 			);
 			const isValidSignature = await utils.isTypedDataSignatureCorrect(
@@ -33,7 +31,7 @@ describe('utils', () => {
 				eip712Signer.getDomain(),
 				constants.EIP712_TYPES,
 				utils.EIP712.getSignInput(tx),
-				signature.signature,
+				signature.serialized,
 			);
 			expect(isValidSignature).toBe(true);
 		});

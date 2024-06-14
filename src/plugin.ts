@@ -3,9 +3,10 @@ import type { Address } from 'web3-types';
 import { Contract } from 'web3-eth-contract';
 import { Web3PluginBase } from 'web3-core';
 
+import { TransactionFactory } from '../../web3.js/packages/web3-eth-accounts';
 import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
-import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
+import { EIP712_TX_TYPE, ETH_ADDRESS, ZERO_ADDRESS } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
@@ -14,6 +15,7 @@ import { IL1MessengerABI } from './contracts/IL1Messenger';
 import { IERC1271ABI } from './contracts/IERC1271';
 import { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
+import { EIP712Transaction } from './Eip712';
 
 export class ZkSyncPlugin extends Web3PluginBase {
 	public pluginNamespace = 'zkSync';
@@ -65,7 +67,8 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 	constructor() {
 		super();
-
+		// @ts-ignore-next-line
+		TransactionFactory.registerTransactionType(EIP712_TX_TYPE, EIP712Transaction);
 		this.erc20BridgeL1 = '';
 		this.erc20BridgeL2 = '';
 		this.wethBridgeL1 = '';
