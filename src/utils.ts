@@ -46,9 +46,7 @@ import {
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import type { RpcMethods } from './rpc.methods';
-
-export * from './Eip712';
+import { Web3ZkSyncL2 } from './web3zksync-l2'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -682,6 +680,7 @@ function isECDSASignatureCorrect(
 	signature: SignatureLike,
 ): boolean {
 	try {
+		web3Accounts.sign(message, PRIVATE_KEY);
 		return isAddressEq(address, recoverSignerAddress(message, signature));
 	} catch {
 		// In case ECDSA signature verification has thrown an error,
@@ -873,7 +872,7 @@ export async function isTypedDataSignatureCorrect(
  */
 export async function estimateDefaultBridgeDepositL2Gas(
 	providerL1: web3.Web3Eth,
-	providerL2: RpcMethods,
+	providerL2: Web3ZkSyncL2,
 	token: web3.Address,
 	amount: web3Types.Numbers,
 	to: web3.Address,
@@ -957,7 +956,7 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
  *
  */
 export async function estimateCustomBridgeDepositL2Gas(
-	providerL2: RpcMethods,
+	providerL2: Web3ZkSyncL2,
 	l1BridgeAddress: web3.Address,
 	l2BridgeAddress: web3.Address,
 	token: web3.Address,

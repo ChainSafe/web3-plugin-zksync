@@ -803,6 +803,8 @@ export interface BridgeAddresses {
 	l2Erc20DefaultBridge: Address;
 	l1WethBridge: Address;
 	l2WethBridge: Address;
+	l1SharedDefaultBridge: Address;
+	l2SharedDefaultBridge: Address;
 }
 
 export interface L2ToL1Proof {
