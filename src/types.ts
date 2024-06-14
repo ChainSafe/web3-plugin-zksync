@@ -1,11 +1,9 @@
-export type { Bytes, HexString, Numbers } from 'web3-types';
-
 // import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
-
+import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
 // // TODO: // is it needed to be re-exported from web3
 // import { watchTransactionForConfirmations } from 'web3-eth/lib/types/utils/watch_transaction_for_confirmations.js';
 
-import {
+import type {
 	Bytes,
 	HexString,
 	Numbers,
@@ -15,22 +13,9 @@ import {
 	TransactionReceipt,
 } from 'web3-types';
 
-import {
-	//  FeeMarketEIP1559Transaction,
-	FeeMarketEIP1559TxData,
-	//  TxOptions
-} from 'web3-eth-accounts';
+import type { RpcMethods } from './rpc.methods';
 
-// import {
-// 	EIP712_TX_TYPE,
-// 	parseEip712,
-// 	serializeEip712,
-// 	sleep,
-// 	eip712TxHash,
-// 	isAddressEq,
-// } from './utils';
-
-import { RpcMethods } from './rpc.methods';
+export type { Bytes, HexString, Numbers } from 'web3-types';
 export interface TransactionOverrides extends Omit<Transaction, 'to' | 'data' | 'input'> {}
 
 export const ZeroAddress: Address = '0x0000000000000000000000000000000000000000';
@@ -393,15 +378,6 @@ export interface zkSyncTxData extends FeeMarketEIP1559TxData {
 // }
 
 // /**
-//  * A `TransactionLike` is an extension of {@link ethers.TransactionLike} with additional features for interacting
-//  * with zkSync Era.
-//  */
-// export interface TransactionLike extends ethers.TransactionLike {
-// 	/** The custom data for EIP712 transaction metadata. */
-// 	customData?: null | Eip712Meta;
-// }
-
-// /**
 //  * A `Transaction` is an extension of {@link ethers.Transaction} with additional features for interacting
 //  * with zkSync Era.
 //  */
@@ -701,17 +677,17 @@ export interface TransactionDetails {
 /** Represents the full deposit fee containing fees for both L1 and L2 transactions. */
 export interface FullDepositFee {
 	/** The maximum fee per gas for L1 transaction. */
-	maxFeePerGas?: BigInt;
+	maxFeePerGas?: bigint;
 	/** The maximum priority fee per gas for L1 transaction. */
-	maxPriorityFeePerGas?: BigInt;
+	maxPriorityFeePerGas?: bigint;
 	/** The gas price for L2 transaction. */
-	gasPrice?: BigInt;
+	gasPrice?: bigint;
 	/** The base cost of the deposit transaction on L2. */
-	baseCost: BigInt;
+	baseCost: bigint;
 	/** The gas limit for L1 transaction. */
-	l1GasLimit: BigInt;
+	l1GasLimit: bigint;
 	/** The gas limit for L2 transaction. */
-	l2GasLimit: BigInt;
+	l2GasLimit: bigint;
 }
 
 /** Represents a raw block transaction. */
@@ -841,3 +817,53 @@ export interface EstimateFee {
 	max_fee_per_gas: Numbers;
 	max_priority_fee_per_gas: Numbers;
 }
+
+export interface TypedDataDomain {
+	/**
+	 *  The human-readable name of the signing domain.
+	 */
+	name?: null | string;
+
+	/**
+	 *  The major version of the signing domain.
+	 */
+	version?: null | string;
+
+	/**
+	 *  The chain ID of the signing domain.
+	 */
+	chainId?: null | Numbers;
+
+	/**
+	 *  The the address of the contract that will verify the signature.
+	 */
+	verifyingContract?: null | string;
+
+	/**
+	 *  A salt used for purposes decided by the specific domain.
+	 */
+	salt?: null | Bytes;
+}
+
+/**
+ *  A specific field of a structured [[link-eip-712]] type.
+ */
+export interface TypedDataField {
+	/**
+	 *  The field name.
+	 */
+	name: string;
+
+	/**
+	 *  The type of the field.
+	 */
+	type: string;
+}
+
+export type Eip712TxData = FeeMarketEIP1559TxData & {
+	/** The custom data for EIP712 transaction metadata. */
+	customData?: null | Eip712Meta;
+	from?: Address;
+	hash?: string;
+	signature?: string;
+};

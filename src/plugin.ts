@@ -1,13 +1,12 @@
-import type { Web3RequestManager } from 'web3-core';
+import type { Web3Context, Web3RequestManager } from 'web3-core';
 import type { Address } from 'web3-types';
-
 import { Contract } from 'web3-eth-contract';
-import { Web3Context, Web3PluginBase } from 'web3-core';
+import { Web3PluginBase } from 'web3-core';
 
+import { TransactionFactory } from '../../web3.js/packages/web3-eth-accounts';
 import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
-import { ETH_ADDRESS, ZERO_ADDRESS } from './constants';
-
+import { EIP712_TX_TYPE, ETH_ADDRESS, ZERO_ADDRESS } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
@@ -16,6 +15,7 @@ import { IL1MessengerABI } from './contracts/IL1Messenger';
 import { IERC1271ABI } from './contracts/IERC1271';
 import { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
+import { EIP712Transaction } from './Eip712';
 
 export class ZkSyncPlugin extends Web3PluginBase {
 	public pluginNamespace = 'zkSync';
@@ -67,7 +67,8 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 	constructor() {
 		super();
-
+		// @ts-ignore-next-line
+		TransactionFactory.registerTransactionType(EIP712_TX_TYPE, EIP712Transaction);
 		this.erc20BridgeL1 = '';
 		this.erc20BridgeL2 = '';
 		this.wethBridgeL1 = '';
@@ -122,7 +123,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 */
 	get rpc(): RpcMethods {
 		if (!this._rpc) {
-			this._rpc = new RpcMethods(this.requestManager as unknown as Web3RequestManager<unknown>);
+			this._rpc = new RpcMethods(
+				this.requestManager as unknown as Web3RequestManager<unknown>,
+			);
 		}
 		return this._rpc;
 	}
@@ -192,7 +195,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l1Token;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
@@ -218,7 +223,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l2WethToken;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 

@@ -38,7 +38,9 @@ describe('ZkSyncPlugin rpc tests', () => {
 		expect(res).toBeDefined();
 	});
 	it('getRawBlockTransactions', async () => {
-		const res = await web3.zkSync.rpc.getRawBlockTransactions(getRawBlockTransactionsData.input);
+		const res = await web3.zkSync.rpc.getRawBlockTransactions(
+			getRawBlockTransactionsData.input,
+		);
 		expect(res).toEqual(getRawBlockTransactionsData.output);
 	});
 	it('getMainContract', async () => {

@@ -1,4 +1,4 @@
-import * as web3Types from 'web3-types';
+import type * as web3Types from 'web3-types';
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -175,3 +175,7 @@ export const EIP712_TYPES = {
 		{ name: 'paymasterInput', type: 'bytes' },
 	],
 };
+
+export const MAX_INTEGER = BigInt(
+	'0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+);
