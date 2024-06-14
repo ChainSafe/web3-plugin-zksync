@@ -46,7 +46,7 @@ import {
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import { Web3ZkSyncL2 } from './web3zksync-l2'; // to be used instead of the one at zksync-ethers: Provider from ./provider
+import type { Web3ZkSyncL2 } from './web3zksync-l2'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';

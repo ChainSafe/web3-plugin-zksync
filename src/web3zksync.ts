@@ -1,7 +1,7 @@
 import type { Web3ContextInitOptions } from 'web3-core';
 import { Web3Eth } from 'web3-eth';
 import * as web3Utils from 'web3-utils';
-import * as web3Types from 'web3-types';
+import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
@@ -86,7 +86,9 @@ export class Web3ZkSync extends Web3Eth {
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
-	public async getL1BatchNumber(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<bigint> {
+	public async getL1BatchNumber(
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<bigint> {
 		return this._rpc.getL1BatchNumber(returnFormat);
 	}
 

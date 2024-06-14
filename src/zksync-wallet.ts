@@ -1,7 +1,7 @@
-import { Web3Eth } from 'web3';
+import type { Web3Eth } from 'web3';
 import * as web3Acccounts from 'web3-eth-accounts';
-import { Web3ZkSyncL2 } from './web3zksync-l2';
-import { EIP712Signer } from './Eip712';
+import type { Web3ZkSyncL2 } from './web3zksync-l2';
+import type { EIP712Signer } from './Eip712';
 
 export class ZKSyncWallet extends web3Acccounts.Wallet {
 	// or extends web3Acccounts.Web3Account

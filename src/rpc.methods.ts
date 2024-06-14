@@ -1,6 +1,6 @@
 import type { Web3RequestManager } from 'web3-core';
 import * as web3Utils from 'web3-utils';
-import * as web3Types from 'web3-types';
+import type * as web3Types from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
 import type {
@@ -203,7 +203,7 @@ export class RpcMethods {
 			[],
 		)) as web3Types.Address;
 
-		return web3Utils.toChecksumAddress(baseTokenL1Address!);
+		return web3Utils.toChecksumAddress(baseTokenL1Address);
 	}
 
 	/**
