@@ -18,7 +18,6 @@ import type {
 	TransactionRequest,
 	TransactionOverrides,
 } from './types';
-import { Network as ZkSyncNetwork } from './types';
 import {
 	ETH_ADDRESS_IN_CONTRACTS,
 	L2_BASE_TOKEN_ADDRESS,
@@ -32,7 +31,7 @@ import { RpcMethods } from './rpc.methods';
  * It extends the `Web3Eth` class and provides additional methods for interacting with zkSync Era.
  * It is the base class for the `Web3ZkSyncL1` and `Web3ZkSyncL2`.
  */
-// TODO: Move some of the methods to the `Web3ZkSyncL1` and `Web3ZkSyncL2` classes.
+// Note: Code logic here is similar to JsonRpcApiProvider class in zksync-ethers
 export class Web3ZkSync extends Web3Eth {
 	protected _rpc: RpcMethods;
 
@@ -395,31 +394,33 @@ export class Web3ZkSync extends Web3Eth {
 		);
 	}
 
-	/**
-	 * Creates a new `Provider` from provided URL or network name.
-	 *
-	 * @param zksyncNetwork The type of zkSync network.
-	 *
-	 * @example
-	 *
-	 * import { initWithDefaultProvider, types } from "web3-plugin-zksync";
-	 *
-	 * const provider = ZkSyncNetwork.initWithDefaultProvider(types.Network.Sepolia);
-	 */
-	static initWithDefaultProvider(
-		zksyncNetwork: ZkSyncNetwork = ZkSyncNetwork.Localhost,
-	): Web3ZkSync {
-		switch (zksyncNetwork) {
-			case ZkSyncNetwork.Localhost:
-				return new Web3ZkSync('http://localhost:3050');
-			case ZkSyncNetwork.Sepolia:
-				return new Web3ZkSync('https://sepolia.era.zksync.dev');
-			case ZkSyncNetwork.Mainnet:
-				return new Web3ZkSync('https://mainnet.era.zksync.io');
-			case ZkSyncNetwork.EraTestNode:
-				return new Web3ZkSync('http://localhost:8011');
-			default:
-				return new Web3ZkSync('http://localhost:3050');
-		}
-	}
+	// /**
+	//  * Returns `tx` as a normalized JSON-RPC transaction request, which has all values `hexlified` and any numeric
+	//  * values converted to Quantity values.
+	//  * @param tx The transaction request that should be normalized.
+	//  */
+	// override getRpcTransaction(tx: TransactionRequest): JsonRpcTransactionRequest {
+	// 	const result: any = super.getRpcTransaction(tx);
+	// 	if (!tx.customData) {
+	// 		return result;
+	// 	}
+	// 	result.type = ethers.toBeHex(EIP712_TX_TYPE);
+	// 	result.eip712Meta = {
+	// 		gasPerPubdata: ethers.toBeHex(tx.customData.gasPerPubdata ?? 0),
+	// 	} as any;
+	// 	if (tx.customData.factoryDeps) {
+	// 		result.eip712Meta.factoryDeps = tx.customData.factoryDeps.map((dep: ethers.BytesLike) =>
+	// 			// TODO (SMA-1605): we arraify instead of hexlifying because server expects Vec<u8>.
+	// 			//  We should change deserialization there.
+	// 			Array.from(ethers.getBytes(dep)),
+	// 		);
+	// 	}
+	// 	if (tx.customData.paymasterParams) {
+	// 		result.eip712Meta.paymasterParams = {
+	// 			paymaster: ethers.hexlify(tx.customData.paymasterParams.paymaster),
+	// 			paymasterInput: Array.from(ethers.getBytes(tx.customData.paymasterParams.paymasterInput)),
+	// 		};
+	// 	}
+	// 	return result;
+	// }
 }

@@ -19,6 +19,8 @@ export type { Bytes, HexString, Numbers } from 'web3-types';
 export interface TransactionOverrides extends Omit<Transaction, 'to' | 'data' | 'input'> {}
 
 export const ZeroAddress: Address = '0x0000000000000000000000000000000000000000';
+export const ZeroHash: string =
+	'0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /** 0x-prefixed, hex encoded, ethereum account address. */
 export type Address = string;
