@@ -1,5 +1,5 @@
 import * as web3Accounts from 'web3-eth-accounts';
-import { Web3 } from '../../../web3.js/packages/web3';
+import { Web3 } from 'web3';
 import * as constants from '../../src/constants';
 import * as utils from '../../src/utils';
 
