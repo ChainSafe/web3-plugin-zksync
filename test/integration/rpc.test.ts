@@ -7,6 +7,7 @@ import {
 	getTransactionDetailsData,
 } from '../fixtures';
 
+
 describe('ZkSyncPlugin rpc tests', () => {
 	let web3: Web3;
 
