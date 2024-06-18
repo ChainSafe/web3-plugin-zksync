@@ -12,6 +12,7 @@ import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Contract from 'web3-eth-contract';
 import type { Bytes } from 'web3-types';
+import { toUint8Array } from 'web3-eth-accounts';
 import type { DeploymentInfo, EthereumSignature } from './types';
 import {
 	// PaymasterParams,
@@ -137,15 +138,16 @@ function recoverSignerAddress(
 		message = messageOrData;
 	}
 
-	if (typeof signature === 'string') {
-		return web3Accounts.recover(message, signature, undefined, undefined, undefined, true);
-	}
+	const signatureObject =
+		typeof signature === 'string'
+			? new SignatureObject(signature)
+			: new SignatureObject(
+					toUint8Array(signature.r),
+					toUint8Array(signature.s),
+					signature.v,
+				);
 
-	const r = web3Utils.toHex(signature.r);
-	const s = web3Utils.toHex(signature.s);
-	const v = web3Utils.toHex(signature.v);
-
-	return web3Accounts.recover(message, v, r, s, undefined, true);
+	return web3Accounts.recover(web3Utils.keccak256(message), signatureObject.serialized, true);
 }
 
 export class SignatureObject {

@@ -278,7 +278,7 @@ describe('utils', () => {
 			const account = web3Accounts.create();
 			const ADDRESS = account.address;
 			const message = 'Hello, world!';
-			const signature = utils.EIP712.sign(message, account.privateKey).signature;
+			const signature = utils.EIP712.sign(message, account.privateKey).serialized;
 			const web3 = new Web3();
 			const isValidSignature = await utils.isMessageSignatureCorrect(
 				web3,

@@ -871,3 +871,19 @@ export type Eip712TxData = FeeMarketEIP1559TxData & {
 	hash?: string;
 	signature?: string;
 };
+export type Eip712SignedInput = FeeMarketEIP1559TxData & {
+	customData?: null | Eip712Meta;
+	data: Bytes;
+	value: Bytes;
+	nonce: Numbers;
+	gasLimit: Numbers;
+	maxFeePerGas: Numbers;
+	maxPriorityFeePerGas: Numbers;
+	from?: Address;
+	txType: Numbers;
+	gasPerPubdataByteLimit?: Numbers;
+	paymaster: Address;
+	factoryDeps: Bytes[];
+	paymasterInput: Bytes;
+	[key: string]: unknown;
+};
