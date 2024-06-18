@@ -14,6 +14,7 @@ import * as web3Contract from 'web3-eth-contract';
 import type { Bytes } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
 import type { DeploymentInfo, EthereumSignature } from './types';
+export * from './Eip712'
 import {
 	// PaymasterParams,
 	PriorityOpTree,
@@ -682,7 +683,6 @@ function isECDSASignatureCorrect(
 	signature: SignatureLike,
 ): boolean {
 	try {
-		web3Accounts.sign(message, PRIVATE_KEY);
 		return isAddressEq(address, recoverSignerAddress(message, signature));
 	} catch {
 		// In case ECDSA signature verification has thrown an error,
