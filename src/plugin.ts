@@ -3,7 +3,7 @@ import type { Address } from 'web3-types';
 import { Contract } from 'web3-eth-contract';
 import { Web3PluginBase } from 'web3-core';
 
-import { TransactionFactory } from '../../web3.js/packages/web3-eth-accounts';
+import { TransactionFactory } from 'web3-eth-accounts';
 import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
 import { EIP712_TX_TYPE, ETH_ADDRESS, ZERO_ADDRESS } from './constants';
