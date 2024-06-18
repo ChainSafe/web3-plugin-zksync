@@ -2,8 +2,7 @@ import { bytesToHex, toBigInt, toHex } from 'web3-utils';
 import type { Bytes, Eip712TypedData, Numbers } from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Utils from 'web3-utils';
-import type * as web3Acccounts from 'web3-eth-accounts';
-import type { JsonTx, TxOptions, TxValuesArray } from 'web3-eth-accounts';
+import type * as web3Accounts from 'web3-eth-accounts';
 import { BaseTransaction, toUint8Array } from 'web3-eth-accounts';
 import { RLP } from '@ethereumjs/rlp';
 import type { Address } from 'web3';
@@ -13,7 +12,13 @@ import {
 	EIP712_TYPES,
 	ZERO_ADDRESS,
 } from './constants';
-import type { Eip712Meta, Eip712TxData, EthereumSignature, PaymasterParams } from './types';
+import type {
+	Eip712Meta,
+	Eip712SignedInput,
+	Eip712TxData,
+	EthereumSignature,
+	PaymasterParams,
+} from './types';
 import type { SignatureLike } from './utils';
 import { concat, hashBytecode, SignatureObject, toBytes } from './utils';
 
@@ -56,7 +61,7 @@ function arrayToPaymasterParams(arr: Uint8Array): PaymasterParams | undefined {
 }
 
 export class EIP712 {
-	static getSignInput(transaction: Eip712TxData) {
+	static getSignInput(transaction: Eip712TxData): Eip712SignedInput {
 		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0n);
 		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
 		const gasPerPubdataByteLimit = toHex(
@@ -66,15 +71,15 @@ export class EIP712 {
 			txType: transaction.type || EIP712_TX_TYPE,
 			from: transaction.from ? toHex(transaction.from) : undefined,
 			to: transaction.to ? toHex(transaction.to) : undefined,
-			gasLimit: transaction.gasLimit || 0,
+			gasLimit: transaction.gasLimit ? toBigInt(transaction.gasLimit) : 0,
 			gasPerPubdataByteLimit: gasPerPubdataByteLimit,
 			customData: transaction.customData,
 			maxFeePerGas,
 			maxPriorityFeePerGas,
 			paymaster: transaction.customData?.paymasterParams?.paymaster || ZERO_ADDRESS,
-			nonce: transaction.nonce || 0,
-			value: transaction.value || toHex(0),
-			data: transaction.data || '0x',
+			nonce: transaction.nonce ? toBigInt(transaction.nonce) : 0,
+			value: transaction.value ? toHex(transaction.value) : '0x0',
+			data: transaction.data ? toHex(transaction.data) : '0x',
 			factoryDeps:
 				transaction.customData?.factoryDeps?.map((dep: Bytes) => hashBytecode(dep)) || [],
 			paymasterInput: transaction.customData?.paymasterParams?.paymasterInput || '0x',
@@ -301,9 +306,9 @@ export class EIP712 {
 
 export class EIP712Signer {
 	private eip712Domain: Eip712TypedData['domain'];
-	private web3Account: web3Acccounts.Web3Account;
+	private web3Account: web3Accounts.Web3Account;
 	private chainId: number;
-	constructor(web3Account: web3Acccounts.Web3Account, chainId: number) {
+	constructor(web3Account: web3Accounts.Web3Account, chainId: number) {
 		this.web3Account = web3Account;
 		this.chainId = Number(web3Utils.toNumber(chainId));
 		this.eip712Domain = {
@@ -328,7 +333,7 @@ export class EIP712Transaction extends BaseTransaction<EIP712Transaction> {
 	private txData: Eip712TxData;
 	private signature?: SignatureObject;
 	constructor(txData: Eip712TxData) {
-		super(txData, {} as TxOptions);
+		super(txData, {} as web3Accounts.TxOptions);
 		const { v, r, s, ...data } = txData;
 
 		if (r && s) {
@@ -359,6 +364,7 @@ export class EIP712Transaction extends BaseTransaction<EIP712Transaction> {
 		});
 	}
 	public ecsign(msgHash: Uint8Array, privateKey: Uint8Array, chainId?: bigint) {
+		// @ts-ignore-next-time until new web3js release
 		const { s, r, v } = this._ecsign(msgHash, privateKey, chainId);
 		this.signature = new SignatureObject(toUint8Array(r), toUint8Array(s), toBigInt(v));
 		return this.signature;
@@ -389,24 +395,24 @@ export class EIP712Transaction extends BaseTransaction<EIP712Transaction> {
 		return toUint8Array(EIP712.txHash(this.txData));
 	}
 	// @ts-ignore-next-line
-	raw(): TxValuesArray[] {
-		return EIP712.raw(this.txData) as unknown as TxValuesArray[];
+	raw(): web3Accounts.TxValuesArray[] {
+		return EIP712.raw(this.txData) as unknown as web3Accounts.TxValuesArray[];
 	}
 
 	serialize(): Uint8Array {
 		return toUint8Array(EIP712.serialize(this.txData));
 	}
 
-	toJSON(): JsonTx {
+	toJSON(): web3Accounts.JsonTx {
 		const data = EIP712.getSignInput(this.txData);
 		return {
-			to: data.to,
+			to: data.to && toHex(data.to),
 			gasLimit: toHex(data.gasLimit),
 			// @ts-ignore-next-line
 			gasPerPubdataByteLimit: data.gasPerPubdataByteLimit,
 			customData: data.customData,
-			maxFeePerGas: data.maxFeePerGas,
-			maxPriorityFeePerGas: data.maxPriorityFeePerGas,
+			maxFeePerGas: toHex(data.maxFeePerGas),
+			maxPriorityFeePerGas: toHex(data.maxPriorityFeePerGas),
 			paymaster: data.paymaster,
 			nonce: toHex(data.nonce),
 			value: toHex(data.value),
