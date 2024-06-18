@@ -21,7 +21,7 @@ describe('utils', () => {
 				270,
 			);
 			const signature = eip712Signer.sign(tx) as utils.SignatureObject;
-			const web3 = new Web3('http://localhost:8545');
+			const web3 = new Web3('https://sepolia.era.zksync.dev');
 			expect(signature.serialized).toBe(
 				'0x5ea12f3d54a1624d7e7f5161dbf6ab746c3335e643b2966264e740cf8e10e9b64b0251fb79d9a5b11730387085a0d58f105926f72e20242ecb274639991939ca1b',
 			);
