@@ -10,7 +10,7 @@ plugin's capabilities.
 
 ## Plugin Components
 
-The plugin exposes the [zkSync JSON-RPC API](https://docs.zksync.io/build/api.html), implemented in
+The plugin exposes the [zkSync JSON-RPC API](https://docs.zksync.io/build/api-reference/zks-rpc), implemented in
 [src/rpc.methods.ts](src/rpc.methods.ts), as well as the [types](src/types.ts) that are used to send
 and receive data using the JSON-RPC API. Smart contract definitions are located in the
 [src/contracts](src/contracts) folder. The plugin is implemented in [src/plugin.ts](src/plugin.ts).
