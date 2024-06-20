@@ -2,6 +2,12 @@
 
 Use [Web3.js](https://web3js.org/) to interact with [zkSync](https://zksync.io/) networks.
 
+## Documentation
+
+Please refer to the comprehensive
+[API documentation](https://chainsafe.github.io/web3-plugin-zksync/) for a complete overview of this
+plugin's capabilities.
+
 ## Plugin Components
 
 The plugin exposes the [zkSync JSON-RPC API](https://docs.zksync.io/build/api.html), implemented in
