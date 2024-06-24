@@ -6,6 +6,7 @@ import {
 	getL2ToL1LogProofData,
 	getProofData,
 } from '../fixtures';
+import { ethRpcMethods } from 'web3-rpc-methods';
 
 describe('ZkSyncPlugin rpc mainnet tests', () => {
 	let web3: Web3;
@@ -53,5 +54,12 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 		const latestBatchDetails = await web3.zkSync.rpc.getL1BatchDetails(latestBatchIndex);
 		const blockDetails = await web3.zkSync.rpc.getBlockDetails(latestBatchDetails.number);
 		expect(blockDetails.number).toBeDefined();
+	});
+	it.only('transactionReceipt', async () => {
+		const res = await ethRpcMethods.getTransactionReceipt(
+			web3.requestManager,
+			'0x8cee929f16b4738a8ae6cf4bd4f43d5be0e5f028e4db45a0bde6203ef242c30e',
+		);
+		console.log('res', res);
 	});
 });

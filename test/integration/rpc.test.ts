@@ -68,4 +68,9 @@ describe('ZkSyncPlugin rpc tests', () => {
 		});
 		expect(res).toBeGreaterThan(BigInt(0));
 	});
+
+    it('getBridgeContracts', async () => {
+        const res = await web3.zkSync.rpc.getBridgeHubContract();
+        expect(res).toEqual(''); // @todo: set bridge hub contract address
+    });
 });

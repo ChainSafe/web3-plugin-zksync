@@ -17,14 +17,18 @@ import type {
 	WalletBalances,
 	TransactionRequest,
 	TransactionOverrides,
+	Address,
 } from './types';
 import {
 	ETH_ADDRESS_IN_CONTRACTS,
 	L2_BASE_TOKEN_ADDRESS,
+	LEGACY_ETH_ADDRESS,
 	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 import { isAddressEq } from './utils';
 import { RpcMethods } from './rpc.methods';
+import * as Web3 from 'web3';
+import { IL2BridgeABI } from './contracts/IL2Bridge';
 
 /**
  * The base class for interacting with zkSync Era.
@@ -344,6 +348,21 @@ export class Web3ZkSync extends Web3Eth {
 	}
 
 	/**
+	 * Returns the address of the BridgeHub contract.
+	 *
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async getBridgeHubContract(
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<Address> {
+		if (!this.contractAddresses().bridgehubContract) {
+			this.contractAddresses().bridgehubContract =
+				await this._rpc.getBridgeHubContract(returnFormat);
+		}
+		return this.contractAddresses().bridgehubContract!;
+	}
+
+	/**
 	 * Returns gas estimation for an L1 to L2 execute operation.
 	 *
 	 * @param transaction The transaction details.
@@ -394,6 +413,42 @@ export class Web3ZkSync extends Web3Eth {
 		);
 	}
 
+	/**
+	 * Returns the L2 token address equivalent for a L1 token address as they are not equal.
+	 * ETH address is set to zero address.
+	 *
+	 * @remarks Only works for tokens bridged on default zkSync Era bridges.
+	 *
+	 * @param token The address of the token on L1.
+	 */
+	async l2TokenAddress(token: Address): Promise<string> {
+		if (isAddressEq(token, LEGACY_ETH_ADDRESS)) {
+			token = ETH_ADDRESS_IN_CONTRACTS;
+		}
+
+		const baseToken = await this.getBaseTokenContractAddress();
+		if (isAddressEq(token, baseToken)) {
+			return L2_BASE_TOKEN_ADDRESS;
+		}
+
+		const bridgeAddresses = await this.getDefaultBridgeAddresses();
+
+		const contract = new Web3.Contract(IL2BridgeABI, bridgeAddresses.sharedL2);
+		contract.setProvider(this.provider);
+		return await contract.methods.l2TokenAddress(token).call();
+	}
+
+	/**
+	 * Returns the main zkSync Era smart contract address.
+	 *
+	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getmaincontract zks_getMainContract} JSON-RPC method.
+	 */
+	async getMainContractAddress(): Promise<Address> {
+		if (!this.contractAddresses().mainContract) {
+			this.contractAddresses().mainContract = await this._rpc.getMainContract();
+		}
+		return this.contractAddresses().mainContract!;
+	}
 	// /**
 	//  * Returns `tx` as a normalized JSON-RPC transaction request, which has all values `hexlified` and any numeric
 	//  * values converted to Quantity values.

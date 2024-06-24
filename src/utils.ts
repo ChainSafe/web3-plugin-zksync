@@ -11,10 +11,11 @@ import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Contract from 'web3-eth-contract';
-import type { Bytes } from 'web3-types';
+import type { Bytes, TransactionReceipt } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
 import type { DeploymentInfo, EthereumSignature } from './types';
-export * from './Eip712'
+
+export * from './Eip712';
 import {
 	// PaymasterParams,
 	PriorityOpTree,
@@ -48,7 +49,10 @@ import {
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import type { Web3ZkSyncL2 } from './web3zksync-l2'; // to be used instead of the one at zksync-ethers: Provider from ./provider
+import type { Web3ZkSyncL2 } from './web3zksync-l2';
+import { Web3PromiEvent } from 'web3';
+import { Web3Eth } from 'web3-eth';
+import { keccak256 } from 'web3-utils'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -201,6 +205,7 @@ export class SignatureObject {
 			this.v = BigInt(signature.v!);
 		}
 	}
+
 	static getNormalizedV(v: number): 27 | 28 {
 		if (v === 0 || v === 27) {
 			return 27;
@@ -212,15 +217,19 @@ export class SignatureObject {
 		// Otherwise, EIP-155 v means odd is 27 and even is 28
 		return v & 1 ? 27 : 28;
 	}
+
 	concat(datas: ReadonlyArray<Bytes>): string {
 		return '0x' + datas.map(d => web3Utils.toHex(d).substring(2)).join('');
 	}
+
 	get yParity(): 0 | 1 {
 		return this.v === 27n ? 0 : 1;
 	}
+
 	public get serialized(): string {
 		return this.concat([this.r, this.s, this.yParity ? '0x1c' : '0x1b']);
 	}
+
 	public toString() {
 		return `${this.r}${this.s.slice(2)}${web3Utils.toHex(this.v).slice(2)}`;
 	}
@@ -784,11 +793,11 @@ async function isSignatureCorrect(
  * const message = "Hello, world!";
  * const signature = await new Wallet(PRIVATE_KEY).signMessage(message);
  * const isValidSignature = await utils.isMessageSignatureCorrect(
- * 			web3,
- * 			ADDRESS,
- * 			message,
- * 			signature,
- * 		);
+ *            web3,
+ *            ADDRESS,
+ *            message,
+ *            signature,
+ *        );
  * // isValidSignature = true
  */
 export async function isMessageSignatureCorrect(
@@ -1007,4 +1016,56 @@ export function toJSON(object: any): string {
  */
 export function isAddressEq(a: web3.Address, b: web3.Address): boolean {
 	return a.toLowerCase() === b.toLowerCase();
+}
+
+export function waitTxConfirmation(
+	tx: Web3PromiEvent<any, any>,
+	waitConfirmations = 1,
+): Promise<TransactionReceipt> {
+	return new Promise(resolve => {
+		tx.on('confirmation', ({ confirmations, receipt }) => {
+			if (confirmations >= waitConfirmations) {
+				resolve(receipt);
+			}
+		});
+	});
+}
+
+export async function waitFinalize(
+	provider: Web3Eth,
+	tx: Web3PromiEvent<any, any>,
+): Promise<TransactionReceipt> {
+	const receipt = await waitTxConfirmation(tx);
+
+	while (true) {
+		if (receipt && receipt.blockNumber) {
+			const block = await provider.getBlock('finalized');
+			if (web3Utils.toBigInt(receipt.blockNumber) <= block!.number) {
+				return (await provider.getTransactionReceipt(
+					receipt.transactionHash,
+				)) as TransactionReceipt;
+			}
+		} else {
+			await sleep(500);
+		}
+	}
+}
+
+/**
+ * A simple hashing function which operates on UTF-8 strings to compute an 32-byte identifier.
+ * This simply computes the UTF-8 bytes and computes the [[keccak256]].
+ * @param value
+ */
+export function id(value: string): string {
+	return keccak256(value);
+}
+
+export function dataSlice(data: Bytes, start?: number, end?: number): string {
+	const bytes = toBytes(data);
+	if (end != null && end > bytes.length) {
+		throw new Error('cannot slice beyond data bounds');
+	}
+	return web3Utils.toHex(
+		bytes.slice(start == null ? 0 : start, end == null ? bytes.length : end),
+	);
 }

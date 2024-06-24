@@ -14,6 +14,7 @@ import type {
 } from 'web3-types';
 
 import type { RpcMethods } from './rpc.methods';
+import { Web3PromiEvent } from 'web3';
 
 export type { Bytes, HexString, Numbers } from 'web3-types';
 export interface TransactionOverrides extends Omit<Transaction, 'to' | 'data' | 'input'> {}
@@ -532,13 +533,15 @@ export declare type TransactionRequest = TransactionWithSenderAPI & {
  * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
  * that waits to commit a L1 transaction, including when given on optional confirmation number.
  */
-export interface PriorityOpResponse extends Transaction {
+export interface PriorityOpResponse extends Web3PromiEvent<any, any> {
 	/**
 	 * Waits for the L1 transaction to be committed, including waiting for the specified number of confirmations.
 	 * @param confirmation The number of confirmations to wait for. Defaults to 1.
 	 * @returns A promise that resolves to the transaction receipt once committed.
 	 */
 	waitL1Commit(confirmation?: number): Promise<TransactionReceipt>;
+	wait(confirmation?: number): Promise<TransactionReceipt>;
+	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
 }
 
 /** A map containing accounts and their balances. */
@@ -886,4 +889,13 @@ export type Eip712SignedInput = FeeMarketEIP1559TxData & {
 	factoryDeps: Bytes[];
 	paymasterInput: Bytes;
 	[key: string]: unknown;
+};
+
+export type ZKTransactionReceipt = TransactionReceipt & {
+	l1BatchNumber: Numbers;
+	l1BatchTxIndex: Numbers;
+	l2ToL1Logs: L2ToL1Log[];
+	logs: TransactionReceipt['logs'] & {
+		l1BatchNumber: Numbers;
+	};
 };
