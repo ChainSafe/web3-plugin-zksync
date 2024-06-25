@@ -16,8 +16,8 @@ import type {
 	TransactionDetails,
 	WalletBalances,
 	TransactionRequest,
-	TransactionOverrides,
 	Address,
+	TransactionOverrides,
 } from './types';
 import {
 	ETH_ADDRESS_IN_CONTRACTS,

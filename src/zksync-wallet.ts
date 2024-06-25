@@ -26,10 +26,11 @@ export class ZKSyncWallet extends web3Acccounts.Wallet {
 	 * const ethProvider = ethers.getDefaultProvider("sepolia");
 	 * const wallet = new Wallet(PRIVATE_KEY, provider, ethProvider);
 	 */
+	// @ts-ignore
 	constructor(
-		privateKey: string /* | ethers.SigningKey */,
-		providerL2?: Web3ZkSyncL2,
-		providerL1?: Web3Eth,
+		_privateKey: string /* | ethers.SigningKey */,
+		_providerL2?: Web3ZkSyncL2,
+		_providerL1?: Web3Eth,
 	) {
 		// TODO: Implement constructor
 	}
@@ -43,7 +44,7 @@ export class ZKSyncWallet extends web3Acccounts.Wallet {
 	getAddress(): any {
 		throw new Error('Method not implemented.');
 	}
-	deposit(arg0: { token: string; to: any; amount: string; refundRecipient: any }) {
+	deposit(_arg0: { token: string; to: any; amount: string; refundRecipient: any }) {
 		throw new Error('Method not implemented.');
 	}
 }

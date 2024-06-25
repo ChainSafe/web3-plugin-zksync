@@ -52,7 +52,7 @@ import {
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import { Web3PromiEvent } from 'web3';
 import { Web3Eth } from 'web3-eth';
-import { keccak256 } from 'web3-utils'; // to be used instead of the one at zksync-ethers: Provider from ./provider
+import { keccak256, toBigInt } from 'web3-utils'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -1029,6 +1029,31 @@ export function waitTxConfirmation(
 			}
 		});
 	});
+}
+
+export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
+	while (true) {
+		const receipt = await web3Eth.getTransactionReceipt(txHash);
+		if (receipt && receipt.blockNumber) {
+			return receipt;
+		}
+		await sleep(500);
+	}
+}
+export async function waitTxByHashConfirmation(
+	web3Eth: Web3Eth,
+	txHash: string,
+	waitConfirmations = 1,
+	blockTag = 'latest',
+): Promise<TransactionReceipt> {
+	const receipt = await waitTxReceipt(web3Eth, txHash);
+	while (true) {
+		const block = await web3Eth.getBlock(blockTag);
+		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+			return receipt;
+		}
+		await sleep(500);
+	}
 }
 
 export async function waitFinalize(

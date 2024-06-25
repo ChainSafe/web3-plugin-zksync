@@ -899,3 +899,6 @@ export type ZKTransactionReceipt = TransactionReceipt & {
 		l1BatchNumber: Numbers;
 	};
 };
+export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
+export interface OverridesReadOnly extends Omit<TransactionRequest, 'to' | 'data'> {}
+export type Overrides = DeepWriteable<OverridesReadOnly>;

@@ -6,6 +6,7 @@
 import {
 	Address,
 	Network as ZkSyncNetwork,
+	TransactionOverrides,
 	PaymasterParams,
 	PriorityOpResponse,
 	TransactionStatus,
@@ -18,28 +19,19 @@ import {
 	isAddressEq,
 	isETH,
 	sleep,
-	waitFinalize,
+	waitTxByHashConfirmation,
 	waitTxConfirmation,
 } from './utils';
-import { Block, TransactionReceiptBase, Web3PromiEvent } from 'web3';
-import {
-	Bytes,
-	DataFormat,
-	DEFAULT_RETURN_FORMAT,
-	EthExecutionAPI,
-	FormatType,
-	Numbers,
-	TransactionReceipt,
-} from 'web3-types';
+import { Block, Web3PromiEvent } from 'web3';
+import { Bytes, DataFormat, DEFAULT_RETURN_FORMAT, Numbers } from 'web3-types';
 import { Web3Eth } from 'web3-eth';
 import { format, toHex } from 'web3-utils';
-import { Web3Context } from 'web3-core';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
-import { transactionReceiptSchema } from 'web3-eth/src/schemas';
 import { ZKTransactionReceiptSchema } from './schemas';
 import { Abi as IEthTokenAbi } from './contracts/IEthToken';
 import {
+	BOOTLOADER_FORMAL_ADDRESS,
 	EIP712_TX_TYPE,
 	ETH_ADDRESS_IN_CONTRACTS,
 	L2_BASE_TOKEN_ADDRESS,
@@ -119,16 +111,27 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 * @param l1TxResponse The L1 transaction response.
 	 */
 	getPriorityOpResponse(l1TxResponse: Web3PromiEvent<any, any>): PriorityOpResponse {
+		// @ts-ignore
 		return {
 			...l1TxResponse,
 			waitL1Commit: () => waitTxConfirmation(l1TxResponse),
 			wait: async () => {
-				const l2Tx = this.getL2TransactionFromPriorityOp(l1TxResponse);
-				return waitTxConfirmation(l2Tx);
+				const l2TxHash = await this.getL2TransactionFromPriorityOp(l1TxResponse);
+				return await waitTxByHashConfirmation(
+					this as unknown as Web3Eth,
+					l2TxHash,
+					1,
+					'latest',
+				);
 			},
 			waitFinalize: async () => {
-				const l2Tx = this.getL2TransactionFromPriorityOp(l1TxResponse);
-				return waitFinalize(this as unknown as Web3Eth, l2Tx);
+				const l2TxHash = await this.getL2TransactionFromPriorityOp(l1TxResponse);
+				return await waitTxByHashConfirmation(
+					this as unknown as Web3Eth,
+					l2TxHash,
+					1,
+					'finalized',
+				);
 			},
 		};
 	}
@@ -158,7 +161,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 
 	async _getPriorityOpConfirmationL2ToL1Log(txHash: string, index = 0) {
 		const hash = toHex(txHash);
-		const receipt = await this.getTransactionReceipt(hash);
+		const receipt = await this.getZKTransactionReceipt(hash);
 		if (!receipt) {
 			throw new Error('Transaction is not mined!');
 		}
@@ -199,9 +202,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 *
 	 * @param l1TxResponse The L1 transaction response.
 	 */
-	async getL2TransactionFromPriorityOp(
-		l1TxResponse: Web3PromiEvent<any, any>,
-	): Promise<TransactionReceiptBase<any, any, any, any>> {
+	async getL2TransactionFromPriorityOp(l1TxResponse: Web3PromiEvent<any, any>) {
 		const receipt = await waitTxConfirmation(l1TxResponse);
 		const l2Hash = getL2HashFromPriorityOp(receipt, await this.getMainContractAddress());
 
@@ -211,7 +212,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 			await sleep(this.transactionPollingInterval);
 		} while (status === TransactionStatus.NotFound);
 
-		return this.getTransaction(l2Hash);
+		return l2Hash;
 	}
 
 	/**
@@ -253,7 +254,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		to?: Address;
 		bridgeAddress?: Address;
 		paymasterParams?: PaymasterParams;
-		overrides?: ethers.Overrides;
+		overrides?: TransactionOverrides;
 	}) {
 		const { ...tx } = transaction;
 		const isEthBasedChain = await this.isEthBasedChain();
@@ -274,14 +275,14 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		}
 
 		tx.to ??= tx.from;
-		tx.overrides ??= {};
-		tx.overrides.from ??= tx.from;
+		tx.overrides ??= {} as TransactionOverrides;
+		tx.overrides.from ??= tx.from as Address;
 
 		if (isETH(tx.token)) {
-			if (!tx.overrides.value) {
-				tx.overrides.value = tx.amount;
+			if (!tx.overrides?.value) {
+				tx.overrides.value = toHex(tx.amount);
 			}
-			const passedValue = BigInt(tx.overrides.value);
+			const passedValue = BigInt(tx.overrides?.value ?? 0);
 
 			if (passedValue !== BigInt(tx.amount)) {
 				// To avoid users shooting themselves into the foot, we will always use the amount to withdraw
@@ -292,16 +293,19 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 
 			const ethL2Token = new Web3.Contract(IEthTokenAbi, L2_BASE_TOKEN_ADDRESS);
 			ethL2Token.setProvider(this.provider);
-			const sendOptions = {
-				...tx.overrides,
-			};
+			const populatedTx = ethL2Token.methods
+				.withdraw(tx.from, tx.to, tx.amount)
+				// @ts-ignore
+				.populateTransaction(tx.overrides);
 			if (tx.paymasterParams) {
-				sendOptions.customData = {
-					paymasterParams: tx.paymasterParams,
+				return {
+					...populatedTx,
+					customData: {
+						paymasterParams: tx.paymasterParams,
+					},
 				};
 			}
-
-			return ethL2Token.methods.withdraw(tx.from, tx.to, tx.amount).send(sendOptions);
+			return populatedTx;
 		}
 
 		if (!tx.bridgeAddress) {
@@ -311,18 +315,20 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		const bridge = new Web3.Contract(IL2BridgeABI, tx.bridgeAddress);
 		bridge.setProvider(this.provider);
 
-		bridge.methods.withdraw();
+		const populatedTx = bridge.methods
+			.withdraw(tx.from, tx.to, tx.token, tx.amount)
+			// @ts-ignore
+			.populateTransaction(tx.overrides);
 
-		const sendOptions = {
-			...tx.overrides,
-		};
 		if (tx.paymasterParams) {
-			sendOptions.customData = {
-				paymasterParams: tx.paymasterParams,
+			return {
+				...populatedTx,
+				customData: {
+					paymasterParams: tx.paymasterParams,
+				},
 			};
 		}
-
-		return bridge.methods.withdraw(tx.from, tx.to, tx.token, tx.amount).send(sendOptions);
+		return populatedTx;
 	}
 
 	/**
@@ -341,7 +347,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		from?: Address;
 		token?: Address;
 		paymasterParams?: PaymasterParams;
-		overrides?: ethers.Overrides;
+		overrides?: TransactionOverrides;
 	}) {
 		const { ...tx } = transaction;
 		const isEthBasedChain = await this.isEthBasedChain();
@@ -354,8 +360,8 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 			tx.token = L2_BASE_TOKEN_ADDRESS;
 		}
 
-		tx.overrides ??= {};
-		tx.overrides.from ??= tx.from;
+		tx.overrides ??= {} as TransactionOverrides;
+		tx.overrides.from ??= tx.from as Address;
 
 		if (isETH(tx.token)) {
 			if (tx.paymasterParams) {
@@ -378,14 +384,20 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		} else {
 			const token = new Web3.Contract(IERC20ABI, tx.token);
 			token.setProvider(this.provider);
+			const populatedTx = token.methods
+				.transfer(tx.to, tx.amount)
+				// @ts-ignore
+				.populateTransaction(tx.overrides);
 
-			const sendOptions = { ...tx.overrides };
 			if (tx.paymasterParams) {
-				sendOptions.customData = {
-					paymasterParams: tx.paymasterParams,
+				return {
+					...populatedTx,
+					customData: {
+						paymasterParams: tx.paymasterParams,
+					},
 				};
 			}
-			return token.methods.transfer(tx.to, tx.amount).send(sendOptions);
+			return populatedTx;
 		}
 	}
 
