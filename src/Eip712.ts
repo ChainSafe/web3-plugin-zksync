@@ -62,23 +62,29 @@ function arrayToPaymasterParams(arr: Uint8Array): PaymasterParams | undefined {
 
 export class EIP712 {
 	static getSignInput(transaction: Eip712TxData): Eip712SignedInput {
-		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0n);
-		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
-		const gasPerPubdataByteLimit = toHex(
-			transaction.customData?.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT,
-		);
+		const maxFeePerGas = toBigInt(transaction.maxFeePerGas || transaction.gasPrice || 0n);
+		const maxPriorityFeePerGas = toBigInt(transaction.maxPriorityFeePerGas || maxFeePerGas);
+		const gasPerPubdataByteLimit =
+			transaction.customData?.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT;
 		return {
 			txType: transaction.type || EIP712_TX_TYPE,
-			from: transaction.from ? toHex(transaction.from) : undefined,
-			to: transaction.to ? toHex(transaction.to) : undefined,
-			gasLimit: transaction.gasLimit ? toBigInt(transaction.gasLimit) : 0,
+			from: transaction.from
+				? typeof transaction.from === 'string'
+					? transaction.from
+					: toHex(transaction.from)
+				: undefined,
+			to: transaction.to
+				? typeof transaction.to === 'string'
+					? transaction.to
+					: toHex(transaction.to)
+				: undefined,
+			gasLimit: transaction.gasLimit ? toBigInt(transaction.gasLimit) : 0n,
 			gasPerPubdataByteLimit: gasPerPubdataByteLimit,
-			customData: transaction.customData,
 			maxFeePerGas,
 			maxPriorityFeePerGas,
 			paymaster: transaction.customData?.paymasterParams?.paymaster || ZERO_ADDRESS,
 			nonce: transaction.nonce ? toBigInt(transaction.nonce) : 0,
-			value: transaction.value ? toHex(transaction.value) : '0x0',
+			value: transaction.value ? toBigInt(transaction.value) : 0n,
 			data: transaction.data ? toHex(transaction.data) : '0x',
 			factoryDeps:
 				transaction.customData?.factoryDeps?.map((dep: Bytes) => hashBytecode(dep)) || [],
@@ -320,6 +326,28 @@ export class EIP712Signer {
 
 	sign(tx: Eip712TxData): SignatureObject | undefined {
 		return new EIP712Transaction(tx).sign(toBytes(this.web3Account.privateKey)).getSignature();
+	}
+
+	/**
+	 * Hashes the transaction request using EIP712.
+	 *
+	 * @param transaction The transaction request that needs to be hashed.
+	 * @returns A hash (digest) of the transaction request.
+	 *
+	 * @throws {Error} If `transaction.chainId` is not set.
+	 */
+	static getSignedDigest(transaction: Eip712TxData): Bytes {
+		if (!transaction.chainId) {
+			throw Error("Transaction chainId isn't set!");
+		}
+		const domain = {
+			name: 'zkSync',
+			version: '2',
+			chainId: transaction.chainId,
+		};
+		// TODO: Implement replacement of the following line
+		// @ts-ignore
+		return ethers.TypedDataEncoder.hash(domain, EIP712_TYPES, EIP712.getSignInput(transaction));
 	}
 
 	/**

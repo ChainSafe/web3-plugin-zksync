@@ -867,17 +867,22 @@ export interface TypedDataField {
 	type: string;
 }
 
-export type Eip712TxData = FeeMarketEIP1559TxData & {
+export type Eip712TxData = Omit<FeeMarketEIP1559TxData, 'gasPrice'> & {
 	/** The custom data for EIP712 transaction metadata. */
 	customData?: null | Eip712Meta;
 	from?: Address;
 	hash?: string;
 	signature?: string;
+	/**
+	 * The transaction's gas price. To be used if maxPriorityFeePerGas and maxFeePerGas were not provided
+	 */
+	gasPrice?: Numbers | Uint8Array | null;
 };
+
 export type Eip712SignedInput = FeeMarketEIP1559TxData & {
 	customData?: null | Eip712Meta;
 	data: Bytes;
-	value: Bytes;
+	value: Numbers;
 	nonce: Numbers;
 	gasLimit: Numbers;
 	maxFeePerGas: Numbers;
