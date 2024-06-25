@@ -7,16 +7,16 @@ jest.mock('web3-rpc-methods');
 
 describe('Web3ZkSyncL2 as a Provider', () => {
 	it('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
-		const web3ZkSyncL2 = new Web3ZkSyncL2();
+		const web3ZkSyncL2 = new Web3ZkSyncL2('https://mainnet.era.zksync.io');
 
 		// TODO: remove the commented lines after the test passes
 		// NOTE: this was an object of TransactionResponse in ethers
 		const l1Tx: Transaction = {
 			// hash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-			from: '0xabcdef1234567890abcdef1234567890abcdef1234',
+			from: '0xabcdef1234567890abcdef1234567890abcdef12',
 			// blockHash: '0xabcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
 			// blockNumber: 123456,
-			to: '0xabcdef1234567890abcdef1234567890abcdef1234',
+			to: '0xabcdef1234567890abcdef1234567890abcdef12',
 			type: 2,
 			nonce: 42,
 			gasLimit: 2000000n,
@@ -41,5 +41,6 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 		expect(typeof priorityOpResponse.wait).toBe('function');
 		// 'The waitFinalize function should be properly initialized'
 		expect(typeof priorityOpResponse.waitFinalize).toEqual('function');
+
 	});
 });
