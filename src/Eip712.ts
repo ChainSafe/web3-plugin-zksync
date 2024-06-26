@@ -89,6 +89,10 @@ export class EIP712 {
 			factoryDeps:
 				transaction.customData?.factoryDeps?.map((dep: Bytes) => hashBytecode(dep)) || [],
 			paymasterInput: transaction.customData?.paymasterParams?.paymasterInput || '0x',
+			customData:
+				transaction.customData && Object.keys(transaction.customData).length > 0
+					? transaction.customData
+					: undefined,
 		};
 	}
 
@@ -340,14 +344,17 @@ export class EIP712Signer {
 		if (!transaction.chainId) {
 			throw Error("Transaction chainId isn't set!");
 		}
-		const domain = {
-			name: 'zkSync',
-			version: '2',
-			chainId: transaction.chainId,
-		};
+
+		return EIP712.txHash(transaction);
+
+		// const domain = {
+		// 	name: 'zkSync',
+		// 	version: '2',
+		// 	chainId: transaction.chainId,
+		// };
 		// TODO: Implement replacement of the following line
 		// @ts-ignore
-		return ethers.TypedDataEncoder.hash(domain, EIP712_TYPES, EIP712.getSignInput(transaction));
+		// return ethers.TypedDataEncoder.hash(domain, EIP712_TYPES, EIP712.getSignInput(transaction));
 	}
 
 	/**

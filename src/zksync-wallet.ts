@@ -1,13 +1,61 @@
-import type { Web3Eth } from 'web3';
-import * as web3Acccounts from 'web3-eth-accounts';
+import { Web3Eth } from 'web3';
+import * as web3Accounts from 'web3-eth-accounts';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import type { EIP712Signer } from './Eip712';
+import { Web3Account } from 'web3-eth-accounts';
+import { AdapterL1, AdapterL2 } from './adapters';
+import type { Address, Eip712Meta, PaymasterParams, TransactionOverrides } from './types';
+import type * as web3Types from 'web3-types';
 
-export class ZKSyncWallet extends web3Acccounts.Wallet {
-	// or extends web3Acccounts.Web3Account
-	readonly provider!: Web3ZkSyncL2;
+class Adapters extends AdapterL1 {
+	adapterL2: AdapterL2;
+	constructor() {
+		super();
+		this.adapterL2 = new AdapterL2();
+		this.adapterL2.getAddress = this.getAddress;
+		this.adapterL2._contextL2 = this._contextL2;
+	}
+	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'committed') {
+		return this.adapterL2.getBalance(token, blockTag);
+	}
+	getAllBalances() {
+		return this.adapterL2.getAllBalances();
+	}
+	getDeploymentNonce() {
+		return this.adapterL2.getDeploymentNonce();
+	}
+	getL2BridgeContracts() {
+		return this.adapterL2.getL2BridgeContracts();
+	}
+	_fillCustomData(data: Eip712Meta) {
+		return this.adapterL2._fillCustomData(data);
+	}
+	withdraw(transaction: {
+		token: Address;
+		amount: web3Types.Numbers;
+		to?: Address;
+		bridgeAddress?: Address;
+		paymasterParams?: PaymasterParams;
+		overrides?: TransactionOverrides;
+	}) {
+		return this.adapterL2.withdraw(transaction);
+	}
+	transfer(transaction: {
+		to: Address;
+		amount: web3Types.Numbers;
+		token?: Address;
+		paymasterParams?: PaymasterParams;
+		overrides?: TransactionOverrides;
+	}) {
+		return this.adapterL2.transfer(transaction);
+	}
+}
+
+export class ZKSyncWallet extends Adapters {
+	readonly provider?: Web3ZkSyncL2;
 	providerL1?: Web3Eth;
 	public eip712!: EIP712Signer;
+	public account: Web3Account;
 
 	/**
 	 *
@@ -28,23 +76,33 @@ export class ZKSyncWallet extends web3Acccounts.Wallet {
 	 */
 	// @ts-ignore
 	constructor(
-		_privateKey: string /* | ethers.SigningKey */,
-		_providerL2?: Web3ZkSyncL2,
-		_providerL1?: Web3Eth,
+		privateKey: string /* | ethers.SigningKey */,
+		providerL2: Web3ZkSyncL2,
+		providerL1: Web3Eth,
 	) {
-		// TODO: Implement constructor
+		super();
+
+		this.account = web3Accounts.privateKeyToAccount(privateKey);
+		this.providerL1 = providerL1;
+		this.provider = providerL2;
+	}
+	protected _contextL1() {
+		return this.providerL1!;
+	}
+	protected _contextL2() {
+		return this.provider!;
 	}
 
 	getBalanceL1() {
-		throw new Error('Method not implemented.');
+		return super.getBalanceL1();
 	}
 	getBalance() {
-		throw new Error('Method not implemented.');
+		return super.getBalance();
 	}
 	getAddress(): any {
-		throw new Error('Method not implemented.');
+		return this.account.address;
 	}
 	deposit(_arg0: { token: string; to: any; amount: string; refundRecipient: any }) {
-		throw new Error('Method not implemented.');
+		return super.deposit(_arg0);
 	}
 }

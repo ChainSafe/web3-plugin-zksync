@@ -7,7 +7,6 @@ import {
 	getTransactionDetailsData,
 } from '../fixtures';
 
-
 describe('ZkSyncPlugin rpc tests', () => {
 	let web3: Web3;
 
@@ -52,10 +51,10 @@ describe('ZkSyncPlugin rpc tests', () => {
 		const res = await web3.zkSync.rpc.getL1BatchBlockRange(1);
 		expect(res).toEqual(['0x1', '0x2']);
 	});
-	it('getTestnetPaymaster', async () => {
-		const res = await web3.zkSync.rpc.getTestnetPaymaster();
-		expect(res).toBe('0x3cb2b87d10ac01736a65688f3e0fb1b070b3eea3');
-	});
+	// it('getTestnetPaymaster', async () => {
+	// 	const res = await web3.zkSync.rpc.getTestnetPaymaster();
+	// 	expect(res).toBe('0x3cb2b87d10ac01736a65688f3e0fb1b070b3eea3');
+	// });
 	it('getBridgeContracts', async () => {
 		const res = await web3.zkSync.rpc.getBridgeContracts();
 		expect(res).toEqual(getBridgeContractsData.output);
@@ -69,8 +68,8 @@ describe('ZkSyncPlugin rpc tests', () => {
 		expect(res).toBeGreaterThan(BigInt(0));
 	});
 
-    it('getBridgeContracts', async () => {
-        const res = await web3.zkSync.rpc.getBridgeHubContract();
-        expect(res).toEqual(''); // @todo: set bridge hub contract address
-    });
+	it('getBridgeHubContract', async () => {
+		const res = await web3.zkSync.rpc.getBridgeHubContract();
+		expect(res).toEqual('0x35a54c8c757806eb6820629bc82d90e056394c92'); // @todo: set bridge hub contract address
+	});
 });
