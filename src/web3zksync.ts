@@ -5,6 +5,7 @@ import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
+import * as Web3 from 'web3';
 import type {
 	BatchDetails,
 	BlockDetails,
@@ -27,7 +28,6 @@ import {
 } from './constants';
 import { isAddressEq } from './utils';
 import { RpcMethods } from './rpc.methods';
-import * as Web3 from 'web3';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 
 /**

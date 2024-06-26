@@ -1,4 +1,5 @@
 import { Web3 } from 'web3';
+import { ethRpcMethods } from 'web3-rpc-methods';
 import { ZkSyncPlugin } from '../../src';
 import {
 	estimateData,
@@ -6,7 +7,6 @@ import {
 	getL2ToL1LogProofData,
 	getProofData,
 } from '../fixtures';
-import { ethRpcMethods } from 'web3-rpc-methods';
 
 describe('ZkSyncPlugin rpc mainnet tests', () => {
 	let web3: Web3;

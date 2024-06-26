@@ -3,17 +3,14 @@
 // import * as web3Utils from 'web3-utils';
 // import type { Address, HexString } from 'web3';
 
-import {
-	Address,
-	Network as ZkSyncNetwork,
-	TransactionOverrides,
-	PaymasterParams,
-	PriorityOpResponse,
-	TransactionStatus,
-	ZKTransactionReceipt,
-} from './types';
 import * as Web3 from 'web3';
-import { Web3ZkSync } from './web3zksync';
+import type { Block, Web3PromiEvent } from 'web3';
+import type { Bytes, DataFormat, Numbers } from 'web3-types';
+import { DEFAULT_RETURN_FORMAT } from 'web3-types';
+import type { Web3Eth } from 'web3-eth';
+import { format, toHex } from 'web3-utils';
+import { ethRpcMethods } from 'web3-rpc-methods';
+import { isNullish } from 'web3-validator';
 import {
 	getL2HashFromPriorityOp,
 	isAddressEq,
@@ -22,12 +19,15 @@ import {
 	waitTxByHashConfirmation,
 	waitTxConfirmation,
 } from './utils';
-import { Block, Web3PromiEvent } from 'web3';
-import { Bytes, DataFormat, DEFAULT_RETURN_FORMAT, Numbers } from 'web3-types';
-import { Web3Eth } from 'web3-eth';
-import { format, toHex } from 'web3-utils';
-import { ethRpcMethods } from 'web3-rpc-methods';
-import { isNullish } from 'web3-validator';
+import { Network as ZkSyncNetwork, TransactionStatus } from './types';
+import type {
+	Address,
+	TransactionOverrides,
+	PaymasterParams,
+	PriorityOpResponse,
+	ZKTransactionReceipt,
+} from './types';
+import { Web3ZkSync } from './web3zksync';
 import { ZKTransactionReceiptSchema } from './schemas';
 import { Abi as IEthTokenAbi } from './contracts/IEthToken';
 import {
@@ -191,9 +191,9 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		const proof = await this._rpc.getL2ToL1LogProof(txHash, l2ToL1LogIndex);
 		return {
 			l1BatchNumber: l2ToL1Log.l1BatchNumber,
-			l2MessageIndex: proof!.id,
+			l2MessageIndex: proof.id,
 			l2TxNumberInBlock: l1BatchTxId,
-			proof: proof!.proof,
+			proof: proof.proof,
 		};
 	}
 
@@ -414,18 +414,18 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 */
 	static initWithDefaultProvider(
 		zksyncNetwork: ZkSyncNetwork = ZkSyncNetwork.Localhost,
-	): Web3ZkSync {
+	): Web3ZkSyncL2 {
 		switch (zksyncNetwork) {
 			case ZkSyncNetwork.Localhost:
-				return new Web3ZkSync('http://localhost:3050');
+				return new Web3ZkSyncL2('http://localhost:3050');
 			case ZkSyncNetwork.Sepolia:
-				return new Web3ZkSync('https://sepolia.era.zksync.dev');
+				return new Web3ZkSyncL2('https://sepolia.era.zksync.dev');
 			case ZkSyncNetwork.Mainnet:
-				return new Web3ZkSync('https://mainnet.era.zksync.io');
+				return new Web3ZkSyncL2('https://mainnet.era.zksync.io');
 			case ZkSyncNetwork.EraTestNode:
-				return new Web3ZkSync('http://localhost:8011');
+				return new Web3ZkSyncL2('http://localhost:8011');
 			default:
-				return new Web3ZkSync('http://localhost:3050');
+				return new Web3ZkSyncL2('http://localhost:3050');
 		}
 	}
 }

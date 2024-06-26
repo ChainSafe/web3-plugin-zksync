@@ -13,9 +13,10 @@ import * as web3Abi from 'web3-eth-abi';
 import * as web3Contract from 'web3-eth-contract';
 import type { Bytes, TransactionReceipt } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
+import type { Web3PromiEvent } from 'web3';
+import type { Web3Eth } from 'web3-eth';
+import { keccak256, toBigInt } from 'web3-utils';
 import type { DeploymentInfo, EthereumSignature } from './types';
-
-export * from './Eip712';
 import {
 	// PaymasterParams,
 	PriorityOpTree,
@@ -50,9 +51,8 @@ import {
 } from './constants';
 
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
-import { Web3PromiEvent } from 'web3';
-import { Web3Eth } from 'web3-eth';
-import { keccak256, toBigInt } from 'web3-utils'; // to be used instead of the one at zksync-ethers: Provider from ./provider
+
+export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -1065,10 +1065,8 @@ export async function waitFinalize(
 	while (true) {
 		if (receipt && receipt.blockNumber) {
 			const block = await provider.getBlock('finalized');
-			if (web3Utils.toBigInt(receipt.blockNumber) <= block!.number) {
-				return (await provider.getTransactionReceipt(
-					receipt.transactionHash,
-				)) as TransactionReceipt;
+			if (web3Utils.toBigInt(receipt.blockNumber) <= block.number) {
+				return await provider.getTransactionReceipt(receipt.transactionHash);
 			}
 		} else {
 			await sleep(500);

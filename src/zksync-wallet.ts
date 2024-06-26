@@ -1,11 +1,11 @@
-import { Web3Eth } from 'web3';
+import type { Web3Eth } from 'web3';
 import * as web3Accounts from 'web3-eth-accounts';
+import type { Web3Account } from 'web3-eth-accounts';
+import type * as web3Types from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import type { EIP712Signer } from './Eip712';
-import { Web3Account } from 'web3-eth-accounts';
 import { AdapterL1, AdapterL2 } from './adapters';
 import type { Address, Eip712Meta, PaymasterParams, TransactionOverrides } from './types';
-import type * as web3Types from 'web3-types';
 
 class Adapters extends AdapterL1 {
 	adapterL2: AdapterL2;

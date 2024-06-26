@@ -1,4 +1,4 @@
-import { Transaction } from 'web3-types';
+import type { Transaction } from 'web3-types';
 import { ethRpcMethods } from 'web3-rpc-methods';
 
 import { Web3ZkSyncL2 } from '../../src';
@@ -41,6 +41,5 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 		expect(typeof priorityOpResponse.wait).toBe('function');
 		// 'The waitFinalize function should be properly initialized'
 		expect(typeof priorityOpResponse.waitFinalize).toEqual('function');
-
 	});
 });

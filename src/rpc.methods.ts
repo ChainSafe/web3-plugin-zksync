@@ -4,17 +4,18 @@ import type * as web3Types from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
 import type {
-    BatchDetails,
-    BlockDetails,
-    BridgeAddresses,
-    EstimateFee,
-    L2ToL1Proof,
-    StorageProof,
-    RawBlockTransaction,
-    TransactionDetails,
-    WalletBalances,
-    TransactionRequest, Address
-} from "./types";
+	BatchDetails,
+	BlockDetails,
+	BridgeAddresses,
+	EstimateFee,
+	L2ToL1Proof,
+	StorageProof,
+	RawBlockTransaction,
+	TransactionDetails,
+	WalletBalances,
+	TransactionRequest,
+	Address,
+} from './types';
 import {
 	AddressSchema,
 	BatchDetailsSchema,
@@ -377,7 +378,7 @@ export class RpcMethods {
 		) as BridgeAddresses;
 	}
 
-    /**
+	/**
 	 * Retrieves the bridge hub contract address
 	 *
 	 * @param returnFormat - The format of the return value.
@@ -386,7 +387,7 @@ export class RpcMethods {
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		return web3Utils.format(
-            AddressSchema,
+			AddressSchema,
 			await this._send('zks_getBridgehubContract', []),
 			returnFormat,
 		) as Address;

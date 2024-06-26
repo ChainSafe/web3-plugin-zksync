@@ -3,6 +3,11 @@ import * as web3Utils from 'web3-utils';
 import type { Web3Eth } from 'web3-eth';
 import * as Web3EthAbi from 'web3-eth-abi';
 
+import type { DataFormat } from 'web3-types/src/data_format_types';
+import { DEFAULT_RETURN_FORMAT } from 'web3';
+import * as Web3 from 'web3';
+import type { PayableMethodObject } from 'web3-eth-contract';
+import { toBigInt, toHex, toNumber } from 'web3-utils';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 
 import {
@@ -42,15 +47,10 @@ import type {
 	WalletBalances,
 } from './types';
 import { ZeroAddress, ZeroHash } from './types';
-import type { DataFormat } from 'web3-types/src/data_format_types';
-import { DEFAULT_RETURN_FORMAT } from 'web3';
-import * as Web3 from 'web3';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
 import { IERC20ABI } from './contracts/IERC20';
 import { IL1BridgeABI } from './contracts/IL1Bridge';
-import { PayableMethodObject } from 'web3-eth-contract';
-import { toBigInt, toHex, toNumber } from 'web3-utils';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
 
@@ -1287,7 +1287,7 @@ export class AdapterL1 implements TxSender {
 			return {};
 		}
 		const messages = Array.from(receipt.l2ToL1Logs.entries()).filter(([, log]) =>
-			isAddressEq(log.sender as string, L1_MESSENGER_ADDRESS),
+			isAddressEq(log.sender, L1_MESSENGER_ADDRESS),
 		);
 		const [l2ToL1LogIndex, l2ToL1Log] = messages[index];
 

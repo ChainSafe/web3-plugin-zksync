@@ -13,8 +13,8 @@ import type {
 	TransactionReceipt,
 } from 'web3-types';
 
+import type { Web3PromiEvent } from 'web3';
 import type { RpcMethods } from './rpc.methods';
-import { Web3PromiEvent } from 'web3';
 
 export type { Bytes, HexString, Numbers } from 'web3-types';
 export interface TransactionOverrides extends Omit<Transaction, 'to' | 'data' | 'input'> {}
