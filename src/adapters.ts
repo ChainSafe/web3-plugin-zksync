@@ -1,9 +1,6 @@
 import type * as web3Types from 'web3-types';
 import * as web3Utils from 'web3-utils';
-import type { Web3Eth } from 'web3-eth';
 import * as Web3EthAbi from 'web3-eth-abi';
-
-import type { DataFormat } from 'web3-types/src/data_format_types';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import * as Web3 from 'web3';
 import type { PayableMethodObject } from 'web3-eth-contract';
@@ -23,6 +20,8 @@ import {
 	id,
 	dataSlice,
 	toBytes,
+	EIP712Signer,
+	EIP712,
 } from './utils';
 
 import {
@@ -45,6 +44,7 @@ import type {
 	PaymasterParams,
 	PriorityOpResponse,
 	WalletBalances,
+	Eip712TxData,
 } from './types';
 import { ZeroAddress, ZeroHash } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
@@ -53,6 +53,7 @@ import { IERC20ABI } from './contracts/IERC20';
 import { IL1BridgeABI } from './contracts/IL1Bridge';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
+import { ethRpcMethods } from 'web3-rpc-methods';
 
 interface TxSender {
 	getAddress(): Promise<Address>;
@@ -69,7 +70,7 @@ export class AdapterL1 implements TxSender {
 	/**
 	 * Returns a context (provider + Signer) instance for connecting to a L1 network.
 	 */
-	protected _contextL1(): Web3Eth {
+	protected _contextL1(): Web3.Web3 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
@@ -77,7 +78,7 @@ export class AdapterL1 implements TxSender {
 	 * Returns `Contract` wrapper of the zkSync Era smart contract.
 	 */
 	async getMainContract(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Web3.Contract<typeof IZkSyncABI>> {
 		const address = await this._contextL2().getMainContract(returnFormat);
 		const contract = new Web3.Contract(IZkSyncABI, address, returnFormat);
@@ -88,32 +89,41 @@ export class AdapterL1 implements TxSender {
 	/**
 	 * Returns `Contract` wrapper of the Bridgehub smart contract.
 	 */
-	async getBridgehubContract(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	async getBridgeHubContract(
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Web3.Contract<typeof IBridgehubABI>> {
 		const address = await this._contextL2().getBridgeHubContract();
-		const contract = new Web3.Contract(IBridgehubABI, address, returnFormat);
-		contract.setProvider(this._contextL1().provider);
-		return contract;
+		return new (this._contextL1().eth.Contract)(IBridgehubABI, address, returnFormat);
 	}
 
 	/**
 	 * Returns L1 bridge contracts.
 	 *
-	 * @remarks There is no separate Ether bridge contract, {@link getBridgehubContract Bridgehub} is used instead.
+	 * @remarks There is no separate Ether bridge contract, {@link getBridgeHubContract Bridgehub} is used instead.
 	 */
-	async getL1BridgeContracts(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<{
+	async getL1BridgeContracts(
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<{
 		erc20: Web3.Contract<typeof IERC20ABI>;
 		weth: Web3.Contract<typeof IERC20ABI>;
 		shared: Web3.Contract<typeof IL1BridgeABI>;
 	}> {
 		const addresses = await this._contextL2().getDefaultBridgeAddresses();
-		const erc20 = new Web3.Contract(IERC20ABI, addresses.erc20L1, returnFormat);
-		erc20.setProvider(this._contextL1().provider);
-		const weth = new Web3.Contract(IERC20ABI, addresses.wethL1, returnFormat);
-		weth.setProvider(this._contextL1().provider);
-		const shared = new Web3.Contract(IL1BridgeABI, addresses.sharedL1, returnFormat);
-		shared.setProvider(this._contextL1().provider);
+		const erc20 = new (this._contextL1().eth.Contract)(
+			IERC20ABI,
+			addresses.erc20L1,
+			returnFormat,
+		);
+		const weth = new (this._contextL1().eth.Contract)(
+			IERC20ABI,
+			addresses.wethL1,
+			returnFormat,
+		);
+		const shared = new (this._contextL1().eth.Contract)(
+			IL1BridgeABI,
+			addresses.sharedL1,
+			returnFormat,
+		);
 
 		return {
 			erc20,
@@ -126,8 +136,8 @@ export class AdapterL1 implements TxSender {
 	 * Returns the address of the base token on L1.
 	 */
 	async getBaseToken(): Promise<Address> {
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		return bridgehub.methods.baseToken(chainId).call();
 	}
 
@@ -148,10 +158,9 @@ export class AdapterL1 implements TxSender {
 	async getBalanceL1(token?: Address, blockTag?: web3Types.BlockNumberOrTag): Promise<bigint> {
 		token ??= LEGACY_ETH_ADDRESS;
 		if (isETH(token)) {
-			return await this._contextL1().getBalance(this.getAddress(), blockTag);
+			return await this._contextL1().eth.getBalance(this.getAddress(), blockTag);
 		} else {
-			const erc20 = new Web3.Contract(IERC20ABI, token);
-			erc20.setProvider(this._contextL1().provider);
+			const erc20 = new (this._contextL1().eth.Contract)(IERC20ABI, token);
 
 			return await erc20.methods.balanceOf(this.getAddress()).call();
 		}
@@ -176,8 +185,7 @@ export class AdapterL1 implements TxSender {
 			bridgeAddress = await bridgeContracts.shared.methods.getAddress().call();
 		}
 
-		const erc20 = new Web3.Contract(IERC20ABI, token);
-		erc20.setProvider(this._contextL1().provider);
+		const erc20 = new (this._contextL1().eth.Contract)(IERC20ABI, token);
 
 		return erc20.methods
 			.allowance(this.getAddress(), bridgeAddress, {
@@ -221,8 +229,7 @@ export class AdapterL1 implements TxSender {
 		overrides ??= {};
 		let bridgeAddress = overrides.bridgeAddress;
 
-		const erc20 = new Web3.Contract(IERC20ABI, token);
-		erc20.setProvider(this._contextL1().provider);
+		const erc20 = new (this._contextL1().eth.Contract)(IERC20ABI, token);
 
 		if (!bridgeAddress) {
 			bridgeAddress = (await this.getL1BridgeContracts()).shared.options.address;
@@ -246,14 +253,14 @@ export class AdapterL1 implements TxSender {
 		gasPerPubdataByte?: web3Types.Numbers;
 		gasPrice?: web3Types.Numbers;
 	}): Promise<bigint> {
-		const bridgehub = await this.getBridgehubContract();
+		const bridgehub = await this.getBridgeHubContract();
 		const parameters = { ...layer1TxDefaults(), ...params };
-		parameters.gasPrice ??= (await this._contextL1().getFeeData()).gasPrice!;
+		parameters.gasPrice ??= (await this._contextL1().eth.calculateFeeData()).gasPrice!;
 		parameters.gasPerPubdataByte ??= REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT;
 
 		return await bridgehub.methods
 			.l2TransactionBaseCost(
-				await this._contextL2().getChainId(),
+				await this._contextL2().eth.getChainId(),
 				parameters.gasPrice,
 				parameters.gasLimit,
 				parameters.gasPerPubdataByte,
@@ -378,8 +385,8 @@ export class AdapterL1 implements TxSender {
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const isETHBasedChain = isAddressEq(baseTokenAddress, ETH_ADDRESS_IN_CONTRACTS);
 
@@ -414,8 +421,8 @@ export class AdapterL1 implements TxSender {
 	}): Promise<PriorityOpResponse> {
 		// Deposit a non-ETH and non-base token to a non-ETH-based chain.
 		// Go through the BridgeHub and obtain approval for both tokens.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const bridgeContracts = await this.getL1BridgeContracts();
 		const { tx, mintValue } =
@@ -475,8 +482,8 @@ export class AdapterL1 implements TxSender {
 	}): Promise<PriorityOpResponse> {
 		// Bridging the base token to a non-ETH-based chain.
 		// Go through the BridgeHub, and give approval.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const sharedBridge = (await this.getL1BridgeContracts()).shared.options.address;
 		const { tx, mintValue } = await this._getDepositBaseTokenOnNonETHBasedChainTx(transaction);
@@ -520,8 +527,8 @@ export class AdapterL1 implements TxSender {
 	}): Promise<PriorityOpResponse> {
 		// Depositing ETH into a non-ETH-based chain.
 		// Use requestL2TransactionTwoBridges, secondBridge is the wETH bridge.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const sharedBridge = (await this.getL1BridgeContracts()).shared.options.address;
 		const { tx, overrides, mintValue } =
@@ -610,7 +617,6 @@ export class AdapterL1 implements TxSender {
 		customBridgeData?: web3Types.Bytes;
 	}): Promise<PriorityOpResponse> {
 		const { tx } = await this._getDepositETHOnETHBasedChainTx(transaction);
-
 		const baseGasLimit = await this.estimateGasRequestExecute(tx);
 		const gasLimit = scaleGasLimit(baseGasLimit);
 
@@ -665,7 +671,7 @@ export class AdapterL1 implements TxSender {
 		if (tx.token && isAddressEq(tx.token, await this.getBaseToken())) {
 			baseGasLimit = await this.estimateGasRequestExecute(tx);
 		} else {
-			baseGasLimit = await this._contextL1().estimateGas(tx);
+			baseGasLimit = await this._contextL1().eth.estimateGas(tx);
 		}
 
 		return scaleGasLimit(baseGasLimit);
@@ -705,8 +711,8 @@ export class AdapterL1 implements TxSender {
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const isETHBasedChain = isAddressEq(baseTokenAddress, ETH_ADDRESS_IN_CONTRACTS);
 
@@ -735,8 +741,8 @@ export class AdapterL1 implements TxSender {
 		refundRecipient?: Address;
 		overrides?: TransactionOverrides;
 	}) {
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const bridgeContracts = await this.getL1BridgeContracts();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
@@ -800,8 +806,8 @@ export class AdapterL1 implements TxSender {
 		// Depositing the base token to a non-ETH-based chain.
 		// Goes through the BridgeHub.
 		// Have to give approvals for the sharedBridge.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
 		const { operatorTip, amount, to, overrides, l2GasLimit, gasPerPubdataByte } = tx;
@@ -841,8 +847,8 @@ export class AdapterL1 implements TxSender {
 		refundRecipient?: Address;
 		overrides?: TransactionOverrides;
 	}) {
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const sharedBridge = (await this.getL1BridgeContracts()).shared.options.address;
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
@@ -906,8 +912,8 @@ export class AdapterL1 implements TxSender {
 		overrides: TransactionOverrides;
 	}> {
 		// Depositing token to an ETH-based chain. Use the ERC20 bridge as done before.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
 		const {
@@ -981,10 +987,11 @@ export class AdapterL1 implements TxSender {
 		overrides?: TransactionOverrides;
 	}) {
 		// Call the BridgeHub directly, like it's done with the DiamondProxy.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
+
 		const { operatorTip, amount, overrides, l2GasLimit, gasPerPubdataByte, to } = tx;
 
 		const gasPriceForEstimation = overrides.maxFeePerGas || overrides.gasPrice;
@@ -996,7 +1003,6 @@ export class AdapterL1 implements TxSender {
 				gasPerPubdataByte,
 			)
 			.call();
-
 		overrides.value ??=
 			web3Utils.toBigInt(baseCost) +
 			web3Utils.toBigInt(operatorTip) +
@@ -1105,9 +1111,11 @@ export class AdapterL1 implements TxSender {
 			transaction.customBridgeData ??
 			(await getERC20DefaultBridgeData(transaction.token, this._contextL1()));
 
-		const bridge = new Web3.Contract(IL1BridgeABI, transaction.bridgeAddress);
-		bridge.setProvider(this._contextL1().provider);
-		const chainId = (await this._contextL2().getChainId()) as web3Types.Numbers;
+		const bridge = new (this._contextL1().eth.Contract)(
+			IL1BridgeABI,
+			transaction.bridgeAddress,
+		);
+		const chainId = (await this._contextL2().eth.getChainId()) as web3Types.Numbers;
 		const l2Address = await bridge.methods.l2BridgeAddress(chainId).call();
 		return await estimateCustomBridgeDepositL2Gas(
 			this._contextL2(),
@@ -1150,8 +1158,8 @@ export class AdapterL1 implements TxSender {
 		}
 		// It is assumed that the L2 fee for the transaction does not depend on its value.
 		const dummyAmount = 1n;
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const isETHBasedChain = isAddressEq(baseTokenAddress, ETH_ADDRESS_IN_CONTRACTS);
 
@@ -1348,16 +1356,15 @@ export class AdapterL1 implements TxSender {
 	) {
 		const { l1BatchNumber, l2MessageIndex, l2TxNumberInBlock, message, proof } =
 			await this.finalizeWithdrawalParams(withdrawalHash, index);
-		const contract = new Web3.Contract(
+		const contract = new (this._contextL1().eth.Contract)(
 			IL1BridgeABI,
 			(await this.getL1BridgeContracts()).shared.options.address,
 		);
-		contract.setProvider(this._contextL1().provider);
 
 		return (
 			contract.methods
 				.finalizeWithdrawal(
-					(await this._contextL2().getChainId()) as web3Types.Numbers,
+					(await this._contextL2().eth.getChainId()) as web3Types.Numbers,
 					l1BatchNumber as web3Types.Numbers,
 					l2MessageIndex as web3Types.Numbers,
 					l2TxNumberInBlock as web3Types.Numbers,
@@ -1392,7 +1399,7 @@ export class AdapterL1 implements TxSender {
 			throw new Error('Log proof not found!');
 		}
 
-		const chainId = await this._contextL2().getChainId();
+		const chainId = await this._contextL2().eth.getChainId();
 
 		let l1Bridge: Web3.Contract<typeof IL1BridgeABI>;
 
@@ -1402,11 +1409,10 @@ export class AdapterL1 implements TxSender {
 			const l2BridgeContract = new Web3.Contract(IL2BridgeABI, sender);
 			l2BridgeContract.setProvider(this._contextL2().provider);
 
-			l1Bridge = new Web3.Contract(
+			l1Bridge = new (this._contextL1().eth.Contract)(
 				IL1BridgeABI,
 				await l2BridgeContract.methods.l1Bridge().call(),
 			);
-			l1Bridge.setProvider(this._contextL1().provider);
 		}
 
 		return await l1Bridge.methods
@@ -1442,7 +1448,7 @@ export class AdapterL1 implements TxSender {
 			throw new Error('Cannot claim successful deposit!');
 		}
 
-		const tx = await this._contextL2().getTransaction(web3Utils.toHex(depositHash));
+		const tx = await this._contextL2().eth.getTransaction(web3Utils.toHex(depositHash));
 
 		// Undo the aliasing, since the Mailbox contract set it as for contract address.
 		const l1BridgeAddress = undoL1ToL2Alias(receipt.from);
@@ -1450,8 +1456,7 @@ export class AdapterL1 implements TxSender {
 		if (!l2BridgeAddress) {
 			throw new Error('L2 bridge address not found!');
 		}
-		const l1Bridge = new Web3.Contract(IL1BridgeABI, l1BridgeAddress);
-		l1Bridge.setProvider(this._contextL1().provider);
+		const l1Bridge = new (this._contextL1().eth.Contract)(IL1BridgeABI, l1BridgeAddress);
 
 		const l2Bridge = new Web3.Contract(IL2BridgeABI, l1BridgeAddress);
 		l2Bridge.setProvider(this._contextL2().provider);
@@ -1470,7 +1475,7 @@ export class AdapterL1 implements TxSender {
 		return (
 			l1Bridge.methods
 				.claimFailedDeposit(
-					(await this._contextL2().getChainId()) as web3Types.Numbers,
+					(await this._contextL2().eth.getChainId()) as web3Types.Numbers,
 					calldata[0], //_l1Sender
 					calldata[2], //_l1Token
 					calldata[3], //_amount
@@ -1578,8 +1583,8 @@ export class AdapterL1 implements TxSender {
 		refundRecipient?: Address;
 		overrides?: TransactionOverrides;
 	}): Promise<{ token: Address; allowance: web3Types.Numbers }> {
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const isETHBaseToken = isAddressEq(
 			await bridgehub.methods.baseToken(chainId).call(),
 			ETH_ADDRESS_IN_CONTRACTS,
@@ -1647,8 +1652,8 @@ export class AdapterL1 implements TxSender {
 		refundRecipient?: Address;
 		overrides?: TransactionOverrides;
 	}) {
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().getChainId();
+		const bridgehub = await this.getBridgeHubContract();
+		const chainId = await this._contextL2().eth.getChainId();
 		const isETHBaseToken = isAddressEq(
 			await bridgehub.methods.baseToken(chainId).call(),
 			ETH_ADDRESS_IN_CONTRACTS,
@@ -1724,6 +1729,9 @@ export class AdapterL2 implements TxSender {
 	_contextL2(): Web3ZkSyncL2 {
 		throw new Error('Must be implemented by the derived class!');
 	}
+	async _eip712Signer(): Promise<EIP712Signer> {
+		throw new Error('Must be implemented by the derived class!');
+	}
 
 	/**
 	 * Returns the balance of the account.
@@ -1741,7 +1749,7 @@ export class AdapterL2 implements TxSender {
 			return contract.methods.balanceOf(this.getAddress()).call();
 		}
 
-		return await this._contextL2().getBalance(this.getAddress(), blockTag);
+		return await this._contextL2().eth.getBalance(this.getAddress(), blockTag);
 	}
 
 	/**
@@ -1812,12 +1820,47 @@ export class AdapterL2 implements TxSender {
 		paymasterParams?: PaymasterParams;
 		overrides?: TransactionOverrides;
 	}) {
-		return this._contextL2().getWithdrawTx({
+		const tx = await this._contextL2().getWithdrawTx({
 			from: this.getAddress(),
 			...transaction,
 		});
-	}
 
+		return this._contextL2().getPriorityOpResponse(
+			// @ts-ignore
+			this.sendTransaction({
+				...tx,
+				// @ts-ignore
+				...transaction.overrides,
+			} as unknown as Eip712TxData),
+		);
+	}
+	async sendTransaction(tx: Eip712TxData) {
+		// tx.chainId = await this._contextL2().eth.getChainId();
+		// const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
+		// const data = { ...tx, ...other };
+		// @ts-ignore
+		// return this._contextL2().eth.sendTransaction(data);
+
+		//
+		const data = EIP712.getSignInput(tx);
+		data.type = data.txType;
+		// @ts-ignore
+		delete data.txType;
+		const signer = await this._eip712Signer();
+
+		data.chainId = signer.getDomain().chainId;
+		data.nonce = await this._contextL2().eth.getTransactionCount(this.getAddress(), 'pending');
+		const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
+		const dataWithGas = { ...data, ...other, gasLimit: 5000000n };
+
+		dataWithGas.customData = {
+			customSignature: signer.sign(dataWithGas)?.serialized,
+		};
+
+		const serialized = EIP712.serialize(dataWithGas);
+
+		return ethRpcMethods.sendRawTransaction(this._contextL2().requestManager, serialized);
+	}
 	/**
 	 * Transfer ETH or any ERC20 token within the same interface.
 	 *
@@ -1849,10 +1892,12 @@ export class AdapterL2 implements TxSender {
 
 // This method checks if the overrides contain a gasPrice (or maxFeePerGas),
 // if not it will insert the maxFeePerGas
-async function insertGasPrice(l1Provider: Web3Eth, overrides: TransactionOverrides): Promise<void> {
+async function insertGasPrice(
+	l1Provider: Web3.Web3,
+	overrides: TransactionOverrides,
+): Promise<void> {
 	if (!overrides.gasPrice && !overrides.maxFeePerGas) {
-		const l1FeeData = await l1Provider.getFeeData();
-
+		const l1FeeData = await l1Provider.eth.calculateFeeData();
 		// Sometimes baseFeePerGas is not available, so we use gasPrice instead.
 		const baseFee = BigInt(
 			l1FeeData.maxFeePerGas! ? getBaseCostFromFeeData(l1FeeData) : l1FeeData.gasPrice!,

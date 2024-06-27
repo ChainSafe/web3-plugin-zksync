@@ -882,7 +882,7 @@ export async function isTypedDataSignatureCorrect(
  *
  */
 export async function estimateDefaultBridgeDepositL2Gas(
-	providerL1: web3.Web3Eth,
+	providerL1: web3.Web3,
 	providerL2: Web3ZkSyncL2,
 	token: web3.Address,
 	amount: web3Types.Numbers,
@@ -1033,44 +1033,48 @@ export function waitTxConfirmation(
 
 export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
 	while (true) {
-		const receipt = await web3Eth.getTransactionReceipt(txHash);
-		if (receipt && receipt.blockNumber) {
-			return receipt;
-		}
+		try {
+			const receipt = await web3Eth.getTransactionReceipt(txHash);
+			if (receipt && receipt.blockNumber) {
+				return receipt;
+			}
+		} catch {}
 		await sleep(500);
 	}
 }
 export async function waitTxByHashConfirmation(
 	web3Eth: Web3Eth,
-	txHash: string,
+	txHashOrReceipt: string | TransactionReceipt,
 	waitConfirmations = 1,
-	blockTag = 'latest',
 ): Promise<TransactionReceipt> {
-	const receipt = await waitTxReceipt(web3Eth, txHash);
+	const receipt =
+		typeof txHashOrReceipt === 'string'
+			? await waitTxReceipt(web3Eth, txHashOrReceipt)
+			: txHashOrReceipt;
 	while (true) {
-		const block = await web3Eth.getBlock(blockTag);
-		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+		const blockNumber = await web3Eth.getBlockNumber();
+		if (toBigInt(blockNumber) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
 			return receipt;
 		}
 		await sleep(500);
 	}
 }
 
-export async function waitFinalize(
-	provider: Web3Eth,
-	tx: Web3PromiEvent<any, any>,
+export async function waitTxByHashConfirmationFinalized(
+	web3Eth: Web3Eth,
+	txHashOrReceipt: string | TransactionReceipt,
+	waitConfirmations = 1,
 ): Promise<TransactionReceipt> {
-	const receipt = await waitTxConfirmation(tx);
-
+	const receipt =
+		typeof txHashOrReceipt === 'string'
+			? await waitTxReceipt(web3Eth, txHashOrReceipt)
+			: txHashOrReceipt;
 	while (true) {
-		if (receipt && receipt.blockNumber) {
-			const block = await provider.getBlock('finalized');
-			if (web3Utils.toBigInt(receipt.blockNumber) <= block.number) {
-				return await provider.getTransactionReceipt(receipt.transactionHash);
-			}
-		} else {
-			await sleep(500);
+		const block = await web3Eth.getBlock('finalized');
+		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+			return receipt;
 		}
+		await sleep(500);
 	}
 }
 

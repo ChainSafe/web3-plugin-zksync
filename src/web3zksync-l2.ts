@@ -3,11 +3,9 @@
 // import * as web3Utils from 'web3-utils';
 // import type { Address, HexString } from 'web3';
 
-import * as Web3 from 'web3';
 import type { Block, Web3PromiEvent } from 'web3';
 import type { Bytes, DataFormat, Numbers } from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3-types';
-import type { Web3Eth } from 'web3-eth';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
@@ -16,8 +14,9 @@ import {
 	isAddressEq,
 	isETH,
 	sleep,
-	waitTxByHashConfirmation,
+	waitTxByHashConfirmationFinalized,
 	waitTxConfirmation,
+	waitTxReceipt,
 } from './utils';
 import { Network as ZkSyncNetwork, TransactionStatus } from './types';
 import type {
@@ -116,22 +115,15 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 			...l1TxResponse,
 			waitL1Commit: () => waitTxConfirmation(l1TxResponse),
 			wait: async () => {
-				const l2TxHash = await this.getL2TransactionFromPriorityOp(l1TxResponse);
-				return await waitTxByHashConfirmation(
-					this as unknown as Web3Eth,
-					l2TxHash,
-					1,
-					'latest',
-				);
+				const res = await l1TxResponse;
+				if (typeof res === 'string') {
+					return waitTxReceipt(this.eth, res);
+				}
+				return res;
 			},
 			waitFinalize: async () => {
 				const l2TxHash = await this.getL2TransactionFromPriorityOp(l1TxResponse);
-				return await waitTxByHashConfirmation(
-					this as unknown as Web3Eth,
-					l2TxHash,
-					1,
-					'finalized',
-				);
+				return await waitTxByHashConfirmationFinalized(this.eth, l2TxHash, 1);
 			},
 		};
 	}
@@ -222,14 +214,14 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 */
 	// This is inefficient. Status should probably be indicated in the transaction receipt.
 	async getTransactionStatus(txHash: string): Promise<TransactionStatus> {
-		const tx = await this.getTransaction(txHash);
+		const tx = await this.eth.getTransaction(txHash);
 		if (!tx) {
 			return TransactionStatus.NotFound;
 		}
 		if (!tx.blockNumber) {
 			return TransactionStatus.Processing;
 		}
-		const verifiedBlock = (await this.getBlock('finalized')) as Block;
+		const verifiedBlock = (await this.eth.getBlock('finalized')) as Block;
 		if (tx.blockNumber <= verifiedBlock.number) {
 			return TransactionStatus.Finalized;
 		}
@@ -291,10 +283,9 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 				throw new Error('The tx.value is not equal to the value withdrawn!');
 			}
 
-			const ethL2Token = new Web3.Contract(IEthTokenAbi, L2_BASE_TOKEN_ADDRESS);
-			ethL2Token.setProvider(this.provider);
+			const ethL2Token = new this.eth.Contract(IEthTokenAbi, L2_BASE_TOKEN_ADDRESS);
 			const populatedTx = ethL2Token.methods
-				.withdraw(tx.from, tx.to, tx.amount)
+				.withdraw(tx.to)
 				// @ts-ignore
 				.populateTransaction(tx.overrides);
 			if (tx.paymasterParams) {
@@ -312,8 +303,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 			const bridgeAddresses = await this.getDefaultBridgeAddresses();
 			tx.bridgeAddress = bridgeAddresses.sharedL2;
 		}
-		const bridge = new Web3.Contract(IL2BridgeABI, tx.bridgeAddress);
-		bridge.setProvider(this.provider);
+		const bridge = new this.eth.Contract(IL2BridgeABI, tx.bridgeAddress);
 
 		const populatedTx = bridge.methods
 			.withdraw(tx.from, tx.to, tx.token, tx.amount)
@@ -376,14 +366,13 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 				};
 			}
 
-			return this.sendTransaction({
+			return this.eth.sendTransaction({
 				...tx.overrides,
 				to: tx.to,
 				value: tx.amount,
 			});
 		} else {
-			const token = new Web3.Contract(IERC20ABI, tx.token);
-			token.setProvider(this.provider);
+			const token = new this.eth.Contract(IERC20ABI, tx.token);
 			const populatedTx = token.methods
 				.transfer(tx.to, tx.amount)
 				// @ts-ignore

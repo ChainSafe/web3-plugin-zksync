@@ -1,5 +1,4 @@
 import type { Web3ContextInitOptions } from 'web3-core';
-import { Web3Eth } from 'web3-eth';
 import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
@@ -36,7 +35,7 @@ import { IL2BridgeABI } from './contracts/IL2Bridge';
  * It is the base class for the `Web3ZkSyncL1` and `Web3ZkSyncL2`.
  */
 // Note: Code logic here is similar to JsonRpcApiProvider class in zksync-ethers
-export class Web3ZkSync extends Web3Eth {
+export class Web3ZkSync extends Web3.Web3 {
 	protected _rpc: RpcMethods;
 
 	protected _contractAddresses: {

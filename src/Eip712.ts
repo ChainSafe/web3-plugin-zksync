@@ -3,7 +3,7 @@ import type { Bytes, Eip712TypedData, Numbers } from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Utils from 'web3-utils';
 import type * as web3Accounts from 'web3-eth-accounts';
-import { BaseTransaction, toUint8Array } from 'web3-eth-accounts';
+import { BaseTransaction, bigIntToUint8Array, toUint8Array } from 'web3-eth-accounts';
 import { RLP } from '@ethereumjs/rlp';
 import type { Address } from 'web3';
 import {
@@ -251,9 +251,9 @@ export class EIP712 {
 		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0);
 		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
 
-		const nonce = toHex(transaction.nonce || 0);
+		const nonce = toBigInt(transaction.nonce || 0);
 		const fields: Array<Uint8Array | Uint8Array[] | string | number | string[]> = [
-			nonce === '0x0' ? new Uint8Array() : toBytes(nonce),
+			nonce === 0n ? new Uint8Array() : bigIntToUint8Array(nonce),
 			maxPriorityFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxPriorityFeePerGas),
 			maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
 			toHex(transaction.gasLimit || 0) === '0x0'
