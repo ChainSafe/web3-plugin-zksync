@@ -11,8 +11,11 @@ import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Contract from 'web3-eth-contract';
-import type { Bytes } from 'web3-types';
+import type { Bytes, TransactionReceipt } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
+import type { Web3PromiEvent } from 'web3';
+import type { Web3Eth } from 'web3-eth';
+import { keccak256, toBigInt } from 'web3-utils';
 import type { DeploymentInfo, EthereumSignature } from './types';
 import {
 	// PaymasterParams,
@@ -47,9 +50,9 @@ import {
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import type { RpcMethods } from './rpc.methods';
+import type { Web3ZkSyncL2 } from './web3zksync-l2';
 
-export * from './Eip712';
+export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 // export * from './paymaster-utils';
 // export * from './smart-account-utils';
@@ -202,6 +205,7 @@ export class SignatureObject {
 			this.v = BigInt(signature.v!);
 		}
 	}
+
 	static getNormalizedV(v: number): 27 | 28 {
 		if (v === 0 || v === 27) {
 			return 27;
@@ -213,15 +217,19 @@ export class SignatureObject {
 		// Otherwise, EIP-155 v means odd is 27 and even is 28
 		return v & 1 ? 27 : 28;
 	}
+
 	concat(datas: ReadonlyArray<Bytes>): string {
 		return '0x' + datas.map(d => web3Utils.toHex(d).substring(2)).join('');
 	}
+
 	get yParity(): 0 | 1 {
 		return this.v === 27n ? 0 : 1;
 	}
+
 	public get serialized(): string {
 		return this.concat([this.r, this.s, this.yParity ? '0x1c' : '0x1b']);
 	}
+
 	public toString() {
 		return `${this.r}${this.s.slice(2)}${web3Utils.toHex(this.v).slice(2)}`;
 	}
@@ -785,11 +793,11 @@ async function isSignatureCorrect(
  * const message = "Hello, world!";
  * const signature = await new Wallet(PRIVATE_KEY).signMessage(message);
  * const isValidSignature = await utils.isMessageSignatureCorrect(
- * 			web3,
- * 			ADDRESS,
- * 			message,
- * 			signature,
- * 		);
+ *            web3,
+ *            ADDRESS,
+ *            message,
+ *            signature,
+ *        );
  * // isValidSignature = true
  */
 export async function isMessageSignatureCorrect(
@@ -874,8 +882,8 @@ export async function isTypedDataSignatureCorrect(
  *
  */
 export async function estimateDefaultBridgeDepositL2Gas(
-	providerL1: web3.Web3Eth,
-	providerL2: RpcMethods,
+	providerL1: web3.Web3,
+	providerL2: Web3ZkSyncL2,
 	token: web3.Address,
 	amount: web3Types.Numbers,
 	to: web3.Address,
@@ -959,7 +967,7 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
  *
  */
 export async function estimateCustomBridgeDepositL2Gas(
-	providerL2: RpcMethods,
+	providerL2: Web3ZkSyncL2,
 	l1BridgeAddress: web3.Address,
 	l2BridgeAddress: web3.Address,
 	token: web3.Address,
@@ -1008,4 +1016,83 @@ export function toJSON(object: any): string {
  */
 export function isAddressEq(a: web3.Address, b: web3.Address): boolean {
 	return a.toLowerCase() === b.toLowerCase();
+}
+
+export function waitTxConfirmation(
+	tx: Web3PromiEvent<any, any>,
+	waitConfirmations = 1,
+): Promise<TransactionReceipt> {
+	return new Promise(resolve => {
+		tx.on('confirmation', ({ confirmations, receipt }) => {
+			if (confirmations >= waitConfirmations) {
+				resolve(receipt);
+			}
+		});
+	});
+}
+
+export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
+	while (true) {
+		try {
+			const receipt = await web3Eth.getTransactionReceipt(txHash);
+			if (receipt && receipt.blockNumber) {
+				return receipt;
+			}
+		} catch {}
+		await sleep(500);
+	}
+}
+export async function waitTxByHashConfirmation(
+	web3Eth: Web3Eth,
+	txHashOrReceipt: string | TransactionReceipt,
+	waitConfirmations = 1,
+): Promise<TransactionReceipt> {
+	const receipt =
+		typeof txHashOrReceipt === 'string'
+			? await waitTxReceipt(web3Eth, txHashOrReceipt)
+			: txHashOrReceipt;
+	while (true) {
+		const blockNumber = await web3Eth.getBlockNumber();
+		if (toBigInt(blockNumber) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+			return receipt;
+		}
+		await sleep(500);
+	}
+}
+
+export async function waitTxByHashConfirmationFinalized(
+	web3Eth: Web3Eth,
+	txHashOrReceipt: string | TransactionReceipt,
+	waitConfirmations = 1,
+): Promise<TransactionReceipt> {
+	const receipt =
+		typeof txHashOrReceipt === 'string'
+			? await waitTxReceipt(web3Eth, txHashOrReceipt)
+			: txHashOrReceipt;
+	while (true) {
+		const block = await web3Eth.getBlock('finalized');
+		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+			return receipt;
+		}
+		await sleep(500);
+	}
+}
+
+/**
+ * A simple hashing function which operates on UTF-8 strings to compute an 32-byte identifier.
+ * This simply computes the UTF-8 bytes and computes the [[keccak256]].
+ * @param value
+ */
+export function id(value: string): string {
+	return keccak256(value);
+}
+
+export function dataSlice(data: Bytes, start?: number, end?: number): string {
+	const bytes = toBytes(data);
+	if (end != null && end > bytes.length) {
+		throw new Error('cannot slice beyond data bounds');
+	}
+	return web3Utils.toHex(
+		bytes.slice(start == null ? 0 : start, end == null ? bytes.length : end),
+	);
 }

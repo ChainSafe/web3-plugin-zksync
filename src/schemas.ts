@@ -1,3 +1,5 @@
+import { transactionReceiptSchema } from 'web3-eth';
+
 export const AddressSchema = { format: 'address' };
 export const IntSchema = { format: 'int' };
 export const UintSchema = { format: 'uint' };
@@ -212,5 +214,44 @@ export const EstimateFeeSchema = {
 		max_fee_per_gas: { format: 'uint' },
 		max_priority_fee_per_gas: { format: 'uint' },
 		gas_per_pubdata_limit: { format: 'uint' },
+	},
+};
+
+export const ZKTransactionReceiptSchema = {
+	type: 'object',
+	properties: {
+		...transactionReceiptSchema.properties,
+		l1BatchNumber: { format: 'uint' },
+		l1BatchTxIndex: { format: 'uint' },
+		logs: {
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					...transactionReceiptSchema.properties.logs.items.properties,
+					l1BatchNumber: { format: 'string' },
+				},
+			},
+		},
+		l2ToL1Logs: {
+			type: 'array',
+
+			items: {
+				type: 'object',
+				properties: {
+					blockNumber: { format: 'uint' },
+					blockHash: { format: 'string' },
+					l1BatchNumber: { format: 'string' },
+					transactionIndex: { format: 'uint' },
+					shardId: { format: 'uint' },
+					isService: { format: 'string' },
+					sender: { format: 'address' },
+					key: { format: 'string' },
+					value: { format: 'bytes' },
+					transactionHash: { format: 'string' },
+					logIndex: { format: 'string' },
+				},
+			},
+		},
 	},
 };
