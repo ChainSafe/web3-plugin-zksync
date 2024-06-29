@@ -2,7 +2,7 @@
 import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
 // // TODO: // is it needed to be re-exported from web3
 // import { watchTransactionForConfirmations } from 'web3-eth/lib/types/utils/watch_transaction_for_confirmations.js';
-
+export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 import type {
 	Bytes,
 	HexString,
@@ -524,10 +524,12 @@ export interface L2ToL1Log {
  * A `TransactionRequest` is an extension of {@link ethers.TransactionRequest} with additional features for interacting
  * with zkSync Era.
  */
-export declare type TransactionRequest = TransactionWithSenderAPI & {
-	/** The custom data for EIP712 transaction metadata. */
-	customData?: null | Eip712Meta;
-};
+export declare type TransactionRequest = DeepWriteable<
+	TransactionWithSenderAPI & {
+		/** The custom data for EIP712 transaction metadata. */
+		customData?: null | Eip712Meta;
+	}
+>;
 
 /**
  * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
@@ -904,6 +906,6 @@ export type ZKTransactionReceipt = TransactionReceipt & {
 		l1BatchNumber: Numbers;
 	};
 };
-export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
+
 export interface OverridesReadOnly extends Omit<TransactionRequest, 'to' | 'data'> {}
 export type Overrides = DeepWriteable<OverridesReadOnly>;

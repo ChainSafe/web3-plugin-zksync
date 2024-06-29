@@ -4,7 +4,7 @@
 // import type { Address, HexString } from 'web3';
 
 import type { Block, Web3PromiEvent } from 'web3';
-import type { Bytes, DataFormat, Numbers } from 'web3-types';
+import { BlockNumberOrTag, Bytes, DataFormat, Numbers } from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
@@ -416,5 +416,9 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 			default:
 				return new Web3ZkSyncL2('http://localhost:3050');
 		}
+	}
+
+	getBalance(address: Address, blockNumber: BlockNumberOrTag = this.defaultBlock) {
+		return this.eth.getBalance(address, blockNumber);
 	}
 }

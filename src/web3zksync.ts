@@ -28,6 +28,7 @@ import {
 import { isAddressEq } from './utils';
 import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
+import { IERC20ABI } from './contracts/IERC20';
 
 /**
  * The base class for interacting with zkSync Era.
@@ -351,12 +352,12 @@ export class Web3ZkSync extends Web3.Web3 {
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
-	public async getBridgeHubContract(
+	public async getBridgehubContractAddress(
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		if (!this.contractAddresses().bridgehubContract) {
 			this.contractAddresses().bridgehubContract =
-				await this._rpc.getBridgeHubContract(returnFormat);
+				await this._rpc.getBridgehubContractAddress(returnFormat);
 		}
 		return this.contractAddresses().bridgehubContract!;
 	}
@@ -477,4 +478,154 @@ export class Web3ZkSync extends Web3.Web3 {
 	// 	}
 	// 	return result;
 	// }
+	async getTokenBalance(token: Address, walletAddress: Address): Promise<bigint> {
+		const erc20 = new this.eth.Contract(IERC20ABI, token);
+
+		return await erc20.methods.balanceOf(walletAddress).call();
+	}
+
+	async populateTransaction(tx: TransactionRequest): Promise<TransactionLike<string>> {
+		if (!this.provider) {
+			throw new Error('provider is not set');
+		}
+
+		const pop = await populate(this, tx);
+
+		if (pop.nonce == null) {
+			pop.nonce = await this.getNonce('pending');
+		}
+
+		if (pop.gasLimit == null) {
+			pop.gasLimit = await this.estimateGas(pop);
+		}
+
+		// Populate the chain ID
+		const network = await (<Provider>this.provider).getNetwork();
+		if (pop.chainId != null) {
+			const chainId = getBigInt(pop.chainId);
+			assertArgument(
+				chainId === network.chainId,
+				'transaction chainId mismatch',
+				'tx.chainId',
+				tx.chainId,
+			);
+		} else {
+			pop.chainId = network.chainId;
+		}
+
+		// Do not allow mixing pre-eip-1559 and eip-1559 properties
+		const hasEip1559 = pop.maxFeePerGas != null || pop.maxPriorityFeePerGas != null;
+		if (pop.gasPrice != null && (pop.type === 2 || hasEip1559)) {
+			assertArgument(false, 'eip-1559 transaction do not support gasPrice', 'tx', tx);
+		} else if ((pop.type === 0 || pop.type === 1) && hasEip1559) {
+			assertArgument(
+				false,
+				'pre-eip-1559 transaction do not support maxFeePerGas/maxPriorityFeePerGas',
+				'tx',
+				tx,
+			);
+		}
+
+		if (
+			(pop.type === 2 || pop.type == null) &&
+			pop.maxFeePerGas != null &&
+			pop.maxPriorityFeePerGas != null
+		) {
+			// Fully-formed EIP-1559 transaction (skip getFeeData)
+			pop.type = 2;
+		} else if (pop.type === 0 || pop.type === 1) {
+			// Explicit Legacy or EIP-2930 transaction
+
+			// We need to get fee data to determine things
+			const feeData = await provider.getFeeData();
+
+			assert(
+				feeData.gasPrice != null,
+				'network does not support gasPrice',
+				'UNSUPPORTED_OPERATION',
+				{
+					operation: 'getGasPrice',
+				},
+			);
+
+			// Populate missing gasPrice
+			if (pop.gasPrice == null) {
+				pop.gasPrice = feeData.gasPrice;
+			}
+		} else {
+			// We need to get fee data to determine things
+			const feeData = await provider.getFeeData();
+
+			if (pop.type == null) {
+				// We need to auto-detect the intended type of this transaction...
+
+				if (feeData.maxFeePerGas != null && feeData.maxPriorityFeePerGas != null) {
+					// The network supports EIP-1559!
+
+					// Upgrade transaction from null to eip-1559
+					pop.type = 2;
+
+					if (pop.gasPrice != null) {
+						// Using legacy gasPrice property on an eip-1559 network,
+						// so use gasPrice as both fee properties
+						const gasPrice = pop.gasPrice;
+						delete pop.gasPrice;
+						pop.maxFeePerGas = gasPrice;
+						pop.maxPriorityFeePerGas = gasPrice;
+					} else {
+						// Populate missing fee data
+
+						if (pop.maxFeePerGas == null) {
+							pop.maxFeePerGas = feeData.maxFeePerGas;
+						}
+
+						if (pop.maxPriorityFeePerGas == null) {
+							pop.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
+						}
+					}
+				} else if (feeData.gasPrice != null) {
+					// Network doesn't support EIP-1559...
+
+					// ...but they are trying to use EIP-1559 properties
+					assert(
+						!hasEip1559,
+						'network does not support EIP-1559',
+						'UNSUPPORTED_OPERATION',
+						{
+							operation: 'populateTransaction',
+						},
+					);
+
+					// Populate missing fee data
+					if (pop.gasPrice == null) {
+						pop.gasPrice = feeData.gasPrice;
+					}
+
+					// Explicitly set untyped transaction to legacy
+					// @TODO: Maybe this shold allow type 1?
+					pop.type = 0;
+				} else {
+					// getFeeData has failed us.
+					assert(false, 'failed to get consistent fee data', 'UNSUPPORTED_OPERATION', {
+						operation: 'signer.getFeeData',
+					});
+				}
+			} else if (pop.type === 2) {
+				// Explicitly using EIP-1559
+
+				// Populate missing fee data
+				if (pop.maxFeePerGas == null) {
+					pop.maxFeePerGas = feeData.maxFeePerGas;
+				}
+
+				if (pop.maxPriorityFeePerGas == null) {
+					pop.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
+				}
+			}
+		}
+
+		//@TOOD: Don't await all over the place; save them up for
+		// the end for better batching
+		return await resolveProperties(pop);
+	}
 }

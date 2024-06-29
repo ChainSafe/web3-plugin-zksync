@@ -383,12 +383,12 @@ export class RpcMethods {
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
-	public async getBridgeHubContract(
+	public async getBridgehubContractAddress(
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		return web3Utils.format(
 			AddressSchema,
-			await this._send('zks_getBridgehubContract', []),
+			await this._send('zks_getBridgehubContractAddress', []),
 			returnFormat,
 		) as Address;
 	}

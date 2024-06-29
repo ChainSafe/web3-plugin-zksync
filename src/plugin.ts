@@ -92,7 +92,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 	private async fillContractsAddresses() {
 		// TODO: optionally fetch and set the contract addresses from the Adapter,
-		// nonce methods like getBridgehubContract and getDefaultBridgeAddresses are implemented.
+		// nonce methods like getBridgehubContractAddress and getDefaultBridgeAddresses are implemented.
 		// this.Contracts.ZkSyncMainContract.options.address =
 		// this.Contracts.BridgehubContract.options.address =
 		// this.Contracts.ContractDeployerContract.options.address =
