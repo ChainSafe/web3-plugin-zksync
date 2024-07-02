@@ -1,6 +1,6 @@
 import { Contract } from 'web3-eth-contract';
 
-import {
+import type {
 	Address,
 	ApprovalBasedPaymasterInput,
 	GeneralPaymasterInput,

@@ -1,7 +1,8 @@
-import * as chai from 'chai';
 import '../custom-matchers';
 import * as ethAccounts from 'web3-eth-accounts';
-import { types, utils, Web3ZkSyncL2, ZKSyncWallet } from '../../src';
+import * as web3Utils from 'web3-utils';
+import type { types } from '../../src';
+import { utils, Web3ZkSyncL2, ZKSyncWallet, Web3ZkSyncL1 } from '../../src';
 import {
 	IS_ETH_BASED,
 	ADDRESS1,
@@ -12,7 +13,6 @@ import {
 	PAYMASTER,
 } from '../utils';
 import { Network as ZkSyncNetwork } from '../../src/types';
-import * as web3Utils from 'web3-utils';
 import {
 	ETH_ADDRESS,
 	ETH_ADDRESS_IN_CONTRACTS,
@@ -20,11 +20,8 @@ import {
 	LEGACY_ETH_ADDRESS,
 } from '../../src/constants';
 import { IERC20ABI } from '../../src/contracts/IERC20';
-import { Web3ZkSyncL1 } from '../../src';
 import { getPaymasterParams } from '../../src/paymaster-utils';
 import { EIP712_TX_TYPE } from '../../lib/constants';
-
-const { expect } = chai;
 
 jest.setTimeout(60000);
 
@@ -40,44 +37,44 @@ describe('Wallet', () => {
 		it('`Wallet(privateKey, provider)` should return a `Wallet` with L2 provider', async () => {
 			const wallet = new ZKSyncWallet(PRIVATE_KEY1, provider);
 
-			expect(wallet.account.privateKey).to.be.equal(PRIVATE_KEY1);
-			expect(wallet.provider).to.be.equal(provider);
+			expect(wallet.account.privateKey).toEqual(PRIVATE_KEY1);
+			expect(wallet.provider).toEqual(provider);
 		});
 
 		it('`Wallet(privateKey, provider, ethProvider)` should return a `Wallet` with L1 and L2 provider', async () => {
 			const wallet = new ZKSyncWallet(PRIVATE_KEY1, provider, ethProvider);
 
-			expect(wallet.account.privateKey).to.be.equal(PRIVATE_KEY1);
-			expect(wallet.provider).to.be.equal(provider);
-			expect(wallet.providerL1).to.be.equal(ethProvider);
+			expect(wallet.account.privateKey).toEqual(PRIVATE_KEY1);
+			expect(wallet.provider).toEqual(provider);
+			expect(wallet.providerL1).toEqual(ethProvider);
 		});
 	});
 
 	describe('#getMainContract()', () => {
 		it('should return the main contract', async () => {
 			const result = await wallet.getMainContract();
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull();
 		});
 	});
 
 	describe('#getBridgehubContract()', () => {
 		it('should return the bridgehub contract', async () => {
 			const result = await wallet.getBridgehubContractAddress();
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 	});
 
 	describe('#getL1BridgeContracts()', () => {
 		it('should return the L1 bridge contracts', async () => {
 			const result = await wallet.getL1BridgeContracts();
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 	});
 
 	describe('#isETHBasedChain()', () => {
 		it('should return whether the chain is ETH-based or not', async () => {
 			const result = await wallet.isETHBasedChain();
-			expect(result).to.be.equal(IS_ETH_BASED);
+			expect(result).toEqual(IS_ETH_BASED);
 		});
 	});
 
@@ -85,22 +82,22 @@ describe('Wallet', () => {
 		it('should return base token', async () => {
 			const result = await wallet.getBaseToken();
 			IS_ETH_BASED
-				? expect(result).to.be.equal(ETH_ADDRESS_IN_CONTRACTS)
-				: expect(result).not.to.be.null;
+				? expect(result).toEqual(ETH_ADDRESS_IN_CONTRACTS)
+				: expect(result).not.toBeNull;
 		});
 	});
 
 	describe('#getBalanceL1()', () => {
 		it('should return a L1 balance', async () => {
 			const result = await wallet.getBalanceL1();
-			expect(result > 0n).to.be.true;
+			expect(result > 0n).toEqual(true);
 		});
 	});
 
 	describe('#getAllowanceL1()', () => {
 		it('should return an allowance of L1 token', async () => {
 			const result = await wallet.getAllowanceL1(DAI_L1);
-			expect(result >= 0n).to.be.true;
+			expect(result >= 0n).toEqual(true);
 		});
 	});
 
@@ -108,33 +105,33 @@ describe('Wallet', () => {
 		it('should return the L2 base address', async () => {
 			const baseToken = await provider.getBaseTokenContractAddress();
 			const result = await wallet.l2TokenAddress(baseToken);
-			expect(result).to.be.equal(L2_BASE_TOKEN_ADDRESS);
+			expect(result).toEqual(L2_BASE_TOKEN_ADDRESS);
 		});
 
 		it('should return the L2 ETH address', async () => {
 			if (!IS_ETH_BASED) {
 				const result = await wallet.l2TokenAddress(LEGACY_ETH_ADDRESS);
-				expect(result).not.to.be.null;
+				expect(result).not.toBeNull;
 			}
 		});
 
 		it('should return the L2 DAI address', async () => {
 			const result = await wallet.l2TokenAddress(DAI_L1);
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 	});
 
 	describe('#approveERC20()', () => {
 		it('should approve a L1 token', async () => {
 			const result = await wallet.approveERC20(DAI_L1, 5);
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 
 		it('should throw an error when approving ETH token', async () => {
 			try {
 				await wallet.approveERC20(LEGACY_ETH_ADDRESS, 5);
 			} catch (e) {
-				expect((e as Error).message).to.be.equal(
+				expect((e as Error).message).toEqual(
 					"ETH token can't be approved! The address of the token does not exist on L1.",
 				);
 			}
@@ -144,14 +141,14 @@ describe('Wallet', () => {
 	describe('#getBaseCost()', () => {
 		it('should return a base cost of L1 transaction', async () => {
 			const result = await wallet.getBaseCost({ gasLimit: 100_000 });
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 	});
 
 	describe('#getBalance()', () => {
 		it('should return a `Wallet` balance', async () => {
 			const result = await wallet.getBalance();
-			expect(result > 0n).to.be.true;
+			expect(result > 0n).toEqual(true);
 		});
 	});
 
@@ -159,21 +156,21 @@ describe('Wallet', () => {
 		it('should return the all balances', async () => {
 			const result = await wallet.getAllBalances();
 			const expected = IS_ETH_BASED ? 2 : 3;
-			expect(Object.keys(result)).to.have.lengthOf(expected);
+			expect(Object.keys(result)).toHaveLength(expected);
 		});
 	});
 
 	describe('#getL2BridgeContracts()', () => {
 		it('should return a L2 bridge contracts', async () => {
 			const result = await wallet.getL2BridgeContracts();
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 	});
 
 	describe('#getAddress()', () => {
 		it('should return the `Wallet` address', async () => {
 			const result = wallet.getAddress();
-			expect(result).to.be.equal(ADDRESS1);
+			expect(result).toEqual(ADDRESS1);
 		});
 	});
 
@@ -181,8 +178,8 @@ describe('Wallet', () => {
 	// 	it('should return a L1 `Wallet`', async () => {
 	// 		const wallet = new ZKSyncWallet(PRIVATE_KEY1, provider, ethProvider);
 	// 		const ethWallet = wallet.ethWallet();
-	// 		expect(ethWallet.signingKey.privateKey).to.be.equal(PRIVATE_KEY1);
-	// 		expect(ethWallet.provider).to.be.equal(ethProvider);
+	// 		expect(ethWallet.signingKey.privateKey).toEqual(PRIVATE_KEY1);
+	// 		expect(ethWallet.provider).toEqual(ethProvider);
 	// 	});
 	//
 	// 	it('should throw  an error when L1 `Provider` is not specified in constructor', async () => {
@@ -190,7 +187,7 @@ describe('Wallet', () => {
 	// 		try {
 	// 			wallet.ethWallet();
 	// 		} catch (e) {
-	// 			expect((e as Error).message).to.be.equal(
+	// 			expect((e as Error).message).toEqual(
 	// 				'L1 provider is missing! Specify an L1 provider using `Wallet.connectToL1()`.',
 	// 			);
 	// 		}
@@ -199,26 +196,26 @@ describe('Wallet', () => {
 
 	describe('#connect()', () => {
 		it('should return a `Wallet` with provided `provider` as L2 provider', async () => {
-			let w = new ZKSyncWallet(PRIVATE_KEY1);
+			const w = new ZKSyncWallet(PRIVATE_KEY1);
 			w.connect(provider);
-			expect(w.account.privateKey).to.be.equal(PRIVATE_KEY1);
-			expect(w.provider).to.be.equal(provider);
+			expect(w.account.privateKey).toEqual(PRIVATE_KEY1);
+			expect(w.provider).toEqual(provider);
 		});
 	});
 
 	describe('#connectL1()', () => {
 		it('should return a `Wallet` with provided `provider` as L1 provider', async () => {
-			let w = new ZKSyncWallet(PRIVATE_KEY1);
+			const w = new ZKSyncWallet(PRIVATE_KEY1);
 			w.connectToL1(ethProvider);
-			expect(w.account.privateKey).to.be.equal(PRIVATE_KEY1);
-			expect(w.providerL1).to.be.equal(ethProvider);
+			expect(w.account.privateKey).toEqual(PRIVATE_KEY1);
+			expect(w.providerL1).toEqual(ethProvider);
 		});
 	});
 
 	describe('#getDeploymentNonce()', () => {
 		it('should return a deployment nonce', async () => {
 			const result = await wallet.getDeploymentNonce();
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 	});
 
@@ -243,8 +240,8 @@ describe('Wallet', () => {
 		// 		value: 7_000_000_000,
 		// 	});
 		// 	expect(result).to.be.deepEqualExcluding(tx, ['gasLimit', 'chainId', 'gasPrice']);
-		// 	expect(BigInt(result.gasLimit!) > 0n).to.be.true;
-		// 	expect(BigInt(result.gasPrice!) > 0n).to.be.true;
+		// 	expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
+		// 	expect(BigInt(result.gasPrice!) > 0n).toEqual(true);
 		// })
 		// it('should return a populated transaction with default values if are omitted', async () => {
 		// 	const tx = {
@@ -267,9 +264,9 @@ describe('Wallet', () => {
 		// 		'maxFeePerGas',
 		// 		'maxPriorityFeePerGas',
 		// 	]);
-		// 	expect(BigInt(result.gasLimit!) > 0n).to.be.true;
-		// 	expect(BigInt(result.maxFeePerGas!) > 0n).to.be.true;
-		// 	expect(BigInt(result.maxPriorityFeePerGas!) > 0n).to.be.true;
+		// 	expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
+		// 	expect(BigInt(result.maxFeePerGas!) > 0n).toEqual(true);
+		// 	expect(BigInt(result.maxPriorityFeePerGas!) > 0n).toEqual(true);
 		// });
 		// 	it('should return populated transaction when `maxFeePerGas` and `maxPriorityFeePerGas` and `customData` are provided', async () => {
 		// 		const tx = {
@@ -298,7 +295,7 @@ describe('Wallet', () => {
 		// 			},
 		// 		});
 		// 		expect(result).to.be.deepEqualExcluding(tx, ['gasLimit']);
-		// 		expect(BigInt(result.gasLimit!) > 0n).to.be.true;
+		// 		expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
 		// 	});
 		//
 		// 	it('should return populated transaction when `maxPriorityFeePerGas` and `customData` are provided', async () => {
@@ -325,7 +322,7 @@ describe('Wallet', () => {
 		// 			},
 		// 		});
 		// 		expect(result).to.be.deepEqualExcluding(tx, ['gasLimit']);
-		// 		expect(BigInt(result.gasLimit!) > 0n).to.be.true;
+		// 		expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
 		// 	});
 		//
 		// 	it('should return populated transaction when `maxFeePerGas` and `customData` are provided', async () => {
@@ -352,7 +349,7 @@ describe('Wallet', () => {
 		// 			},
 		// 		});
 		// 		expect(result).to.be.deepEqualExcluding(tx, ['gasLimit']);
-		// 		expect(BigInt(result.gasLimit!) > 0n).to.be.true;
+		// 		expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
 		// 	});
 		//
 		// 	it('should return populated EIP1559 transaction when `maxFeePerGas` and `maxPriorityFeePerGas` are provided', async () => {
@@ -373,7 +370,7 @@ describe('Wallet', () => {
 		// 			maxPriorityFeePerGas: 2_000_000_000n,
 		// 		});
 		// 		expect(result).to.be.deepEqualExcluding(tx, ['gasLimit']);
-		// 		expect(BigInt(result.gasLimit!) > 0n).to.be.true;
+		// 		expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
 		// 	});
 		//
 		// 	it('should return populated EIP1559 transaction with `maxFeePerGas` and `maxPriorityFeePerGas` same as provided `gasPrice`', async () => {
@@ -393,7 +390,7 @@ describe('Wallet', () => {
 		// 			gasPrice: 3_500_000_000n,
 		// 		});
 		// 		expect(result).to.be.deepEqualExcluding(tx, ['gasLimit']);
-		// 		expect(BigInt(result.gasLimit!) > 0n).to.be.true;
+		// 		expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
 		// 	});
 		//
 		// 	it('should return populated legacy transaction when `type = 0`', async () => {
@@ -412,8 +409,8 @@ describe('Wallet', () => {
 		// 			value: 7_000_000,
 		// 		});
 		// 		expect(result).to.be.deepEqualExcluding(tx, ['gasLimit', 'gasPrice']);
-		// 		expect(BigInt(result.gasLimit!) > 0n).to.be.true;
-		// 		expect(BigInt(result.gasPrice!) > 0n).to.be.true;
+		// 		expect(BigInt(result.gasLimit!) > 0n).toEqual(true);
+		// 		expect(BigInt(result.gasPrice!) > 0n).toEqual(true);
 		// 	});
 		// });
 		//
@@ -430,7 +427,7 @@ describe('Wallet', () => {
 		// 		});
 		// 		const tx = await wallet.sendTransaction(populatedTx);
 		// 		const result = await tx.wait();
-		// 		expect(result).not.to.be.null;
+		// 		expect(result).not.toBeNull;
 		// 	})
 		//
 		// 	it('should send EIP1559 transaction when `maxFeePerGas` and `maxPriorityFeePerGas` are provided', async () => {
@@ -441,8 +438,8 @@ describe('Wallet', () => {
 		// 			maxPriorityFeePerGas: 2_000_000_000n,
 		// 		});
 		// 		const result = await tx.wait();
-		// 		expect(result).not.to.be.null;
-		// 		expect(result.type).to.be.equal(2);
+		// 		expect(result).not.toBeNull;
+		// 		expect(result.type).toEqual(2);
 		// 	})
 		//
 		// 	it('should send already populated EIP1559 transaction with `maxFeePerGas` and `maxPriorityFeePerGas`', async () => {
@@ -455,8 +452,8 @@ describe('Wallet', () => {
 		//
 		// 		const tx = await wallet.sendTransaction(populatedTx);
 		// 		const result = await tx.wait();
-		// 		expect(result).not.to.be.null;
-		// 		expect(result.type).to.be.equal(2);
+		// 		expect(result).not.toBeNull;
+		// 		expect(result.type).toEqual(2);
 		// 	})
 		//
 		// 	it('should send EIP1559 transaction with `maxFeePerGas` and `maxPriorityFeePerGas` same as provided `gasPrice`', async () => {
@@ -466,8 +463,8 @@ describe('Wallet', () => {
 		// 			gasPrice: 3_500_000_000n,
 		// 		});
 		// 		const result = await tx.wait();
-		// 		expect(result).not.to.be.null;
-		// 		expect(result.type).to.be.equal(2);
+		// 		expect(result).not.toBeNull;
+		// 		expect(result.type).toEqual(2);
 		// 	})
 		//
 		// 	it('should send legacy transaction when `type = 0`', async () => {
@@ -477,16 +474,16 @@ describe('Wallet', () => {
 		// 			value: 7_000_000,
 		// 		});
 		// 		const result = await tx.wait();
-		// 		expect(result).not.to.be.null;
-		// 		expect(result.type).to.be.equal(0);
+		// 		expect(result).not.toBeNull;
+		// 		expect(result.type).toEqual(0);
 		// 	})
 	});
 
 	// describe('#fromMnemonic()', () => {
 	// 	it('should return a `Wallet` with the `provider` as L1 provider and a private key that is built from the `mnemonic` passphrase', async () => {
 	// 		const wallet = Web3ZkSyncL2.fromMnemonic(MNEMONIC1, ethProvider);
-	// 		expect(wallet.signingKey.privateKey).to.be.equal(PRIVATE_KEY1);
-	// 		expect(wallet.providerL1).to.be.equal(ethProvider);
+	// 		expect(wallet.signingKey.privateKey).toEqual(PRIVATE_KEY1);
+	// 		expect(wallet.providerL1).toEqual(ethProvider);
 	// 	});
 	// });
 
@@ -496,7 +493,7 @@ describe('Wallet', () => {
 	// 			fs.readFileSync('tests/files/wallet.json', 'utf8'),
 	// 			'password',
 	// 		);
-	// 		expect(wallet.signingKey.privateKey).to.be.equal(PRIVATE_KEY1);
+	// 		expect(wallet.signingKey.privateKey).toEqual(PRIVATE_KEY1);
 	// 	})
 	// });
 
@@ -506,15 +503,15 @@ describe('Wallet', () => {
 	// 			fs.readFileSync('tests/files/wallet.json', 'utf8'),
 	// 			'password',
 	// 		);
-	// 		expect(wallet.signingKey.privateKey).to.be.equal(PRIVATE_KEY1);
+	// 		expect(wallet.signingKey.privateKey).toEqual(PRIVATE_KEY1);
 	// 	})
 	// });
 
 	describe('#createRandom()', () => {
 		it('should return a random `Wallet` with L2 provider', async () => {
 			const wallet = ZKSyncWallet.createRandom(provider);
-			expect(wallet.account.privateKey).not.to.be.null;
-			expect(wallet.provider).to.be.equal(provider);
+			expect(wallet.account.privateKey).not.toBeNull;
+			expect(wallet.provider).toEqual(provider);
 		});
 	});
 
@@ -552,12 +549,12 @@ describe('Wallet', () => {
 				// 	'mintValue',
 				// 	'overrides',
 				// ]);
-				expect(result.l2GasLimit > 0n).to.be.true;
-				expect(result.mintValue > 0n).to.be.true;
-				expect(utils.isAddressEq(result.overrides.from, ADDRESS1)).to.be.true;
-				expect(result.overrides.maxFeePerGas > 0n).to.be.true;
-				expect(result.overrides.maxPriorityFeePerGas > 0n).to.be.true;
-				expect(result.overrides.value > 0n).to.be.true;
+				expect(result.l2GasLimit > 0n).toEqual(true);
+				expect(result.mintValue > 0n).toEqual(true);
+				expect(utils.isAddressEq(result.overrides.from, ADDRESS1)).toEqual(true);
+				expect(result.overrides.maxFeePerGas > 0n).toEqual(true);
+				expect(result.overrides.maxPriorityFeePerGas > 0n).toEqual(true);
+				expect(result.overrides.value > 0n).toEqual(true);
 			});
 
 			it('should return a deposit transaction with `tx.to == Wallet.getAddress()` when `tx.to` is not specified', async () => {
@@ -591,12 +588,12 @@ describe('Wallet', () => {
 				// 	'mintValue',
 				// 	'overrides',
 				// ]);
-				expect(result.l2GasLimit > 0n).to.be.true;
-				expect(result.mintValue > 0n).to.be.true;
-				expect(utils.isAddressEq(result.overrides.from, ADDRESS1)).to.be.true;
-				expect(result.overrides.maxFeePerGas > 0n).to.be.true;
-				expect(result.overrides.maxPriorityFeePerGas > 0n).to.be.true;
-				expect(result.overrides.value > 0n).to.be.true;
+				expect(result.l2GasLimit > 0n).toEqual(true);
+				expect(result.mintValue > 0n).toEqual(true);
+				expect(utils.isAddressEq(result.overrides.from, ADDRESS1)).toEqual(true);
+				expect(result.overrides.maxFeePerGas > 0n).toEqual(true);
+				expect(result.overrides.maxPriorityFeePerGas > 0n).toEqual(true);
+				expect(result.overrides.value > 0n).toEqual(true);
 			});
 
 			it('should return DAI deposit transaction', async () => {
@@ -621,9 +618,9 @@ describe('Wallet', () => {
 				// 	'maxPriorityFeePerGas',
 				// 	'value',
 				// ]);
-				expect(result.maxFeePerGas > 0n).to.be.true;
-				expect(result.maxPriorityFeePerGas > 0n).to.be.true;
-				expect(result.value > 0n).to.be.true;
+				expect(result.maxFeePerGas > 0n).toEqual(true);
+				expect(result.maxPriorityFeePerGas > 0n).toEqual(true);
+				expect(result.value > 0n).toEqual(true);
 			});
 		} else {
 			it('should return ETH deposit transaction', async () => {
@@ -650,9 +647,9 @@ describe('Wallet', () => {
 					...otherResult
 				} = result;
 
-				expect(otherResult).to.be.equal(otherTx);
-				expect(BigInt(result.maxPriorityFeePerGas) > 0n).to.be.true;
-				expect(BigInt(result.maxFeePerGas) > 0n).to.be.true;
+				expect(otherResult).toEqual(otherTx);
+				expect(BigInt(result.maxPriorityFeePerGas) > 0n).toEqual(true);
+				expect(BigInt(result.maxFeePerGas) > 0n).toEqual(true);
 			});
 
 			it('should return a deposit transaction with `tx.to == Wallet.getAddress()` when `tx.to` is not specified', async () => {
@@ -675,8 +672,8 @@ describe('Wallet', () => {
 				// 	'maxFeePerGas',
 				// 	'maxPriorityFeePerGas',
 				// ]);
-				expect(BigInt(result.maxPriorityFeePerGas) > 0n).to.be.true;
-				expect(BigInt(result.maxFeePerGas) > 0n).to.be.true;
+				expect(BigInt(result.maxPriorityFeePerGas) > 0n).toEqual(true);
+				expect(BigInt(result.maxFeePerGas) > 0n).toEqual(true);
 			});
 
 			it('should return DAI deposit transaction', async () => {
@@ -700,8 +697,8 @@ describe('Wallet', () => {
 				// 	'maxFeePerGas',
 				// 	'maxPriorityFeePerGas',
 				// ]);
-				expect(BigInt(result.maxPriorityFeePerGas) > 0n).to.be.true;
-				expect(BigInt(result.maxFeePerGas) > 0n).to.be.true;
+				expect(BigInt(result.maxPriorityFeePerGas) > 0n).toEqual(true);
+				expect(BigInt(result.maxFeePerGas) > 0n).toEqual(true);
 			});
 		}
 	});
@@ -715,7 +712,7 @@ describe('Wallet', () => {
 					amount: 5,
 					refundRecipient: wallet.getAddress(),
 				});
-				expect(result > 0n).to.be.true;
+				expect(result > 0n).toEqual(true);
 			});
 
 			it('should return a gas estimation for the DAI deposit transaction', async () => {
@@ -725,7 +722,7 @@ describe('Wallet', () => {
 					amount: 5,
 					refundRecipient: wallet.getAddress(),
 				});
-				expect(result > 0n).to.be.true;
+				expect(result > 0n).toEqual(true);
 			});
 		} else {
 			it('should throw an error for insufficient allowance when estimating gas for ETH deposit transaction', async () => {
@@ -737,7 +734,7 @@ describe('Wallet', () => {
 						refundRecipient: wallet.getAddress(),
 					});
 				} catch (e: any) {
-					expect(e.reason).to.include('ERC20: insufficient allowance');
+					expect(e.reason).toMatch('ERC20: insufficient allowance');
 				}
 			});
 
@@ -754,7 +751,7 @@ describe('Wallet', () => {
 					amount: amount,
 					refundRecipient: wallet.getAddress(),
 				});
-				expect(result > 0n).to.be.true;
+				expect(result > 0n).toEqual(true);
 			});
 
 			it('should return gas estimation for base token deposit transaction', async () => {
@@ -770,7 +767,7 @@ describe('Wallet', () => {
 					amount: amount,
 					refundRecipient: wallet.getAddress(),
 				});
-				expect(result > 0n).to.be.true;
+				expect(result > 0n).toEqual(true);
 			});
 
 			it('should return gas estimation for DAI deposit transaction', async () => {
@@ -787,7 +784,7 @@ describe('Wallet', () => {
 					amount: amount,
 					refundRecipient: wallet.getAddress(),
 				});
-				expect(result > 0n).to.be.true;
+				expect(result > 0n).toEqual(true);
 			});
 		}
 	});
@@ -807,9 +804,9 @@ describe('Wallet', () => {
 				const result = await tx.wait();
 				const l2BalanceAfterDeposit = await wallet.getBalance();
 				const l1BalanceAfterDeposit = await wallet.getBalanceL1();
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).to.be.true;
-				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).toEqual(true);
+				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).toEqual(true);
 			});
 
 			it('should deposit DAI to L2 network', async () => {
@@ -827,9 +824,9 @@ describe('Wallet', () => {
 				const result = await tx.wait();
 				const l2BalanceAfterDeposit = await wallet.getBalance(l2DAI);
 				const l1BalanceAfterDeposit = await wallet.getBalanceL1(DAI_L1);
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).to.be.true;
-				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).toEqual(true);
+				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).toEqual(true);
 			});
 
 			it('should deposit DAI to the L2 network with approve transaction for allowance', async () => {
@@ -848,9 +845,9 @@ describe('Wallet', () => {
 				await tx.waitFinalize();
 				const l2BalanceAfterDeposit = await wallet.getBalance(l2DAI);
 				const l1BalanceAfterDeposit = await wallet.getBalanceL1(DAI_L1);
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).to.be.true;
-				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).toEqual(true);
+				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).toEqual(true);
 			});
 		} else {
 			it('should deposit ETH to L2 network', async () => {
@@ -868,9 +865,9 @@ describe('Wallet', () => {
 				const result = await tx.wait();
 				const l2BalanceAfterDeposit = await wallet.getBalance(l2EthAddress);
 				const l1BalanceAfterDeposit = await wallet.getBalanceL1();
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).to.be.true;
-				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).toEqual(true);
+				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).toEqual(true);
 			});
 
 			it('should deposit base token to L2 network', async () => {
@@ -888,9 +885,9 @@ describe('Wallet', () => {
 				const result = await tx.wait();
 				const l2BalanceAfterDeposit = await wallet.getBalance();
 				const l1BalanceAfterDeposit = await wallet.getBalanceL1(baseTokenL1);
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).to.be.true;
-				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= 0n).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).toEqual(true);
+				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= 0n).toEqual(true);
 			});
 
 			it('should deposit DAI to L2 network', async () => {
@@ -909,9 +906,9 @@ describe('Wallet', () => {
 				const result = await tx.wait();
 				const l2BalanceAfterDeposit = await wallet.getBalance(l2DAI);
 				const l1BalanceAfterDeposit = await wallet.getBalanceL1(DAI_L1);
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).to.be.true;
-				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterDeposit - l2BalanceBeforeDeposit >= amount).toEqual(true);
+				expect(l1BalanceBeforeDeposit - l1BalanceAfterDeposit >= amount).toEqual(true);
 			});
 		}
 	});
@@ -941,7 +938,7 @@ describe('Wallet', () => {
 						blockDetails = await wallet.provider!.getBlockDetails(blockNumber);
 					} while (!blockDetails || !blockDetails.executeTxHash);
 					const result = await wallet.claimFailedDeposit((error as any).receipt.hash);
-					expect(result?.blockHash).to.be.not.null;
+					expect(result?.blockHash).not.toBeNull();
 				}
 			});
 
@@ -956,7 +953,7 @@ describe('Wallet', () => {
 				try {
 					await wallet.claimFailedDeposit(tx.hash);
 				} catch (e) {
-					expect((e as Error).message).to.be.equal('Cannot claim successful deposit!');
+					expect((e as Error).message).toEqual('Cannot claim successful deposit!');
 				}
 			});
 		} else {
@@ -972,7 +969,7 @@ describe('Wallet', () => {
 				try {
 					await wallet.claimFailedDeposit(tx.hash);
 				} catch (e) {
-					expect((e as Error).message).to.be.equal('Cannot claim successful deposit!');
+					expect((e as Error).message).toEqual('Cannot claim successful deposit!');
 				}
 			});
 		}
@@ -985,11 +982,11 @@ describe('Wallet', () => {
 					token: LEGACY_ETH_ADDRESS,
 					to: wallet.getAddress(),
 				});
-				expect(result.baseCost > 0n).to.be.true;
-				expect(result.l1GasLimit > 0n).to.be.true;
-				expect(result.l2GasLimit > 0n).to.be.true;
-				expect(result.maxPriorityFeePerGas! > 0n).to.be.true;
-				expect(result.maxFeePerGas! > 0n).to.be.true;
+				expect(result.baseCost > 0n).toEqual(true);
+				expect(result.l1GasLimit > 0n).toEqual(true);
+				expect(result.l2GasLimit > 0n).toEqual(true);
+				expect(result.maxPriorityFeePerGas! > 0n).toEqual(true);
+				expect(result.maxFeePerGas! > 0n).toEqual(true);
 			});
 
 			it('should throw an error when there is not enough allowance to cover the deposit', async () => {
@@ -999,7 +996,7 @@ describe('Wallet', () => {
 						to: wallet.getAddress(),
 					});
 				} catch (e) {
-					expect((e as Error).message).to.be.equal(
+					expect((e as Error).message).toEqual(
 						'Not enough allowance to cover the deposit!',
 					);
 				}
@@ -1012,11 +1009,11 @@ describe('Wallet', () => {
 					token: DAI_L1,
 					to: wallet.getAddress(),
 				});
-				expect(result.baseCost > 0n).to.be.true;
-				expect(result.l1GasLimit > 0n).to.be.true;
-				expect(result.l2GasLimit > 0n).to.be.true;
-				expect(result.maxPriorityFeePerGas! > 0n).to.be.true;
-				expect(result.maxFeePerGas! > 0n).to.be.true;
+				expect(result.baseCost > 0n).toEqual(true);
+				expect(result.l1GasLimit > 0n).toEqual(true);
+				expect(result.l2GasLimit > 0n).toEqual(true);
+				expect(result.maxPriorityFeePerGas! > 0n).toEqual(true);
+				expect(result.maxFeePerGas! > 0n).toEqual(true);
 			});
 
 			it('should throw an error when there is not enough balance for the deposit', async () => {
@@ -1031,7 +1028,7 @@ describe('Wallet', () => {
 						to: wallet.getAddress(),
 					});
 				} catch (e) {
-					expect((e as Error).message).to.include('Not enough balance for deposit!');
+					expect((e as Error).message).toMatch('Not enough balance for deposit!');
 				}
 			});
 		} else {
@@ -1046,7 +1043,7 @@ describe('Wallet', () => {
 						to: wallet.getAddress(),
 					});
 				} catch (e) {
-					expect((e as Error).message).to.be.equal(
+					expect((e as Error).message).toEqual(
 						'Not enough base token allowance to cover the deposit!',
 					);
 				}
@@ -1062,11 +1059,11 @@ describe('Wallet', () => {
 					token: token,
 					to: wallet.getAddress(),
 				});
-				expect(result.baseCost > 0n).to.be.true;
-				expect(result.l1GasLimit > 0n).to.be.true;
-				expect(result.l2GasLimit > 0n).to.be.true;
-				expect(result.maxPriorityFeePerGas! > 0n).to.be.true;
-				expect(result.maxFeePerGas! > 0n).to.be.true;
+				expect(result.baseCost > 0n).toEqual(true);
+				expect(result.l1GasLimit > 0n).toEqual(true);
+				expect(result.l2GasLimit > 0n).toEqual(true);
+				expect(result.maxPriorityFeePerGas! > 0n).toEqual(true);
+				expect(result.maxFeePerGas! > 0n).toEqual(true);
 			});
 
 			it('should return fee for base token deposit', async () => {
@@ -1079,7 +1076,7 @@ describe('Wallet', () => {
 					token: token,
 					to: wallet.getAddress(),
 				});
-				expect(result).not.to.be.null;
+				expect(result).not.toBeNull;
 			});
 
 			it('should return fee for DAI token deposit', async () => {
@@ -1093,11 +1090,11 @@ describe('Wallet', () => {
 					token: token,
 					to: wallet.getAddress(),
 				});
-				expect(result.baseCost > 0n).to.be.true;
-				expect(result.l1GasLimit > 0n).to.be.true;
-				expect(result.l2GasLimit > 0n).to.be.true;
-				expect(result.maxPriorityFeePerGas! > 0n).to.be.true;
-				expect(result.maxFeePerGas! > 0n).to.be.true;
+				expect(result.baseCost > 0n).toEqual(true);
+				expect(result.l1GasLimit > 0n).toEqual(true);
+				expect(result.l2GasLimit > 0n).toEqual(true);
+				expect(result.maxPriorityFeePerGas! > 0n).toEqual(true);
+				expect(result.maxFeePerGas! > 0n).toEqual(true);
 			});
 
 			it('should throw an error when there is not enough token allowance to cover the deposit', async () => {
@@ -1134,7 +1131,7 @@ describe('Wallet', () => {
 						to: wallet.getAddress(),
 					});
 				} catch (e) {
-					expect((e as Error).message).to.be.equal(
+					expect((e as Error).message).toEqual(
 						'Not enough token allowance to cover the deposit!',
 					);
 				}
@@ -1153,12 +1150,14 @@ describe('Wallet', () => {
 					amount: amount,
 				});
 				await withdrawTx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).to.be.false;
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance();
-				expect(result).not.to.be.null;
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
+					true,
+				);
 			});
 
 			it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
@@ -1185,7 +1184,7 @@ describe('Wallet', () => {
 					}),
 				});
 				await withdrawTx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).to.be.false;
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
 
@@ -1198,19 +1197,20 @@ describe('Wallet', () => {
 				const l2ApprovalTokenBalanceAfterWithdrawal =
 					await wallet.getBalance(APPROVAL_TOKEN);
 
-				expect(paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n).to
-					.be.true;
+				expect(
+					paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
+				).toEqual(true);
 				expect(
 					paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-				).to.be.equal(minimalAllowance);
+				).toEqual(minimalAllowance);
 
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).to.be.equal(amount);
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
 				expect(
 					l2ApprovalTokenBalanceAfterWithdrawal ===
 						l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-				).to.be.true;
+				).toEqual(true);
 
-				expect(result).not.to.be.null;
+				expect(result).not.toBeNull;
 			});
 		} else {
 			it('should withdraw ETH to the L1 network', async () => {
@@ -1223,12 +1223,14 @@ describe('Wallet', () => {
 					amount: amount,
 				});
 				await withdrawTx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).to.be.false;
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance(token);
-				expect(result).not.to.be.null;
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
+					true,
+				);
 			});
 
 			it('should withdraw base token to the L1 network', async () => {
@@ -1241,12 +1243,14 @@ describe('Wallet', () => {
 					amount: amount,
 				});
 				await withdrawTx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).to.be.false;
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance();
-				expect(result).not.to.be.null;
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
+					true,
+				);
 			});
 
 			it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
@@ -1275,7 +1279,7 @@ describe('Wallet', () => {
 					}),
 				});
 				await withdrawTx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).to.be.false;
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
 
@@ -1288,19 +1292,20 @@ describe('Wallet', () => {
 				const l2ApprovalTokenBalanceAfterWithdrawal =
 					await wallet.getBalance(APPROVAL_TOKEN);
 
-				expect(paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n).to
-					.be.true;
+				expect(
+					paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
+				).toEqual(true);
 				expect(
 					paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-				).to.be.equal(minimalAllowance);
+				).toEqual(minimalAllowance);
 
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).to.be.equal(amount);
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
 				expect(
 					l2ApprovalTokenBalanceAfterWithdrawal ===
 						l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-				).to.be.true;
+				).toEqual(true);
 
-				expect(result).not.to.be.null;
+				expect(result).not.toBeNull;
 			});
 		}
 
@@ -1316,15 +1321,15 @@ describe('Wallet', () => {
 				amount: amount,
 			});
 			await withdrawTx.waitFinalize();
-			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).to.be.false;
+			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toEqual(false);
 
 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
 			const l2BalanceAfterWithdrawal = await wallet.getBalance(l2DAI);
 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
 
-			expect(result).not.to.be.null;
-			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).to.be.equal(amount);
-			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).to.be.equal(amount);
+			expect(result).not.toBeNull;
+			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
+			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
 		});
 
 		it('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
@@ -1353,7 +1358,7 @@ describe('Wallet', () => {
 				}),
 			});
 			await withdrawTx.waitFinalize();
-			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).to.be.false;
+			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toEqual(false);
 
 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
 
@@ -1366,19 +1371,20 @@ describe('Wallet', () => {
 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
 			const l2ApprovalTokenBalanceAfterWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
 
-			expect(paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n).to.be
-				.true;
+			expect(
+				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
+			).toEqual(true);
 			expect(
 				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-			).to.be.equal(minimalAllowance);
+			).toEqual(minimalAllowance);
 			expect(
 				l2ApprovalTokenBalanceAfterWithdrawal ===
 					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-			).to.be.true;
+			).toEqual(true);
 
-			expect(result).not.to.be.null;
-			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).to.be.equal(amount);
-			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).to.be.equal(amount);
+			expect(result).not.toBeNull;
+			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
+			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
 		});
 	});
 
@@ -1391,7 +1397,7 @@ describe('Wallet', () => {
 					calldata: '0x',
 					l2Value: amount,
 				});
-				expect(result).not.to.be.null;
+				expect(result).not.toBeNull;
 			});
 		} else {
 			it('should return request execute transaction', async () => {
@@ -1401,7 +1407,7 @@ describe('Wallet', () => {
 					l2Value: amount,
 					overrides: { nonce: 0 },
 				});
-				expect(result).not.to.be.null;
+				expect(result).not.toBeNull;
 			});
 		}
 	});
@@ -1414,7 +1420,7 @@ describe('Wallet', () => {
 					calldata: '0x',
 					l2Value: 7_000_000_000,
 				});
-				expect(result > 0n).to.be.true;
+				expect(result > 0n).toEqual(true);
 			});
 		} else {
 			it('should return gas estimation for request execute transaction', async () => {
@@ -1429,7 +1435,7 @@ describe('Wallet', () => {
 				await wallet.approveERC20(approveParams.token, approveParams.allowance);
 
 				const result = await wallet.estimateGasRequestExecute(tx);
-				expect(result > 0n).to.be.true;
+				expect(result > 0n).toEqual(true);
 			});
 		}
 	});
@@ -1449,9 +1455,9 @@ describe('Wallet', () => {
 				const result = await tx.wait();
 				const l2BalanceAfterExecution = await wallet.getBalance();
 				const l1BalanceAfterExecution = await wallet.getBalanceL1();
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterExecution - l2BalanceBeforeExecution >= amount).to.be.true;
-				expect(l1BalanceBeforeExecution - l1BalanceAfterExecution >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterExecution - l2BalanceBeforeExecution >= amount).toEqual(true);
+				expect(l1BalanceBeforeExecution - l1BalanceAfterExecution >= amount).toEqual(true);
 			});
 		} else {
 			it('should request transaction execution on L2 network', async () => {
@@ -1482,9 +1488,9 @@ describe('Wallet', () => {
 				const result = await tx.wait();
 				const l2BalanceAfterExecution = await wallet.getBalance();
 				const l1BalanceAfterExecution = await wallet.getBalanceL1();
-				expect(result).not.to.be.null;
-				expect(l2BalanceAfterExecution - l2BalanceBeforeExecution >= amount).to.be.true;
-				expect(l1BalanceBeforeExecution - l1BalanceAfterExecution >= amount).to.be.true;
+				expect(result).not.toBeNull;
+				expect(l2BalanceAfterExecution - l2BalanceBeforeExecution >= amount).toEqual(true);
+				expect(l1BalanceBeforeExecution - l1BalanceAfterExecution >= amount).toEqual(true);
 			});
 		}
 	});
@@ -1499,8 +1505,8 @@ describe('Wallet', () => {
 				amount: amount,
 			});
 			const balanceAfterTransfer = await provider.getBalance(ADDRESS2);
-			expect(result).not.to.be.null;
-			expect(balanceAfterTransfer - balanceBeforeTransfer).to.be.equal(amount);
+			expect(result).not.toBeNull;
+			expect(balanceAfterTransfer - balanceBeforeTransfer).toEqual(amount);
 		});
 
 		it('should transfer ETH or base token depending on chain using paymaster to cover fee', async () => {
@@ -1537,21 +1543,21 @@ describe('Wallet', () => {
 			const senderApprovalTokenBalanceAfterTransfer = await wallet.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2);
 
-			expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).to.be.true;
+			expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toEqual(
+				true,
+			);
 			expect(
 				paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer,
-			).to.be.equal(minimalAllowance);
+			).toEqual(minimalAllowance);
 
-			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).to.be.equal(amount);
+			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
 			expect(
 				senderApprovalTokenBalanceAfterTransfer ===
 					senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
-			).to.be.true;
+			).toEqual(true);
 
-			expect(result).not.to.be.null;
-			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).to.be.equal(
-				amount,
-			);
+			expect(result).not.toBeNull;
+			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toEqual(amount);
 		});
 
 		if (!IS_ETH_BASED) {
@@ -1565,8 +1571,8 @@ describe('Wallet', () => {
 					amount: amount,
 				});
 				const balanceAfterTransfer = await provider.getBalance(ADDRESS2, 'latest', token);
-				expect(result).not.to.be.null;
-				expect(balanceAfterTransfer - balanceBeforeTransfer).to.be.equal(amount);
+				expect(result).not.toBeNull;
+				expect(balanceAfterTransfer - balanceBeforeTransfer).toEqual(amount);
 			});
 
 			it('should transfer ETH using paymaster to cover fee', async () => {
@@ -1612,22 +1618,21 @@ describe('Wallet', () => {
 					ADDRESS2,
 				);
 
-				expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).to.be
-					.true;
+				expect(
+					paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
+				).toEqual(true);
 				expect(
 					paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer,
-				).to.be.equal(minimalAllowance);
+				).toEqual(minimalAllowance);
 
-				expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).to.be.equal(
-					amount,
-				);
+				expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
 				expect(
 					senderApprovalTokenBalanceAfterTransfer ===
 						senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
-				).to.be.true;
+				).toEqual(true);
 
-				expect(result).not.to.be.null;
-				expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).to.be.equal(
+				expect(result).not.toBeNull;
+				expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toEqual(
 					amount,
 				);
 			});
@@ -1643,8 +1648,8 @@ describe('Wallet', () => {
 				amount: amount,
 			});
 			const balanceAfterTransfer = await provider.getTokenBalance(l2DAI, ADDRESS2);
-			expect(result).not.to.be.null;
-			expect(balanceAfterTransfer - balanceBeforeTransfer).to.be.equal(amount);
+			expect(result).not.toBeNull;
+			expect(balanceAfterTransfer - balanceBeforeTransfer).toEqual(amount);
 		});
 
 		it('should transfer DAI using paymaster to cover fee', async () => {
@@ -1683,21 +1688,21 @@ describe('Wallet', () => {
 			const senderApprovalTokenBalanceAfterTransfer = await wallet.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceAfterTransfer = await provider.getTokenBalance(l2DAI, ADDRESS2);
 
-			expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).to.be.true;
+			expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toEqual(
+				true,
+			);
 			expect(
 				paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer,
-			).to.be.equal(minimalAllowance);
+			).toEqual(minimalAllowance);
 
-			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).to.be.equal(amount);
+			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
 			expect(
 				senderApprovalTokenBalanceAfterTransfer ===
 					senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
-			).to.be.true;
+			).toEqual(true);
 
-			expect(result).not.to.be.null;
-			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).to.be.equal(
-				amount,
-			);
+			expect(result).not.toBeNull;
+			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toEqual(amount);
 		});
 
 		if (!IS_ETH_BASED) {
@@ -1710,8 +1715,8 @@ describe('Wallet', () => {
 					amount: amount,
 				});
 				const balanceAfterTransfer = await provider.getBalance(ADDRESS2);
-				expect(result).not.to.be.null;
-				expect(balanceAfterTransfer - balanceBeforeTransfer).to.be.equal(amount);
+				expect(result).not.toBeNull;
+				expect(balanceAfterTransfer - balanceBeforeTransfer).toEqual(amount);
 			});
 		}
 	});
@@ -1723,7 +1728,7 @@ describe('Wallet', () => {
 				to: ADDRESS2,
 				value: 7_000_000_000n,
 			});
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 
 		it('should return a signed EIP712 transaction', async () => {
@@ -1732,7 +1737,7 @@ describe('Wallet', () => {
 				to: ADDRESS2,
 				value: web3Utils.toWei('1', 'ether'),
 			});
-			expect(result).not.to.be.null;
+			expect(result).not.toBeNull;
 		});
 
 		it('should throw an error when `tx.from` is mismatched from private key', async () => {
@@ -1744,7 +1749,7 @@ describe('Wallet', () => {
 					value: 7_000_000_000,
 				});
 			} catch (e) {
-				expect((e as Error).message).to.contain('transaction from mismatch');
+				expect((e as Error).message).toMatch('transaction from mismatch');
 			}
 		});
 	});
