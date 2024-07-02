@@ -5,8 +5,11 @@ import { DEFAULT_RETURN_FORMAT } from 'web3';
 import * as Web3 from 'web3';
 import type { PayableMethodObject } from 'web3-eth-contract';
 import { toBigInt, toHex, toNumber } from 'web3-utils';
+import { ethRpcMethods } from 'web3-rpc-methods';
+import type { TransactionReceipt } from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 
+import type { EIP712Signer } from './utils';
 import {
 	checkBaseCost,
 	estimateCustomBridgeDepositL2Gas,
@@ -20,7 +23,6 @@ import {
 	id,
 	dataSlice,
 	toBytes,
-	EIP712Signer,
 	EIP712,
 } from './utils';
 
@@ -53,8 +55,6 @@ import { IERC20ABI } from './contracts/IERC20';
 import { IL1BridgeABI } from './contracts/IL1Bridge';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
-import { ethRpcMethods } from 'web3-rpc-methods';
-import { TransactionReceipt } from 'web3-types';
 
 interface TxSender {
 	getAddress(): Promise<Address>;
@@ -1442,7 +1442,7 @@ export class AdapterL1 implements TxSender {
 		);
 		if (!receipt) {
 			// @todo: or throw?
-			return {};
+			return {} as any;
 		}
 		const successL2ToL1LogIndex = receipt.l2ToL1Logs.findIndex(
 			l2ToL1log =>

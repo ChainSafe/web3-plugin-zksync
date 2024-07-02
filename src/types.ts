@@ -1,8 +1,5 @@
 // import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
 import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
-// // TODO: // is it needed to be re-exported from web3
-// import { watchTransactionForConfirmations } from 'web3-eth/lib/types/utils/watch_transaction_for_confirmations.js';
-export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 import type {
 	Bytes,
 	HexString,
@@ -15,6 +12,8 @@ import type {
 
 import type { Web3PromiEvent } from 'web3';
 import type { RpcMethods } from './rpc.methods';
+
+export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
 export type { Bytes, HexString, Numbers } from 'web3-types';
 export interface TransactionOverrides extends Omit<Transaction, 'to' | 'data' | 'input'> {}

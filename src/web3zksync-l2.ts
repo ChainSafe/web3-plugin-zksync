@@ -4,8 +4,8 @@
 // import type { Address, HexString } from 'web3';
 
 import type { Block, Web3PromiEvent } from 'web3';
-import { BlockNumberOrTag, Bytes, DataFormat, Numbers } from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3-types';
+import type { BlockNumberOrTag, Bytes, DataFormat, Numbers } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
