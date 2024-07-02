@@ -1,6 +1,9 @@
 import type { Web3 } from 'web3';
-import { Web3Account, privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
+import type { Web3Account } from 'web3-eth-accounts';
+import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
+import type { BlockNumberOrTag } from 'web3-types';
+import { toHex, toNumber } from 'web3-utils';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
@@ -11,10 +14,9 @@ import type {
 	TransactionOverrides,
 	TransactionRequest,
 } from './types';
-import { EIP712, EIP712Signer } from './utils';
-import { BlockNumberOrTag } from 'web3-types';
+import type { EIP712Signer } from './utils';
+import { EIP712 } from './utils';
 import { EIP712_TX_TYPE } from './constants';
-import { toHex, toNumber } from 'web3-utils';
 
 class Adapters extends AdapterL1 {
 	adapterL2: AdapterL2;
