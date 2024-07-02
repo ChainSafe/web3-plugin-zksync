@@ -1442,6 +1442,7 @@ export class AdapterL1 implements TxSender {
 		);
 		if (!receipt) {
 			// @todo: or throw?
+			// @ts-ignore
 			return {};
 		}
 		const successL2ToL1LogIndex = receipt.l2ToL1Logs.findIndex(

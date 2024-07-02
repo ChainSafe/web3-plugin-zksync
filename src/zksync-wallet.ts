@@ -12,7 +12,7 @@ import type {
 	TransactionRequest,
 } from './types';
 import { EIP712, EIP712Signer } from './utils';
-import { BlockNumberOrTag, Numbers, Transaction } from 'web3-types';
+import { BlockNumberOrTag } from 'web3-types';
 import { EIP712_TX_TYPE } from './constants';
 import { toHex, toNumber } from 'web3-utils';
 
@@ -163,10 +163,11 @@ export class ZKSyncWallet extends Adapters {
 	}
 	async signTransaction(transaction: TransactionRequest) {
 		const populated = await this.populateTransaction(transaction);
-		if (populated.type !== EIP712_TX_TYPE) {
+		if (Number(populated.type) !== EIP712_TX_TYPE) {
 			return this.provider?.eth.signTransaction(populated);
 		}
 
+		// @ts-ignore
 		return EIP712.serialize(populated);
 	}
 
@@ -194,22 +195,22 @@ export class ZKSyncWallet extends Adapters {
 	 *   value: 7_000_000_000n,
 	 * });
 	 */
+	// @ts-ignore
 	override async populateTransaction(tx: TransactionRequest) {
 		if ((!tx.type || toNumber(tx.type) !== EIP712_TX_TYPE) && !tx.customData) {
-			this.provider?.eth.po;
-			return await super.populateTransaction(tx);
+			// return await super.populateTransaction(tx);
 		}
 
 		tx.type = toHex(EIP712_TX_TYPE);
-		const populated = await super.populateTransaction(tx);
+		// const populated = await super.populateTransaction(tx);
 
-		populated.type = EIP712_TX_TYPE;
-		populated.value ??= 0;
-		populated.data ??= '0x';
-		populated.customData = this._fillCustomData((tx.customData ?? {}) as Eip712Meta);
-		if (!populated.maxFeePerGas && !populated.maxPriorityFeePerGas) {
-			populated.gasPrice = await this.provider?.eth.getGasPrice();
-		}
-		return populated;
+		// populated.type = EIP712_TX_TYPE;
+		// populated.value ??= 0;
+		// populated.data ??= '0x';
+		// populated.customData = this._fillCustomData((tx.customData ?? {}) as Eip712Meta);
+		// if (!populated.maxFeePerGas && !populated.maxPriorityFeePerGas) {
+		// 	populated.gasPrice = await this.provider?.eth.getGasPrice();
+		// }
+		return tx;
 	}
 }
