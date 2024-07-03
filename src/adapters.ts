@@ -1522,7 +1522,7 @@ export class AdapterL1 implements TxSender {
 		overrides?: TransactionOverrides;
 	}): Promise<PriorityOpResponse> {
 		const tx = await this.getRequestExecuteTx(transaction);
-		const populated = await this.populateTransaction(tx);
+		const populated = tx; // await this.populateTransaction(tx);
 		const signed = await this.signTransaction(populated as Transaction);
 
 		return this._contextL2().getPriorityOpResponse(
@@ -1740,7 +1740,8 @@ export class AdapterL1 implements TxSender {
 		overrides?: TransactionOverrides;
 	}) {
 		const { method, overrides } = await this.getRequestExecuteContractMethod(transaction);
-		return method.populateTransaction(overrides as PayableTxOptions);
+		return overrides ? method.send(overrides as PayableTxOptions) : method;
+		// return method.populateTransaction(overrides as PayableTxOptions);
 	}
 
 	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {

@@ -11,8 +11,8 @@ describe('ZkSyncPlugin rpc tests', () => {
 	let web3: Web3;
 
 	beforeAll(() => {
-		web3 = new Web3('https://sepolia.era.zksync.dev');
-		web3.registerPlugin(new ZkSyncPlugin());
+		web3 = new Web3();
+		web3.registerPlugin(new ZkSyncPlugin('https://sepolia.era.zksync.dev'));
 	});
 
 	it('l1ChainId', async () => {
