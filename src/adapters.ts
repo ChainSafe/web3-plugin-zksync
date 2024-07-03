@@ -1522,11 +1522,13 @@ export class AdapterL1 implements TxSender {
 		overrides?: TransactionOverrides;
 	}): Promise<PriorityOpResponse> {
 		const tx = await this.getRequestExecuteTx(transaction);
-
-		const populated = await this.populateTransaction(tx as Transaction);
+		const populated = await this.populateTransaction(tx);
 		const signed = await this.signTransaction(populated as Transaction);
 
-		return this._contextL2().getPriorityOpResponse(this.sendRawTransaction(signed));
+		return this._contextL2().getPriorityOpResponse(
+			this._contextL1(),
+			this._contextL1().sendRawTransaction(signed),
+		);
 	}
 	async signTransaction(tx: Transaction): Promise<string> {
 		return this._contextL2().signTransaction(tx);
@@ -1534,8 +1536,11 @@ export class AdapterL1 implements TxSender {
 	async sendRawTransaction(signedTx: string): Promise<TransactionHash> {
 		return this._contextL2().sendRawTransaction(signedTx);
 	}
-	async getPriorityOpResponse(txPromise: Promise<TransactionHash>) {
-		return this._contextL2().getPriorityOpResponse(txPromise);
+	async getPriorityOpResponse(
+		context: Web3ZkSyncL1 | Web3ZkSyncL2,
+		txPromise: Promise<TransactionHash>,
+	) {
+		return this._contextL2().getPriorityOpResponse(context, txPromise);
 	}
 	/**
 	 * Estimates the amount of gas required for a request execute transaction.
@@ -1745,10 +1750,10 @@ export class AdapterL1 implements TxSender {
 				toHex(tx.type) !== toHex(EIP712_TX_TYPE) &&
 				!(tx as Eip712TxData).customData)
 		) {
-			return this._contextL2().populateTransaction(tx);
+			return this._contextL1().populateTransaction(tx);
 		}
 
-		const populated = (await this._contextL2().populateTransaction(tx)) as Eip712TxData;
+		const populated = (await this._contextL1().populateTransaction(tx)) as Eip712TxData;
 		populated.from = this.getAddress();
 		populated.type = EIP712_TX_TYPE;
 		populated.value ??= 0;
@@ -1857,10 +1862,10 @@ export class AdapterL2 implements TxSender {
 			...transaction,
 			from: this.getAddress(),
 		});
-		tx.type = EIP712_TX_TYPE;
+		// tx.type = EIP712_TX_TYPE;
 		const populated = await this.populateTransaction(tx as Transaction);
 		const signed = await this.signTransaction(populated as Transaction);
-		return this.getPriorityOpResponse(this.sendRawTransaction(signed));
+		return this.getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
 	}
 
 	async signTransaction(tx: Transaction): Promise<string> {
@@ -1869,8 +1874,11 @@ export class AdapterL2 implements TxSender {
 	async sendRawTransaction(signedTx: string): Promise<TransactionHash> {
 		return this._contextL2().sendRawTransaction(signedTx);
 	}
-	async getPriorityOpResponse(txPromise: Promise<TransactionHash>) {
-		return this._contextL2().getPriorityOpResponse(txPromise);
+	async getPriorityOpResponse(
+		context: Web3ZkSyncL1 | Web3ZkSyncL2,
+		txPromise: Promise<TransactionHash>,
+	) {
+		return this._contextL2().getPriorityOpResponse(context, txPromise);
 	}
 	/**
 	 * Transfer ETH or any ERC20 token within the same interface.

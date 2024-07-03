@@ -38,6 +38,7 @@ import {
 } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
+import { Web3ZkSyncL1 } from './web3zksync-l1';
 
 // Equivalent to both Provider and Signer in zksync-ethers
 export class Web3ZkSyncL2 extends Web3ZkSync {
@@ -107,20 +108,25 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	/**
 	 * Returns a {@link PriorityOpResponse} from L1 transaction response.
 	 *
+	 * @param context
 	 * @param l1TxPromise The L1 transaction promise.
 	 */
-	getPriorityOpResponse(l1TxPromise: Promise<TransactionHash>): PriorityOpResponse {
+	getPriorityOpResponse(
+		context: Web3ZkSyncL2 | Web3ZkSyncL1,
+		l1TxPromise: Promise<TransactionHash>,
+	): PriorityOpResponse {
 		return {
 			waitL1Commit: async () => {
 				const hash = await l1TxPromise;
-				return waitTxByHashConfirmation(this.eth, hash, 1);
+				return waitTxByHashConfirmation(context.eth, hash, 1);
 			},
 			wait: async () => {
 				const hash = await l1TxPromise;
-				return waitTxByHashConfirmation(this.eth, hash, 1);
+				return waitTxByHashConfirmation(context.eth, hash, 1);
 			},
 			waitFinalize: async () => {
-				const l2TxHash = await this.getL2TransactionFromPriorityOp(l1TxPromise);
+				const hash = await l1TxPromise;
+				const l2TxHash = await this.getL2TransactionFromPriorityOp(context, hash);
 				return await waitTxByHashConfirmationFinalized(this.eth, l2TxHash, 1);
 			},
 		};
@@ -190,11 +196,14 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	/**
 	 * Returns a L2 transaction response from L1 transaction response.
 	 *
-	 * @param l1TxPromise The L1 transaction response.
+	 * @param context
+	 * @param txHash
 	 */
-	async getL2TransactionFromPriorityOp(l1TxPromise: Promise<TransactionHash>) {
-		const txHash = await l1TxPromise;
-		const receipt = await waitTxReceipt(this.eth, txHash);
+	async getL2TransactionFromPriorityOp(
+		context: Web3ZkSyncL2 | Web3ZkSyncL1,
+		txHash: TransactionHash,
+	) {
+		const receipt = await waitTxReceipt(context.eth, txHash);
 		const l2Hash = getL2HashFromPriorityOp(receipt, await this.getMainContractAddress());
 
 		let status = null;

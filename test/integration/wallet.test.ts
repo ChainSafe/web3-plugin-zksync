@@ -25,7 +25,7 @@ describe('wallet', () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),
-			amount: '0x1',
+			amount: 10_000_000000_000000n,
 			refundRecipient: wallet.getAddress(),
 		});
 		const receipt = await tx.wait();
@@ -40,7 +40,7 @@ describe('wallet', () => {
 		const tx = await wallet.withdraw({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),
-			amount: '0x1',
+			amount: 10n,
 		});
 		const receipt = await tx.wait();
 

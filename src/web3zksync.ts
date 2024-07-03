@@ -515,6 +515,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		} else {
 			populated.gasPrice = gasFees.gasPrice;
 		}
+		console.log('gasFees', gasFees);
 
 		return populated;
 	}
