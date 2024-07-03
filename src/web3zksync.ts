@@ -3,7 +3,7 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
-import { transactionBuilder } from 'web3-eth';
+import { estimateGas, transactionBuilder } from 'web3-eth';
 import * as Web3 from 'web3';
 import type {
 	BatchDetails,
@@ -510,11 +510,26 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
-			populated.maxFeePerGas = gasFees.maxFeePerGas;
-			populated.maxPriorityFeePerGas = gasFees.maxPriorityFeePerGas;
+			populated.maxFeePerGas = web3Utils.toBigInt(gasFees.maxFeePerGas);
+			populated.maxPriorityFeePerGas =
+				web3Utils.toBigInt(populated.maxFeePerGas) >
+				web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
+					? populated.maxFeePerGas
+					: gasFees.maxPriorityFeePerGas;
 		} else {
-			populated.gasPrice = gasFees.gasPrice;
+			populated.maxFeePerGas = populated.gasPrice;
+			populated.maxPriorityFeePerGas = populated.gasPrice;
 		}
+
+		populated.gasLimit = await estimateGas(
+			this,
+			populated as Transaction,
+			'latest',
+			DEFAULT_RETURN_FORMAT,
+		);
+
+		populated.nonce = await this.eth.getTransactionCount(populated.from!, 'pending');
+
 		return populated;
 	}
 

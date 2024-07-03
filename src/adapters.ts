@@ -1862,7 +1862,7 @@ export class AdapterL2 implements TxSender {
 			...transaction,
 			from: this.getAddress(),
 		});
-		// tx.type = EIP712_TX_TYPE;
+		tx.type = EIP712_TX_TYPE;
 		const populated = await this.populateTransaction(tx as Transaction);
 		const signed = await this.signTransaction(populated as Transaction);
 		return this.getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
