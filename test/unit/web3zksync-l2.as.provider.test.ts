@@ -8,16 +8,19 @@ jest.mock('web3-rpc-methods');
 describe('Web3ZkSyncL2 as a Provider', () => {
 	it('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
 		const web3ZkSyncL2 = new Web3ZkSyncL2('https://mainnet.era.zksync.io');
-
+		const acc = web3ZkSyncL2.eth.accounts.privateKeyToAccount(
+			'0x1f953dc9b6437fb94fcafa5dabe3faa0c34315b954dd66f41bf53273339c6d26',
+		);
+		web3ZkSyncL2.eth.accounts.wallet.add(acc);
 		// TODO: remove the commented lines after the test passes
 		// NOTE: this was an object of TransactionResponse in ethers
 		const l1Tx: Transaction = {
 			// hash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-			from: '0xabcdef1234567890abcdef1234567890abcdef12',
+			from: acc.address,
 			// blockHash: '0xabcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
 			// blockNumber: 123456,
 			to: '0xabcdef1234567890abcdef1234567890abcdef12',
-			type: 2,
+			type: 0,
 			nonce: 42,
 			gasLimit: 2000000n,
 			// index: 3,
@@ -39,9 +42,12 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 
 		const signed = await web3ZkSyncL2.signTransaction(l1Tx as Transaction);
 
-		const l1TxResponse = web3ZkSyncL2.sendRawTransaction(signed);
+		const txPromise = web3ZkSyncL2.sendRawTransaction(signed);
 
-		const priorityOpResponse = await web3ZkSyncL2.getPriorityOpResponse(l1TxResponse);
+		const priorityOpResponse = await web3ZkSyncL2.getPriorityOpResponse(
+			web3ZkSyncL2,
+			txPromise,
+		);
 		// 'The waitL1Commit function should be properly initialized'
 		expect(typeof priorityOpResponse.waitL1Commit).toEqual('function');
 		// 'The wait function should be properly initialized'
