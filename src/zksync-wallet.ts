@@ -1,20 +1,12 @@
-import type { Web3 } from 'web3';
 import { Web3Account, privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
+import type { Web3ZkSyncL1 } from './web3zksync-l1';
 import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
-import type {
-	Address,
-	Eip712Meta,
-	PaymasterParams,
-	TransactionOverrides,
-	TransactionRequest,
-} from './types';
-import { EIP712, EIP712Signer } from './utils';
-import { BlockNumberOrTag } from 'web3-types';
-import { EIP712_TX_TYPE } from './constants';
-import { toHex, toNumber } from 'web3-utils';
+import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
+import { EIP712Signer } from './utils';
+import { BlockNumberOrTag, Transaction } from 'web3-types';
 
 class Adapters extends AdapterL1 {
 	adapterL2: AdapterL2;
@@ -23,7 +15,7 @@ class Adapters extends AdapterL1 {
 		this.adapterL2 = new AdapterL2();
 		this.adapterL2.getAddress = this.getAddress.bind(this);
 		this.adapterL2._contextL2 = this._contextL2.bind(this);
-		this.adapterL2._eip712Signer = this._eip712Signer.bind(this);
+		this.adapterL2._eip712Signer = this._eip712Signer;
 	}
 	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'committed') {
 		return this.adapterL2.getBalance(token, blockTag);
@@ -31,14 +23,16 @@ class Adapters extends AdapterL1 {
 	getAllBalances() {
 		return this.adapterL2.getAllBalances();
 	}
+
+	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {
+		return super.populateTransaction(tx);
+	}
+
 	getDeploymentNonce() {
 		return this.adapterL2.getDeploymentNonce();
 	}
 	getL2BridgeContracts() {
 		return this.adapterL2.getL2BridgeContracts();
-	}
-	_fillCustomData(data: Eip712Meta) {
-		return this.adapterL2._fillCustomData(data);
 	}
 	protected async _eip712Signer(): Promise<EIP712Signer> {
 		throw new Error('Must be implemented by the derived class!');
@@ -67,7 +61,7 @@ class Adapters extends AdapterL1 {
 
 export class ZKSyncWallet extends Adapters {
 	provider?: Web3ZkSyncL2;
-	providerL1?: Web3;
+	providerL1?: Web3ZkSyncL1;
 	protected eip712!: utils.EIP712Signer;
 	public account: Web3Account;
 
@@ -88,7 +82,7 @@ export class ZKSyncWallet extends Adapters {
 	 * const ethProvider = ethers.getDefaultProvider("sepolia");
 	 * const wallet = new Wallet(PRIVATE_KEY, provider, ethProvider);
 	 */
-	constructor(privateKey: string, providerL2?: Web3ZkSyncL2, providerL1?: Web3) {
+	constructor(privateKey: string, providerL2?: Web3ZkSyncL2, providerL1?: Web3ZkSyncL1) {
 		super();
 
 		this.account = privateKeyToAccount(privateKey);
@@ -102,9 +96,10 @@ export class ZKSyncWallet extends Adapters {
 	public connect(provider: Web3ZkSyncL2) {
 		provider.eth.accounts.wallet.add(this.account);
 		this.provider = provider;
+		this.provider._eip712Signer = this._eip712Signer.bind(this);
 		return this;
 	}
-	public connectToL1(provider: Web3) {
+	public connectToL1(provider: Web3ZkSyncL1) {
 		provider.eth.accounts.wallet.add(this.account);
 		this.providerL1 = provider;
 		return this;
@@ -157,18 +152,15 @@ export class ZKSyncWallet extends Adapters {
 	getNonce(blockNumber?: BlockNumberOrTag) {
 		return this.provider?.eth.getTransactionCount(this.account.address, blockNumber);
 	}
-	static createRandom(provider?: Web3ZkSyncL2, providerL1?: Web3) {
+	static createRandom(provider?: Web3ZkSyncL2, providerL1?: Web3ZkSyncL1) {
 		const acc = createAccount();
 		return new ZKSyncWallet(acc.privateKey, provider, providerL1);
 	}
-	async signTransaction(transaction: TransactionRequest) {
-		const populated = await this.populateTransaction(transaction);
-		if (Number(populated.type) !== EIP712_TX_TYPE) {
-			return this.provider?.eth.signTransaction(populated);
-		}
-
-		// @ts-ignore
-		return EIP712.serialize(populated);
+	signTransaction(transaction: Transaction): Promise<string> {
+		return super.signTransaction(transaction);
+	}
+	sendRawTransaction(signedTx: string) {
+		return super.sendRawTransaction(signedTx);
 	}
 
 	/**
@@ -195,22 +187,13 @@ export class ZKSyncWallet extends Adapters {
 	 *   value: 7_000_000_000n,
 	 * });
 	 */
-	// @ts-ignore
-	override async populateTransaction(tx: TransactionRequest) {
-		if ((!tx.type || toNumber(tx.type) !== EIP712_TX_TYPE) && !tx.customData) {
-			// return await super.populateTransaction(tx);
-		}
+	async populateTransaction(tx: Transaction) {
+		return super.populateTransaction(tx);
+	}
 
-		tx.type = toHex(EIP712_TX_TYPE);
-		// const populated = await super.populateTransaction(tx);
-
-		// populated.type = EIP712_TX_TYPE;
-		// populated.value ??= 0;
-		// populated.data ??= '0x';
-		// populated.customData = this._fillCustomData((tx.customData ?? {}) as Eip712Meta);
-		// if (!populated.maxFeePerGas && !populated.maxPriorityFeePerGas) {
-		// 	populated.gasPrice = await this.provider?.eth.getGasPrice();
-		// }
-		return tx;
+	async sendTransaction(transaction: Transaction) {
+		const populated = await this.populateTransaction(transaction);
+		const signed = await this.signTransaction(populated as Transaction);
+		return this.sendRawTransaction(signed);
 	}
 }

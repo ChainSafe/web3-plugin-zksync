@@ -10,7 +10,6 @@ import type {
 	TransactionReceipt,
 } from 'web3-types';
 
-import type { Web3PromiEvent } from 'web3';
 import type { RpcMethods } from './rpc.methods';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
@@ -527,6 +526,7 @@ export declare type TransactionRequest = DeepWriteable<
 	TransactionWithSenderAPI & {
 		/** The custom data for EIP712 transaction metadata. */
 		customData?: null | Eip712Meta;
+		type?: TransactionWithSenderAPI['type'] & Numbers;
 	}
 >;
 
@@ -534,7 +534,7 @@ export declare type TransactionRequest = DeepWriteable<
  * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
  * that waits to commit a L1 transaction, including when given on optional confirmation number.
  */
-export interface PriorityOpResponse extends Web3PromiEvent<any, any> {
+export interface PriorityOpResponse {
 	/**
 	 * Waits for the L1 transaction to be committed, including waiting for the specified number of confirmations.
 	 * @param confirmation The number of confirmations to wait for. Defaults to 1.

@@ -9,3 +9,15 @@ export const APPROVAL_TOKEN = '0x841c43Fa5d8fFfdB9efE3358906f7578d8700Dd4'; // C
 export const PAYMASTER = '0xa222f0c183AFA73a8Bc1AFb48D34C88c9Bf7A174'; // Crown token paymaster
 
 export const IS_ETH_BASED = true;
+
+export function deepEqualExcluding(
+	obj1: Record<string, any>,
+	expected: Record<string, any>,
+	excludeFields: string[],
+) {
+	for (const key in obj1) {
+		if (!excludeFields.includes(key)) {
+			expect(obj1[key]).toEqual(expected[key]);
+		}
+	}
+}

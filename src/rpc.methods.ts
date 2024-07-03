@@ -388,7 +388,7 @@ export class RpcMethods {
 	): Promise<Address> {
 		return web3Utils.format(
 			AddressSchema,
-			await this._send('zks_getBridgehubContractAddress', []),
+			await this._send('zks_getBridgehubContract', []),
 			returnFormat,
 		) as Address;
 	}

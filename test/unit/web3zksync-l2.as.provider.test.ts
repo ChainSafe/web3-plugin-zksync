@@ -31,8 +31,15 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 
 		// mock ethRpcMethods.sendTransaction
 		jest.spyOn(ethRpcMethods, 'sendTransaction').mockResolvedValue('');
+		// @ts-ignore
+		jest.spyOn(ethRpcMethods, 'signTransaction').mockResolvedValue({
+			// @ts-ignore
+			raw: '0xabcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+		});
 
-		const l1TxResponse = web3ZkSyncL2.sendTransaction(l1Tx);
+		const signed = await web3ZkSyncL2.signTransaction(l1Tx as Transaction);
+
+		const l1TxResponse = web3ZkSyncL2.sendRawTransaction(signed);
 
 		const priorityOpResponse = await web3ZkSyncL2.getPriorityOpResponse(l1TxResponse);
 		// 'The waitL1Commit function should be properly initialized'

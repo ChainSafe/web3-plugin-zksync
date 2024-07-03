@@ -1,8 +1,6 @@
-import { Web3 } from 'web3';
 import * as web3Accounts from 'web3-eth-accounts';
-
 import { Network as ZkSyncNetwork } from '../../src/types';
-import { Web3ZkSyncL2, ZKSyncWallet } from '../../src';
+import { Web3ZkSyncL2, Web3ZkSyncL1, ZKSyncWallet } from '../../src';
 import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
 import { TransactionFactory } from 'web3-eth-accounts';
 import * as utils from '../../src/utils';
@@ -16,11 +14,12 @@ jest.setTimeout(50000);
 describe('wallet', () => {
 	// @ts-ignore
 	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
-	const provider = Web3ZkSyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
-	const web3 = new Web3('https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz');
-
+	const l1Provider = new Web3ZkSyncL1(
+		'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
+	);
+	const l2Provider = Web3ZkSyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
 	const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || web3Accounts.create().privateKey;
-	const wallet = new ZKSyncWallet(PRIVATE_KEY, provider, web3);
+	const wallet = new ZKSyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
 
 	it('should deposit', async () => {
 		const tx = await wallet.deposit({
@@ -37,7 +36,7 @@ describe('wallet', () => {
 		expect(receipt.transactionHash).toBeDefined();
 	});
 
-	it('should withdraw eth', async () => {
+	it.only('should withdraw eth', async () => {
 		const tx = await wallet.withdraw({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),

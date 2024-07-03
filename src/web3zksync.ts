@@ -3,7 +3,7 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
-import type { DataFormat } from 'web3-types/src/data_format_types';
+import { transactionBuilder } from 'web3-eth';
 import * as Web3 from 'web3';
 import type {
 	BatchDetails,
@@ -18,17 +18,24 @@ import type {
 	TransactionRequest,
 	Address,
 	TransactionOverrides,
+	Eip712TxData,
+	Eip712Meta,
 } from './types';
 import {
+	DEFAULT_GAS_PER_PUBDATA_LIMIT,
+	EIP712_TX_TYPE,
 	ETH_ADDRESS_IN_CONTRACTS,
 	L2_BASE_TOKEN_ADDRESS,
 	LEGACY_ETH_ADDRESS,
 	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
-import { isAddressEq } from './utils';
+import { EIP712, type EIP712Signer, isAddressEq } from './utils';
 import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
+import { Transaction } from 'web3-types';
+import { toHex } from 'web3-utils';
+import { ethRpcMethods } from 'web3-rpc-methods';
 
 /**
  * The base class for interacting with zkSync Era.
@@ -80,17 +87,21 @@ export class Web3ZkSync extends Web3.Web3 {
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
-	public async l1ChainId(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<bigint> {
+	public async l1ChainId(
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<bigint> {
 		return this._rpc.l1ChainId(returnFormat);
 	}
-
+	async _eip712Signer(): Promise<EIP712Signer> {
+		throw new Error('Must be implemented by the derived class!');
+	}
 	/**
 	 * Returns the latest L1 batch number.
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getL1BatchNumber(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<bigint> {
 		return this._rpc.getL1BatchNumber(returnFormat);
 	}
@@ -103,7 +114,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async getL1BatchDetails(
 		number: web3Types.Numbers,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<BatchDetails> {
 		return this._rpc.getL1BatchDetails(number, returnFormat);
 	}
@@ -120,7 +131,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async getBlockDetails(
 		number: web3Types.Numbers,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<BlockDetails> {
 		return this._rpc.getBlockDetails(number, returnFormat);
 	}
@@ -133,7 +144,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async getTransactionDetails(
 		txHash: web3Types.Bytes,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<TransactionDetails> {
 		return this._rpc.getTransactionDetails(txHash, returnFormat);
 	}
@@ -146,7 +157,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async getBytecodeByHash(
 		bytecodeHash: web3Types.Bytes,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Uint8Array> {
 		return this._rpc.getBytecodeByHash(bytecodeHash, returnFormat);
 	}
@@ -159,7 +170,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async getRawBlockTransactions(
 		number: web3Types.Numbers,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<RawBlockTransaction[]> {
 		return this._rpc.getRawBlockTransactions(number, returnFormat);
 	}
@@ -172,7 +183,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async estimateFee(
 		transaction: Partial<web3Types.TransactionWithSenderAPI>,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<EstimateFee> {
 		return this._rpc.estimateFee(transaction, returnFormat);
 	}
@@ -257,7 +268,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async estimateGasL1ToL2(
 		transaction: Partial<TransactionRequest>,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<web3Types.Numbers> {
 		return this._rpc.estimateGasL1ToL2(transaction, returnFormat);
 	}
@@ -270,7 +281,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async getAllAccountBalances(
 		address: web3Types.Address,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<WalletBalances> {
 		return this._rpc.getAllAccountBalances(address, returnFormat);
 	}
@@ -281,7 +292,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getMainContract(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<web3Types.Address> {
 		return this._rpc.getMainContract(returnFormat);
 	}
@@ -295,7 +306,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 */
 	public async getL1BatchBlockRange(
 		number: web3Types.Numbers,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<web3Types.Bytes[]> {
 		return this._rpc.getL1BatchBlockRange(number, returnFormat);
 	}
@@ -314,7 +325,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		address: web3Types.Address,
 		keys: string[],
 		l1BatchNumber: web3Types.Numbers,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<StorageProof> {
 		return this._rpc.getProof(address, keys, l1BatchNumber, returnFormat);
 	}
@@ -331,7 +342,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	public async getL2ToL1LogProof(
 		txHash: web3Types.HexString32Bytes,
 		l2ToL1LogIndex?: web3Types.Numbers,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<L2ToL1Proof> {
 		return this._rpc.getL2ToL1LogProof(txHash, l2ToL1LogIndex, returnFormat);
 	}
@@ -342,7 +353,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getBridgeContracts(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<BridgeAddresses> {
 		return this._rpc.getBridgeContracts(returnFormat);
 	}
@@ -353,7 +364,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getBridgehubContractAddress(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		if (!this.contractAddresses().bridgehubContract) {
 			this.contractAddresses().bridgehubContract =
@@ -385,7 +396,7 @@ export class Web3ZkSync extends Web3.Web3 {
 			gasPerPubdataByte?: web3Types.Numbers;
 			overrides?: TransactionOverrides;
 		},
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<web3Types.Numbers> {
 		transaction.gasPerPubdataByte ??= REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT;
 
@@ -484,148 +495,92 @@ export class Web3ZkSync extends Web3.Web3 {
 		return await erc20.methods.balanceOf(walletAddress).call();
 	}
 
-	// async populateTransaction(tx: TransactionRequest): Promise<TransactionLike<string>> {
-	// 	if (!this.provider) {
-	// 		throw new Error('provider is not set');
-	// 	}
-	//
-	// 	const pop = await populate(this, tx);
-	//
-	// 	if (pop.nonce == null) {
-	// 		pop.nonce = await this.getNonce('pending');
-	// 	}
-	//
-	// 	if (pop.gasLimit == null) {
-	// 		pop.gasLimit = await this.estimateGas(pop);
-	// 	}
-	//
-	// 	// Populate the chain ID
-	// 	const network = await (<Provider>this.provider).getNetwork();
-	// 	if (pop.chainId != null) {
-	// 		const chainId = getBigInt(pop.chainId);
-	// 		assertArgument(
-	// 			chainId === network.chainId,
-	// 			'transaction chainId mismatch',
-	// 			'tx.chainId',
-	// 			tx.chainId,
-	// 		);
-	// 	} else {
-	// 		pop.chainId = network.chainId;
-	// 	}
-	//
-	// 	// Do not allow mixing pre-eip-1559 and eip-1559 properties
-	// 	const hasEip1559 = pop.maxFeePerGas != null || pop.maxPriorityFeePerGas != null;
-	// 	if (pop.gasPrice != null && (pop.type === 2 || hasEip1559)) {
-	// 		assertArgument(false, 'eip-1559 transaction do not support gasPrice', 'tx', tx);
-	// 	} else if ((pop.type === 0 || pop.type === 1) && hasEip1559) {
-	// 		assertArgument(
-	// 			false,
-	// 			'pre-eip-1559 transaction do not support maxFeePerGas/maxPriorityFeePerGas',
-	// 			'tx',
-	// 			tx,
-	// 		);
-	// 	}
-	//
-	// 	if (
-	// 		(pop.type === 2 || pop.type == null) &&
-	// 		pop.maxFeePerGas != null &&
-	// 		pop.maxPriorityFeePerGas != null
-	// 	) {
-	// 		// Fully-formed EIP-1559 transaction (skip getFeeData)
-	// 		pop.type = 2;
-	// 	} else if (pop.type === 0 || pop.type === 1) {
-	// 		// Explicit Legacy or EIP-2930 transaction
-	//
-	// 		// We need to get fee data to determine things
-	// 		const feeData = await provider.getFeeData();
-	//
-	// 		assert(
-	// 			feeData.gasPrice != null,
-	// 			'network does not support gasPrice',
-	// 			'UNSUPPORTED_OPERATION',
-	// 			{
-	// 				operation: 'getGasPrice',
-	// 			},
-	// 		);
-	//
-	// 		// Populate missing gasPrice
-	// 		if (pop.gasPrice == null) {
-	// 			pop.gasPrice = feeData.gasPrice;
-	// 		}
-	// 	} else {
-	// 		// We need to get fee data to determine things
-	// 		const feeData = await provider.getFeeData();
-	//
-	// 		if (pop.type == null) {
-	// 			// We need to auto-detect the intended type of this transaction...
-	//
-	// 			if (feeData.maxFeePerGas != null && feeData.maxPriorityFeePerGas != null) {
-	// 				// The network supports EIP-1559!
-	//
-	// 				// Upgrade transaction from null to eip-1559
-	// 				pop.type = 2;
-	//
-	// 				if (pop.gasPrice != null) {
-	// 					// Using legacy gasPrice property on an eip-1559 network,
-	// 					// so use gasPrice as both fee properties
-	// 					const gasPrice = pop.gasPrice;
-	// 					delete pop.gasPrice;
-	// 					pop.maxFeePerGas = gasPrice;
-	// 					pop.maxPriorityFeePerGas = gasPrice;
-	// 				} else {
-	// 					// Populate missing fee data
-	//
-	// 					if (pop.maxFeePerGas == null) {
-	// 						pop.maxFeePerGas = feeData.maxFeePerGas;
-	// 					}
-	//
-	// 					if (pop.maxPriorityFeePerGas == null) {
-	// 						pop.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
-	// 					}
-	// 				}
-	// 			} else if (feeData.gasPrice != null) {
-	// 				// Network doesn't support EIP-1559...
-	//
-	// 				// ...but they are trying to use EIP-1559 properties
-	// 				assert(
-	// 					!hasEip1559,
-	// 					'network does not support EIP-1559',
-	// 					'UNSUPPORTED_OPERATION',
-	// 					{
-	// 						operation: 'populateTransaction',
-	// 					},
-	// 				);
-	//
-	// 				// Populate missing fee data
-	// 				if (pop.gasPrice == null) {
-	// 					pop.gasPrice = feeData.gasPrice;
-	// 				}
-	//
-	// 				// Explicitly set untyped transaction to legacy
-	// 				// @TODO: Maybe this shold allow type 1?
-	// 				pop.type = 0;
-	// 			} else {
-	// 				// getFeeData has failed us.
-	// 				assert(false, 'failed to get consistent fee data', 'UNSUPPORTED_OPERATION', {
-	// 					operation: 'signer.getFeeData',
-	// 				});
-	// 			}
-	// 		} else if (pop.type === 2) {
-	// 			// Explicitly using EIP-1559
-	//
-	// 			// Populate missing fee data
-	// 			if (pop.maxFeePerGas == null) {
-	// 				pop.maxFeePerGas = feeData.maxFeePerGas;
-	// 			}
-	//
-	// 			if (pop.maxPriorityFeePerGas == null) {
-	// 				pop.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
-	// 			}
-	// 		}
-	// 	}
-	//
-	// 	//@TOOD: Don't await all over the place; save them up for
-	// 	// the end for better batching
-	// 	return await resolveProperties(pop);
-	// }
+	fillCustomData(data: Eip712Meta): Eip712Meta {
+		const customData = { ...data };
+		customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
+		customData.factoryDeps ??= [];
+		return customData;
+	}
+
+	private async populateTransactionAndGasPrice(transaction: Transaction): Promise<Transaction> {
+		const populated = await transactionBuilder({
+			transaction,
+			web3Context: this,
+		});
+
+		const gasFees = await this.eth.calculateFeeData();
+		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
+			populated.maxFeePerGas = gasFees.maxFeePerGas;
+			populated.maxPriorityFeePerGas = gasFees.maxPriorityFeePerGas;
+		} else {
+			populated.gasPrice = gasFees.gasPrice;
+		}
+
+		return populated;
+	}
+
+	async populateTransaction(transaction: Transaction) {
+		if (
+			!transaction.type ||
+			(transaction.type &&
+				toHex(transaction.type) !== toHex(EIP712_TX_TYPE) &&
+				!(transaction as Eip712TxData).customData)
+		) {
+			return this.populateTransactionAndGasPrice(transaction);
+		}
+		const populated = (await this.populateTransactionAndGasPrice(transaction)) as Eip712TxData;
+
+		if ((transaction as Eip712TxData).customData) {
+			populated.customData = this.fillCustomData(
+				(transaction as Eip712TxData).customData as Eip712Meta,
+			);
+		}
+		return populated;
+	}
+
+	async signTransaction(tx: Transaction): Promise<string> {
+		if (tx.type && toHex(tx.type) === toHex(EIP712_TX_TYPE)) {
+			const data = EIP712.getSignInput(tx as Eip712TxData);
+			// @ts-ignore
+			delete data.txType;
+			data.type = EIP712_TX_TYPE;
+			const signer = await this._eip712Signer();
+			data.chainId = signer.getDomain().chainId;
+			data.customData = {
+				customSignature: signer.sign(data)?.serialized,
+			};
+			return EIP712.serialize(data);
+		}
+
+		const account = this.eth.accounts.wallet.get(tx.from!);
+
+		if (!account) {
+			throw new Error('Account not found');
+		}
+		const res = await this.eth.accounts.signTransaction(tx, account?.privateKey);
+		return res.rawTransaction;
+	}
+	async sendRawTransaction(signedTx: string) {
+		// tx.chainId = await this._contextL2().eth.getChainId();
+		// const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
+		// const data = { ...tx, ...other };
+		// @ts-ignore
+		// return this._contextL2().eth.sendTransaction(data);
+
+		//
+		// const populated = await this.populateTransaction(tx);
+
+		// const signedTx = await this.signTransaction(populated);
+
+		// data.nonce = await this._contextL2().eth.getTransactionCount(this.getAddress(), 'pending');
+		// const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
+		// const dataWithGas = { ...data, ...other, gasLimit: 5000000n };
+		//
+		// dataWithGas.customData = {
+		// 	customSignature: signer.sign(dataWithGas)?.serialized,
+		// };
+		//
+		// const serialized = EIP712.serialize(dataWithGas);
+		return ethRpcMethods.sendRawTransaction(this.requestManager, signedTx);
+	}
 }

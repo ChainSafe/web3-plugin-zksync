@@ -1,31 +1,16 @@
-// import { AbiCoder, BigNumberish, Bytes, ethers, SignatureLike } from 'ethers';
-
 import { sha256 } from 'ethereum-cryptography/sha256.js';
-// import { secp256k1 } from '@noble/curves/secp256k1';
-// import { keccak256 } from '@ethersproject/keccak256';
-
 import * as web3 from 'web3';
-
 import * as web3Utils from 'web3-utils';
 import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Contract from 'web3-eth-contract';
-import type { Bytes, TransactionReceipt } from 'web3-types';
+import type { Bytes, TransactionHash, TransactionReceipt } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
-import type { Web3PromiEvent } from 'web3';
 import type { Web3Eth } from 'web3-eth';
 import { keccak256, toBigInt } from 'web3-utils';
 import type { DeploymentInfo, EthereumSignature } from './types';
-import {
-	// PaymasterParams,
-	PriorityOpTree,
-	PriorityQueueType,
-	// Transaction,
-	// TransactionRequest,
-} from './types';
-// import { EIP712Signer } from './signer';
-// import { IERC20__factory } from './typechain';
+import { PriorityOpTree, PriorityQueueType } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
 import { IContractDeployerABI } from './contracts/IContractDeployer';
@@ -53,10 +38,6 @@ import {
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
-
-// export * from './paymaster-utils';
-// export * from './smart-account-utils';
-// export { EIP712_TYPES } from './signer';
 
 /**
  * The web3.js Contract instance for the `ZkSync` interface.
@@ -1018,19 +999,6 @@ export function isAddressEq(a: web3.Address, b: web3.Address): boolean {
 	return a.toLowerCase() === b.toLowerCase();
 }
 
-export function waitTxConfirmation(
-	tx: Web3PromiEvent<any, any>,
-	waitConfirmations = 1,
-): Promise<TransactionReceipt> {
-	return new Promise(resolve => {
-		tx.on('confirmation', ({ confirmations, receipt }) => {
-			if (confirmations >= waitConfirmations) {
-				resolve(receipt);
-			}
-		});
-	});
-}
-
 export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
 	while (true) {
 		try {
@@ -1044,13 +1012,10 @@ export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<T
 }
 export async function waitTxByHashConfirmation(
 	web3Eth: Web3Eth,
-	txHashOrReceipt: string | TransactionReceipt,
+	txHash: TransactionHash,
 	waitConfirmations = 1,
 ): Promise<TransactionReceipt> {
-	const receipt =
-		typeof txHashOrReceipt === 'string'
-			? await waitTxReceipt(web3Eth, txHashOrReceipt)
-			: txHashOrReceipt;
+	const receipt = await waitTxReceipt(web3Eth, txHash);
 	while (true) {
 		const blockNumber = await web3Eth.getBlockNumber();
 		if (toBigInt(blockNumber) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
@@ -1062,13 +1027,10 @@ export async function waitTxByHashConfirmation(
 
 export async function waitTxByHashConfirmationFinalized(
 	web3Eth: Web3Eth,
-	txHashOrReceipt: string | TransactionReceipt,
+	txHash: TransactionHash,
 	waitConfirmations = 1,
 ): Promise<TransactionReceipt> {
-	const receipt =
-		typeof txHashOrReceipt === 'string'
-			? await waitTxReceipt(web3Eth, txHashOrReceipt)
-			: txHashOrReceipt;
+	const receipt = await waitTxReceipt(web3Eth, txHash);
 	while (true) {
 		const block = await web3Eth.getBlock('finalized');
 		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {

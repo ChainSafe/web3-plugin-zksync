@@ -3,8 +3,8 @@
 // import * as web3Utils from 'web3-utils';
 // import type { Address, HexString } from 'web3';
 
-import type { Block, Web3PromiEvent } from 'web3';
-import { DEFAULT_RETURN_FORMAT } from 'web3-types';
+import type { Block } from 'web3';
+import { DEFAULT_RETURN_FORMAT, Transaction, TransactionHash } from 'web3-types';
 import type { BlockNumberOrTag, Bytes, DataFormat, Numbers } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
@@ -14,8 +14,8 @@ import {
 	isAddressEq,
 	isETH,
 	sleep,
+	waitTxByHashConfirmation,
 	waitTxByHashConfirmationFinalized,
-	waitTxConfirmation,
 	waitTxReceipt,
 } from './utils';
 import { Network as ZkSyncNetwork, TransactionStatus } from './types';
@@ -107,22 +107,20 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	/**
 	 * Returns a {@link PriorityOpResponse} from L1 transaction response.
 	 *
-	 * @param l1TxResponse The L1 transaction response.
+	 * @param l1TxPromise The L1 transaction promise.
 	 */
-	getPriorityOpResponse(l1TxResponse: Web3PromiEvent<any, any>): PriorityOpResponse {
-		// @ts-ignore
+	getPriorityOpResponse(l1TxPromise: Promise<TransactionHash>): PriorityOpResponse {
 		return {
-			...l1TxResponse,
-			waitL1Commit: () => waitTxConfirmation(l1TxResponse),
+			waitL1Commit: async () => {
+				const hash = await l1TxPromise;
+				return waitTxByHashConfirmation(this.eth, hash, 1);
+			},
 			wait: async () => {
-				const res = await l1TxResponse;
-				if (typeof res === 'string') {
-					return waitTxReceipt(this.eth, res);
-				}
-				return res;
+				const hash = await l1TxPromise;
+				return waitTxByHashConfirmation(this.eth, hash, 1);
 			},
 			waitFinalize: async () => {
-				const l2TxHash = await this.getL2TransactionFromPriorityOp(l1TxResponse);
+				const l2TxHash = await this.getL2TransactionFromPriorityOp(l1TxPromise);
 				return await waitTxByHashConfirmationFinalized(this.eth, l2TxHash, 1);
 			},
 		};
@@ -192,10 +190,11 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	/**
 	 * Returns a L2 transaction response from L1 transaction response.
 	 *
-	 * @param l1TxResponse The L1 transaction response.
+	 * @param l1TxPromise The L1 transaction response.
 	 */
-	async getL2TransactionFromPriorityOp(l1TxResponse: Web3PromiEvent<any, any>) {
-		const receipt = await waitTxConfirmation(l1TxResponse);
+	async getL2TransactionFromPriorityOp(l1TxPromise: Promise<TransactionHash>) {
+		const txHash = await l1TxPromise;
+		const receipt = await waitTxReceipt(this.eth, txHash);
 		const l2Hash = getL2HashFromPriorityOp(receipt, await this.getMainContractAddress());
 
 		let status = null;
@@ -362,15 +361,15 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 					value: tx.amount,
 					customData: {
 						paymasterParams: tx.paymasterParams,
-					},
+					} as Transaction,
 				};
 			}
 
-			return this.eth.sendTransaction({
+			return {
 				...tx.overrides,
-				to: tx.to,
+				to: tx.to as Address,
 				value: tx.amount,
-			});
+			} as Transaction;
 		} else {
 			const token = new this.eth.Contract(IERC20ABI, tx.token);
 			const populatedTx = token.methods
@@ -386,7 +385,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 					},
 				};
 			}
-			return populatedTx;
+			return populatedTx as Transaction;
 		}
 	}
 
