@@ -40,7 +40,7 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 			raw: '0xabcd1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
 		});
 
-		const signed = await web3ZkSyncL2.signTransaction(l1Tx as Transaction);
+		const signed = await web3ZkSyncL2.signTransaction(l1Tx);
 
 		const txPromise = web3ZkSyncL2.sendRawTransaction(signed);
 

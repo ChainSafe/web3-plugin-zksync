@@ -4,8 +4,15 @@
 // import type { Address, HexString } from 'web3';
 
 import type { Block } from 'web3';
-import { DEFAULT_RETURN_FORMAT, Transaction, TransactionHash } from 'web3-types';
-import type { BlockNumberOrTag, Bytes, DataFormat, Numbers } from 'web3-types';
+import { DEFAULT_RETURN_FORMAT } from 'web3-types';
+import type {
+	BlockNumberOrTag,
+	Bytes,
+	DataFormat,
+	Numbers,
+	Transaction,
+	TransactionHash,
+} from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
@@ -38,7 +45,7 @@ import {
 } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
-import { Web3ZkSyncL1 } from './web3zksync-l1';
+import type { Web3ZkSyncL1 } from './web3zksync-l1';
 
 // Equivalent to both Provider and Signer in zksync-ethers
 export class Web3ZkSyncL2 extends Web3ZkSync {
@@ -376,7 +383,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 
 			return {
 				...tx.overrides,
-				to: tx.to as Address,
+				to: tx.to,
 				value: tx.amount,
 			} as Transaction;
 		} else {
