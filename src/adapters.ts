@@ -52,7 +52,7 @@ import { IERC20ABI } from './contracts/IERC20';
 import { IL1BridgeABI } from './contracts/IL1Bridge';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
-import { Web3ZkSyncL1 } from './web3zksync-l1';
+import type { Web3ZkSyncL1 } from './web3zksync-l1';
 
 interface TxSender {
 	getAddress(): Promise<Address>;

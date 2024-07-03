@@ -1,13 +1,13 @@
 import type { Web3Account } from 'web3-eth-accounts';
 import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
+import type { Transaction } from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import type { Web3ZkSyncL1 } from './web3zksync-l1';
 import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
 import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
-import { EIP712Signer } from './utils';
-import { Transaction } from 'web3-types';
+import type { EIP712Signer } from './utils';
 
 class Adapters extends AdapterL1 {
 	adapterL2: AdapterL2;

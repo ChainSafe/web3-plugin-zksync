@@ -5,6 +5,9 @@ import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import { estimateGas, transactionBuilder } from 'web3-eth';
 import * as Web3 from 'web3';
+import type { Transaction } from 'web3-types';
+import { toHex } from 'web3-utils';
+import { ethRpcMethods } from 'web3-rpc-methods';
 import type {
 	BatchDetails,
 	BlockDetails,
@@ -33,9 +36,6 @@ import { EIP712, type EIP712Signer, isAddressEq } from './utils';
 import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
-import { Transaction } from 'web3-types';
-import { toHex } from 'web3-utils';
-import { ethRpcMethods } from 'web3-rpc-methods';
 
 /**
  * The base class for interacting with zkSync Era.

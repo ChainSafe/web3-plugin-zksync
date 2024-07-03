@@ -1,8 +1,8 @@
 import * as web3Accounts from 'web3-eth-accounts';
+import { TransactionFactory } from 'web3-eth-accounts';
 import { Network as ZkSyncNetwork } from '../../src/types';
 import { Web3ZkSyncL2, Web3ZkSyncL1, ZKSyncWallet } from '../../src';
 import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
-import { TransactionFactory } from 'web3-eth-accounts';
 import * as utils from '../../src/utils';
 
 // TODO: This test needs to setup local dev nodes for L1 and L2
