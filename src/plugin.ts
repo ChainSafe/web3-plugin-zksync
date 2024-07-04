@@ -38,47 +38,49 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	public _l2BridgeContracts: Record<Address, Contract<typeof IL2BridgeABI>>;
 	public _erc20Contracts: Record<Address, Contract<typeof IERC20ABI>>;
 	public Contracts: {
-		// TODO: Organize these contracts in L1 and L2 groups
-		L1: {};
-		L2: {};
-		/**
-		 * The web3.js Contract instance for the `ZkSync` interface.
-		 */
-		ZkSyncMainContract: Contract<typeof IZkSyncABI>;
-		/**
-		 * The ABI of the `Bridgehub` interface.
-		 */
-		BridgehubContract: Contract<typeof IBridgehubABI>;
-		/**
-		 * The web3.js Contract instance for the `IContractDeployer` interface, which is utilized for deploying smart contracts.
-		 */
-		ContractDeployerContract: Contract<typeof IContractDeployerABI>;
-		/**
-		 * The web3.js Contract instance for the `IL1Messenger` interface, which is utilized for sending messages from the L2 to L1.
-		 */
-		L1MessengerContract: Contract<typeof IL1MessengerABI>;
-		/**
-		 * The web3.js Contract instance for the `IERC20` interface, which is utilized for interacting with ERC20 tokens.
-		 */
-		IERC20Contract: Contract<typeof IERC20ABI>;
-		/**
-		 * The web3.js Contract instance for the `IERC1271` interface, which is utilized for signature validation by contracts.
-		 */
-		IERC1271Contract: Contract<typeof IERC1271ABI>;
-		/**
-		 * The web3.js Contract instance for the `IL1Bridge` interface, which is utilized for transferring ERC20 tokens from L1 to L2.
-		 */
-		L1BridgeContract: Contract<typeof IL1BridgeABI>;
+		Generic: {
+			/**
+			 * The web3.js Contract instance for the `IERC20` interface, which is utilized for interacting with ERC20 tokens.
+			 */
+			IERC20Contract: Contract<typeof IERC20ABI>;
+			/**
+			 * The web3.js Contract instance for the `IERC1271` interface, which is utilized for signature validation by contracts.
+			 */
+			IERC1271Contract: Contract<typeof IERC1271ABI>;
+		};
+		L1: {
+			/**
+			 * The web3.js Contract instance for the `ZkSync` interface.
+			 */
+			ZkSyncMainContract: Contract<typeof IZkSyncABI>;
+			/**
+			 * The ABI of the `Bridgehub` interface.
+			 */
+			BridgehubContract: Contract<typeof IBridgehubABI>;
+			/**
+			 * The web3.js Contract instance for the `IL1Bridge` interface, which is utilized for transferring ERC20 tokens from L1 to L2.
+			 */
+			L1BridgeContract: Contract<typeof IL1BridgeABI>;
+		};
+		L2: {
+			/**
+			 * The web3.js Contract instance for the `IContractDeployer` interface, which is utilized for deploying smart contracts.
+			 */
+			ContractDeployerContract: Contract<typeof IContractDeployerABI>;
+			/**
+			 * The web3.js Contract instance for the `IL1Messenger` interface, which is utilized for sending messages from the L2 to L1.
+			 */
+			L1MessengerContract: Contract<typeof IL1MessengerABI>;
+			/**
+			 * The web3.js Contract instance for the `IL2Bridge` interface, which is utilized for transferring ERC20 tokens from L2 to L1.
+			 */
+			L2BridgeContract: Contract<typeof IL2BridgeABI>;
 
-		/**
-		 * The web3.js Contract instance for the `IL2Bridge` interface, which is utilized for transferring ERC20 tokens from L2 to L1.
-		 */
-		L2BridgeContract: Contract<typeof IL2BridgeABI>;
-
-		/**
-		 * The web3.js Contract instance for the `INonceHolder` interface, which is utilized for managing deployment nonces.
-		 */
-		NonceHolderContract: Contract<typeof INonceHolderABI>;
+			/**
+			 * The web3.js Contract instance for the `INonceHolder` interface, which is utilized for managing deployment nonces.
+			 */
+			NonceHolderContract: Contract<typeof INonceHolderABI>;
+		};
 	};
 	ZKSyncWallet: ZKSyncWalletConstructor;
 
@@ -93,31 +95,45 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		}
 		// @ts-ignore-next-line
 		TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
+
+		// TODO: Chose between this pattern and using this.Contracts...
 		this.erc20BridgeL1 = '';
 		this.erc20BridgeL2 = '';
 		this.wethBridgeL1 = '';
 		this.wethBridgeL2 = '';
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
-		this.Contracts = {
-			// TODO: Organize these contracts in L1 and L2 groups
-			// and pass the providerL2 to the corresponding contracts
-			L1: {},
-			L2: {},
-			ZkSyncMainContract: new Contract(IZkSyncABI, ''),
-			BridgehubContract: new Contract(IBridgehubABI, ''),
-			ContractDeployerContract: new Contract(IContractDeployerABI, ''),
-			L1MessengerContract: new Contract(IL1MessengerABI, ''),
-			IERC20Contract: new Contract(IERC20ABI, ''),
-			IERC1271Contract: new Contract(IERC1271ABI, ''),
-			L1BridgeContract: new Contract(IL1BridgeABI, ''),
-			L2BridgeContract: new Contract(IL2BridgeABI, ''),
-			NonceHolderContract: new Contract(INonceHolderABI, ''),
-		};
 
-		// this.wallet = (privateKey: string, providerL2?: Web3ZkSyncL2) => {
-		// 	return new ZKSyncWallet(privateKey, providerL2, this.web3);
-		// };
+		// TODO: Rethink the way of initializing contracts, maybe it should be lazy loaded?!
+		this.Contracts = {
+			Generic: {
+				IERC20Contract: new Contract(IERC20ABI),
+				IERC1271Contract: new Contract(IERC1271ABI),
+			},
+			L1: {
+				ZkSyncMainContract: new Contract(IZkSyncABI),
+				BridgehubContract: new Contract(IBridgehubABI),
+				L1BridgeContract: new Contract(IL1BridgeABI),
+			},
+			L2: {
+				ContractDeployerContract: new Contract(
+					IContractDeployerABI,
+					constants.CONTRACT_DEPLOYER_ADDRESS,
+					this.providerL2,
+				),
+				L1MessengerContract: new Contract(
+					IL1MessengerABI,
+					constants.L1_MESSENGER_ADDRESS,
+					this.providerL2,
+				),
+				NonceHolderContract: new Contract(
+					INonceHolderABI,
+					constants.NONCE_HOLDER_ADDRESS,
+					this.providerL2,
+				),
+				L2BridgeContract: new Contract(IL2BridgeABI, this.providerL2),
+			},
+		};
 
 		this.ZKSyncWallet = (() => {
 			throw new Error('Web3 instance is not yet linked to ZkSync plugin');
@@ -136,32 +152,27 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 */
 	public async tryFillContractsAddresses() {
 		try {
-			// TODO: double check the contract addresses assignments.
-			// and do we need to assign to IERC20Contract and IERC1271Contract or are n't they generic?
+			const [mainContract, bridgehubContractAddress, bridgeContracts] = await Promise.all([
+				this.rpc.getMainContract(),
+				this.rpc.getBridgehubContractAddress(),
+				this.rpc.getBridgeContracts(),
+			]);
 
-			this.Contracts.ContractDeployerContract.options.address = constants.CONTRACT_DEPLOYER_ADDRESS;
-			this.Contracts.L1MessengerContract.options.address = constants.L1_MESSENGER_ADDRESS;
-			// this.Contracts.IERC20Contract.options.address =
-			// this.Contracts.IERC1271Contract.options.address =
-			this.Contracts.NonceHolderContract.options.address = constants.NONCE_HOLDER_ADDRESS;
+			// mainContract looks like in the ZK Era mainnet: '0x32400084C286CF3E17e7B677ea9583e60a000324'
+			this.Contracts.L1.ZkSyncMainContract.options.address = mainContract;
+			// mainContract looks like in the ZK Era mainnet: '0x303a465B659cBB0ab36eE643eA362c509EEb5213'
+			this.Contracts.L1.BridgehubContract.options.address = bridgehubContractAddress;
 
-			const bridgehubContractAddress = await this.rpc.getBridgehubContractAddress();
-			this.Contracts.BridgehubContract.options.address = bridgehubContractAddress;
-
-			const mainContract = await this.rpc.getMainContract();
-			this.Contracts.ZkSyncMainContract.options.address = mainContract;
-
-			const bridgeContracts = await this.rpc.getBridgeContracts();
-			// console.log('bridgeContracts', bridgeContracts);
-			// in Mainnet, the bridgeContracts object looks like:
+			// bridgeContracts object looks like in the ZK Era mainnet:
 			// {
 			// 	l1Erc20DefaultBridge: '0x57891966931eb4bb6fb81430e6ce0a03aabde063',
 			// 	l1WethBridge: '0x0000000000000000000000000000000000000000',
 			// 	l2Erc20DefaultBridge: '0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102',
 			// 	l2WethBridge: '0x0000000000000000000000000000000000000000'
 			// }
-			this.Contracts.L2BridgeContract.options.address = bridgeContracts.l2Erc20DefaultBridge;
-			this.Contracts.L1BridgeContract.options.address = bridgeContracts.l1Erc20DefaultBridge;
+			this.Contracts.L1.L1BridgeContract.options.address = bridgeContracts.l1Erc20DefaultBridge;
+			this.Contracts.L2.L2BridgeContract.options.address = bridgeContracts.l2Erc20DefaultBridge;
+
 			return true;
 		} catch (e) {
 			return false;
@@ -173,17 +184,10 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 		this.web3 = parentContext as Web3;
 
-		// TODO: After these contracts are organized in L1 and L2 groups,
-		//  pass the parentContext to the corresponding L1 contracts
-		this.Contracts.ZkSyncMainContract.link<any>(parentContext);
-		this.Contracts.BridgehubContract.link<any>(parentContext);
-		this.Contracts.ContractDeployerContract.link<any>(parentContext);
-		this.Contracts.L1MessengerContract.link<any>(parentContext);
-		this.Contracts.IERC20Contract.link<any>(parentContext);
-		this.Contracts.IERC1271Contract.link<any>(parentContext);
-		this.Contracts.L1BridgeContract.link<any>(parentContext);
-		this.Contracts.L2BridgeContract.link<any>(parentContext);
-		this.Contracts.NonceHolderContract.link<any>(parentContext);
+		// Pass the parentContext to the corresponding L1 contracts
+		this.Contracts.L1.ZkSyncMainContract.link<any>(parentContext);
+		this.Contracts.L1.BridgehubContract.link<any>(parentContext);
+		this.Contracts.L1.L1BridgeContract.link<any>(parentContext);
 
 		const self = this;
 		class ZKSyncWalletWithFullContext extends ZKSyncWallet {
@@ -232,30 +236,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	}
 
 	/**
-	 * Get the default bridge addresses
-	 */
-	async getDefaultBridgeAddresses(): Promise<{
-		erc20L1: Address;
-		erc20L2: Address;
-		wethL1: Address;
-		wethL2: Address;
-	}> {
-		if (!this.erc20BridgeL1) {
-			const addresses = await this.rpc.getBridgeContracts();
-			this.erc20BridgeL1 = addresses.l1Erc20DefaultBridge;
-			this.erc20BridgeL2 = addresses.l2Erc20DefaultBridge;
-			this.wethBridgeL1 = addresses.l1WethBridge;
-			this.wethBridgeL2 = addresses.l2WethBridge;
-		}
-		return {
-			erc20L1: this.erc20BridgeL1,
-			erc20L2: this.erc20BridgeL2,
-			wethL1: this.wethBridgeL1,
-			wethL2: this.wethBridgeL2,
-		};
-	}
-
-	/**
 	 * Get the L1 address of a token
 	 * @param token - The address of the token
 	 */
@@ -263,7 +243,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		if (token == constants.ETH_ADDRESS) {
 			return constants.ETH_ADDRESS;
 		} else {
-			const bridgeAddresses = await this.getDefaultBridgeAddresses();
+			const bridgeAddresses = await this.providerL2.getDefaultBridgeAddresses();
 			if (bridgeAddresses.wethL2 !== constants.ZERO_ADDRESS) {
 				const l2Bridge = this.getL2BridgeContract(bridgeAddresses.wethL2);
 				try {
@@ -289,7 +269,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		if (token == constants.ETH_ADDRESS) {
 			return constants.ETH_ADDRESS;
 		} else {
-			const bridgeAddresses = await this.getDefaultBridgeAddresses();
+			const bridgeAddresses = await this.providerL2.getDefaultBridgeAddresses();
 			if (bridgeAddresses.wethL2 !== constants.ZERO_ADDRESS) {
 				const l2Bridge = this.getL2BridgeContract(bridgeAddresses.wethL2);
 				try {
