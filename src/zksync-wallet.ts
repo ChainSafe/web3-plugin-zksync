@@ -1,7 +1,6 @@
 import type { Web3Account } from 'web3-eth-accounts';
 import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
-import type { Transaction } from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import type { Web3ZkSyncL1 } from './web3zksync-l1';
 import * as utils from './utils';
@@ -25,7 +24,9 @@ class Adapters extends AdapterL1 {
 		return this.adapterL2.getAllBalances();
 	}
 
-	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {
+	async populateTransaction(
+		tx: web3Types.Transaction,
+	): Promise<web3Types.Transaction | Eip712TxData> {
 		return super.populateTransaction(tx);
 	}
 
@@ -157,7 +158,7 @@ export class ZKSyncWallet extends Adapters {
 		const acc = createAccount();
 		return new ZKSyncWallet(acc.privateKey, provider, providerL1);
 	}
-	signTransaction(transaction: Transaction): Promise<string> {
+	signTransaction(transaction: web3Types.Transaction): Promise<string> {
 		return super.signTransaction(transaction);
 	}
 	sendRawTransaction(signedTx: string) {
@@ -188,13 +189,16 @@ export class ZKSyncWallet extends Adapters {
 	 *   value: 7_000_000_000n,
 	 * });
 	 */
-	async populateTransaction(tx: Transaction) {
+	async populateTransaction(tx: web3Types.Transaction) {
 		return super.populateTransaction(tx);
 	}
 
-	async sendTransaction(transaction: Transaction) {
-		const populated = await this.populateTransaction(transaction);
-		const signed = await this.signTransaction(populated as Transaction);
-		return this.sendRawTransaction(signed);
+	async getBridgehubContractAddress() {
+		return this._contextL2().getBridgehubContractAddress();
+	}
+
+	async sendTransaction(transaction: web3Types.Transaction) {
+		const signed = await this.signTransaction(transaction);
+		return this.getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
 	}
 }
