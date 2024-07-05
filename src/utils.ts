@@ -9,7 +9,7 @@ import type { Bytes, TransactionHash, TransactionReceipt } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
 import type { Web3Eth } from 'web3-eth';
 import { keccak256, toBigInt } from 'web3-utils';
-import type { DeploymentInfo, EthereumSignature } from './types';
+import type { DeploymentInfo, EthereumSignature, PriorityOpResponse } from './types';
 import { PriorityOpTree, PriorityQueueType } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
@@ -36,6 +36,7 @@ import {
 } from './constants';
 
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
+import type { Web3ZkSyncL1 } from './web3zksync-l1';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -98,12 +99,17 @@ export const NonceHolderContract = new web3.Contract(INonceHolderABI);
  * consider adding the next few functions to web3.js:
  * */
 
-export const toBytes = (number: web3Types.Numbers | Uint8Array) =>
-	web3Utils.hexToBytes(
+export const evenHex = (hex: string) => {
+	return hex.length % 2 === 0 ? hex : `0x0${hex.slice(2)}`;
+};
+export const toBytes = (number: web3Types.Numbers | Uint8Array) => {
+	const hex =
 		typeof number === 'number' || typeof number === 'bigint'
 			? web3Utils.numberToHex(number)
-			: web3Utils.bytesToHex(number),
-	);
+			: web3Utils.bytesToHex(number);
+
+	return web3Utils.hexToBytes(evenHex(hex));
+};
 
 export function concat(bytes: web3Types.Bytes[]): string {
 	return '0x' + bytes.map(d => web3Utils.toHex(d).substring(2)).join('');
@@ -603,7 +609,6 @@ export async function getERC20DefaultBridgeData(
 		l1TokenAddress = ETH_ADDRESS_IN_CONTRACTS;
 	}
 	const token = new web3Contract.Contract(IERC20ABI, l1TokenAddress, context);
-
 	const name = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
 		? 'Ether'
 		: await token.methods.name().call();
@@ -614,7 +619,10 @@ export async function getERC20DefaultBridgeData(
 		? 18
 		: await token.methods.decimals().call();
 
-	return web3Abi.encodeParameters(['string', 'string', 'uint256'], [name, symbol, decimals]);
+	return web3Abi.encodeParameters(
+		['string', 'string', 'uint256'],
+		[name, symbol, Number(decimals)],
+	);
 }
 
 /**
@@ -891,7 +899,7 @@ export async function estimateDefaultBridgeDepositL2Gas(
 		const l2BridgeAddress = bridgeAddresses.sharedL2;
 		const bridgeData = await getERC20DefaultBridgeData(token, providerL1);
 
-		return await estimateCustomBridgeDepositL2Gas(
+		return estimateCustomBridgeDepositL2Gas(
 			providerL2,
 			l1BridgeAddress,
 			l2BridgeAddress,
@@ -960,7 +968,7 @@ export async function estimateCustomBridgeDepositL2Gas(
 	l2Value?: web3Types.Numbers,
 ): Promise<web3Types.Numbers> {
 	const calldata = await getERC20BridgeCalldata(token, from, to, amount, bridgeData);
-	return await providerL2.estimateL1ToL2Execute({
+	return providerL2.estimateL1ToL2Execute({
 		caller: applyL1ToL2Alias(l1BridgeAddress),
 		contractAddress: l2BridgeAddress,
 		gasPerPubdataByte: gasPerPubdataByte,
@@ -1024,6 +1032,42 @@ export async function waitTxByHashConfirmation(
 		await sleep(500);
 	}
 }
+
+export const getPriorityOpResponse = (
+	context: Web3ZkSyncL2 | Web3ZkSyncL1,
+	l1TxPromise: Promise<TransactionHash>,
+	contextL2?: Web3ZkSyncL2,
+): PriorityOpResponse => {
+	return {
+		waitL1Commit: async () => {
+			const hash = await l1TxPromise;
+			return waitTxByHashConfirmation(context.eth, hash, 1);
+		},
+		wait: async () => {
+			const hash = await l1TxPromise;
+			return waitTxByHashConfirmation(context.eth, hash, 1);
+		},
+		waitFinalize: async () => {
+			const hash = await l1TxPromise;
+			const l2TxHash = await (context as Web3ZkSyncL2).getL2TransactionFromPriorityOp(
+				context,
+				hash,
+			);
+
+			if (!contextL2) {
+				return {
+					transactionHash: l2TxHash,
+				} as TransactionReceipt;
+			}
+
+			return await waitTxByHashConfirmationFinalized(
+				(contextL2 as Web3ZkSyncL2).eth,
+				l2TxHash,
+				1,
+			);
+		},
+	};
+};
 
 export async function waitTxByHashConfirmationFinalized(
 	web3Eth: Web3Eth,

@@ -251,14 +251,17 @@ export class EIP712 {
 		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0);
 		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
 
+		let gasLimitBytes = new Uint8Array();
+		if (transaction.gasLimit && toHex(transaction.gasLimit) !== '0x0') {
+			gasLimitBytes = toBytes(transaction.gasLimit);
+		}
+
 		const nonce = toBigInt(transaction.nonce || 0);
 		const fields: Array<Uint8Array | Uint8Array[] | string | number | string[]> = [
 			nonce === 0n ? new Uint8Array() : bigIntToUint8Array(nonce),
 			maxPriorityFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxPriorityFeePerGas),
 			maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
-			toHex(transaction.gasLimit || 0) === '0x0'
-				? new Uint8Array()
-				: toBytes(transaction.gasLimit!),
+			gasLimitBytes,
 			transaction.to ? web3Utils.toChecksumAddress(toHex(transaction.to)) : '0x',
 			toHex(transaction.value || 0) === '0x0'
 				? new Uint8Array()

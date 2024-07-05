@@ -8,7 +8,7 @@ import { toBigInt, toHex, toNumber } from 'web3-utils';
 import type { Transaction, TransactionHash, TransactionReceipt } from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 
-import type { EIP712Signer } from './utils';
+import { EIP712Signer, getPriorityOpResponse } from './utils';
 import {
 	checkBaseCost,
 	estimateCustomBridgeDepositL2Gas,
@@ -50,6 +50,7 @@ import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
 import { IERC20ABI } from './contracts/IERC20';
 import { IL1BridgeABI } from './contracts/IL1Bridge';
+import { Abi as IL1SharedBridgeABI } from './contracts/IL1SharedBridge';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
 import type { Web3ZkSyncL1 } from './web3zksync-l1';
@@ -105,7 +106,7 @@ export class AdapterL1 implements TxSender {
 	): Promise<{
 		erc20: Web3.Contract<typeof IERC20ABI>;
 		weth: Web3.Contract<typeof IERC20ABI>;
-		shared: Web3.Contract<typeof IL1BridgeABI>;
+		shared: Web3.Contract<typeof IL1SharedBridgeABI>;
 	}> {
 		const addresses = await this._contextL2().getDefaultBridgeAddresses();
 		const erc20 = new (this._contextL1().eth.Contract)(
@@ -119,7 +120,7 @@ export class AdapterL1 implements TxSender {
 			returnFormat,
 		);
 		const shared = new (this._contextL1().eth.Contract)(
-			IL1BridgeABI,
+			IL1SharedBridgeABI,
 			addresses.sharedL1,
 			returnFormat,
 		);
@@ -181,7 +182,7 @@ export class AdapterL1 implements TxSender {
 	): Promise<bigint> {
 		if (!bridgeAddress) {
 			const bridgeContracts = await this.getL1BridgeContracts();
-			bridgeAddress = await bridgeContracts.shared.methods.getAddress().call();
+			bridgeAddress = bridgeContracts.shared.options.address;
 		}
 
 		const erc20 = new (this._contextL1().eth.Contract)(IERC20ABI, token);
@@ -253,6 +254,7 @@ export class AdapterL1 implements TxSender {
 		gasLimit: web3Types.Numbers;
 		gasPerPubdataByte?: web3Types.Numbers;
 		gasPrice?: web3Types.Numbers;
+		chainId?: web3Types.Numbers;
 	}): Promise<bigint> {
 		const bridgehub = await this.getBridgehubContract();
 		const parameters = { ...layer1TxDefaults(), ...params };
@@ -261,7 +263,7 @@ export class AdapterL1 implements TxSender {
 
 		return await bridgehub.methods
 			.l2TransactionBaseCost(
-				await this._contextL2().eth.getChainId(),
+				parameters.chainId ?? (await this._contextL2().eth.getChainId()),
 				parameters.gasPrice,
 				parameters.gasLimit,
 				parameters.gasPerPubdataByte,
@@ -460,8 +462,7 @@ export class AdapterL1 implements TxSender {
 		const baseGasLimit = await tx.estimateGas();
 		const gasLimit = scaleGasLimit(baseGasLimit);
 
-		// @ts-ignore
-		return this._contextL2().getPriorityOpResponse(tx.send({ gasLimit }));
+		return this.signAndSend(tx.populateTransaction({ gasLimit } as PayableTxOptions));
 	}
 
 	async _depositBaseTokenToNonETHBasedChain(transaction: {
@@ -551,8 +552,8 @@ export class AdapterL1 implements TxSender {
 		const gasLimit = scaleGasLimit(baseGasLimit);
 
 		overrides.gasLimit ??= gasLimit;
-		// @ts-ignore
-		return this._contextL2().getPriorityOpResponse(tx.send(overrides));
+
+		return this.signAndSend(tx.populateTransaction(overrides as PayableTxOptions));
 	}
 
 	async _depositTokenToETHBasedChain(transaction: {
@@ -590,14 +591,12 @@ export class AdapterL1 implements TxSender {
 			}
 		}
 
-		// @ts-ignore
-		const baseGasLimit = await tx.estimateGas(overrides);
+		const baseGasLimit = await tx.estimateGas(overrides as PayableTxOptions);
 		const gasLimit = scaleGasLimit(baseGasLimit);
 
 		overrides.gasLimit ??= gasLimit;
 
-		// @ts-ignore
-		return this._contextL2().getPriorityOpResponse(tx.send(overrides));
+		return this.signAndSend(tx.populateTransaction(overrides as PayableTxOptions));
 	}
 
 	async _depositETHToETHBasedChain(transaction: {
@@ -711,9 +710,7 @@ export class AdapterL1 implements TxSender {
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().eth.getChainId();
-		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
+		const baseTokenAddress = await this.getBaseToken();
 		const isETHBasedChain = isAddressEq(baseTokenAddress, ETH_ADDRESS_IN_CONTRACTS);
 
 		if (isETHBasedChain && isAddressEq(transaction.token, ETH_ADDRESS_IN_CONTRACTS)) {
@@ -757,15 +754,12 @@ export class AdapterL1 implements TxSender {
 			gasPerPubdataByte,
 		} = tx;
 
-		const gasPriceForEstimation = overrides.maxFeePerGas || overrides.gasPrice;
-		const baseCost = await bridgehub.methods
-			.l2TransactionBaseCost(
-				chainId as web3Types.Numbers,
-				gasPriceForEstimation as web3Types.Numbers,
-				l2GasLimit,
-				gasPerPubdataByte,
-			)
-			.call();
+		const baseCost = await this.getBaseCost({
+			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
+			gasLimit: l2GasLimit,
+			gasPerPubdataByte: gasPerPubdataByte,
+			chainId,
+		});
 
 		const mintValue = web3Utils.toBigInt(baseCost) + web3Utils.toBigInt(operatorTip);
 		await checkBaseCost(baseCost, mintValue);
@@ -806,21 +800,15 @@ export class AdapterL1 implements TxSender {
 		// Depositing the base token to a non-ETH-based chain.
 		// Goes through the BridgeHub.
 		// Have to give approvals for the sharedBridge.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().eth.getChainId();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
 		const { operatorTip, amount, to, overrides, l2GasLimit, gasPerPubdataByte } = tx;
 
-		const gasPriceForEstimation = overrides.maxFeePerGas || overrides.gasPrice;
-		const baseCost = await bridgehub.methods
-			.l2TransactionBaseCost(
-				chainId as web3Types.Numbers,
-				gasPriceForEstimation as web3Types.Numbers,
-				l2GasLimit,
-				gasPerPubdataByte,
-			)
-			.call();
+		const baseCost = await this.getBaseCost({
+			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
+			gasLimit: l2GasLimit,
+			gasPerPubdataByte: gasPerPubdataByte,
+		});
 
 		tx.overrides.value = 0;
 		return {
@@ -862,15 +850,12 @@ export class AdapterL1 implements TxSender {
 			gasPerPubdataByte,
 		} = tx;
 
-		const gasPriceForEstimation = overrides.maxFeePerGas || overrides.gasPrice;
-		const baseCost = await bridgehub.methods
-			.l2TransactionBaseCost(
-				chainId as web3Types.Numbers,
-				gasPriceForEstimation as web3Types.Numbers,
-				l2GasLimit,
-				gasPerPubdataByte,
-			)
-			.call();
+		const baseCost = await this.getBaseCost({
+			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
+			gasLimit: l2GasLimit,
+			chainId: chainId,
+			gasPerPubdataByte: gasPerPubdataByte,
+		});
 
 		overrides.value ??= amount;
 		const mintValue = web3Utils.toBigInt(baseCost) + web3Utils.toBigInt(operatorTip);
@@ -927,15 +912,12 @@ export class AdapterL1 implements TxSender {
 			gasPerPubdataByte,
 		} = tx;
 
-		const gasPriceForEstimation = overrides.maxFeePerGas || overrides.gasPrice;
-		const baseCost = await bridgehub.methods
-			.l2TransactionBaseCost(
-				chainId as web3Types.Numbers,
-				gasPriceForEstimation as web3Types.Numbers,
-				tx.l2GasLimit,
-				tx.gasPerPubdataByte,
-			)
-			.call();
+		const baseCost = await this.getBaseCost({
+			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
+			gasLimit: l2GasLimit,
+			gasPerPubdataByte,
+			chainId,
+		});
 
 		const mintValue = web3Utils.toBigInt(baseCost) + web3Utils.toBigInt(operatorTip);
 		overrides.value ??= mintValue;
@@ -987,21 +969,15 @@ export class AdapterL1 implements TxSender {
 		overrides?: TransactionOverrides;
 	}) {
 		// Call the BridgeHub directly, like it's done with the DiamondProxy.
-		const bridgehub = await this.getBridgehubContract();
-		const chainId = await this._contextL2().eth.getChainId();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
 		const { operatorTip, amount, overrides, l2GasLimit, gasPerPubdataByte, to } = tx;
+		const baseCost = await this.getBaseCost({
+			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
+			gasLimit: l2GasLimit,
+			gasPerPubdataByte,
+		});
 
-		const gasPriceForEstimation = overrides.maxFeePerGas || overrides.gasPrice;
-		const baseCost = await bridgehub.methods
-			.l2TransactionBaseCost(
-				chainId as web3Types.Numbers,
-				gasPriceForEstimation as web3Types.Numbers,
-				l2GasLimit,
-				gasPerPubdataByte,
-			)
-			.call();
 		overrides.value ??=
 			web3Utils.toBigInt(baseCost) +
 			web3Utils.toBigInt(operatorTip) +
@@ -1398,7 +1374,7 @@ export class AdapterL1 implements TxSender {
 
 		const chainId = await this._contextL2().eth.getChainId();
 
-		let l1Bridge: Web3.Contract<typeof IL1BridgeABI>;
+		let l1Bridge: Web3.Contract<typeof IL1BridgeABI> | Web3.Contract<typeof IL1SharedBridgeABI>;
 
 		if (await this._contextL2().isBaseToken(sender)) {
 			l1Bridge = (await this.getL1BridgeContracts()).shared;
@@ -1522,25 +1498,23 @@ export class AdapterL1 implements TxSender {
 		overrides?: TransactionOverrides;
 	}): Promise<PriorityOpResponse> {
 		const tx = await this.getRequestExecuteTx(transaction);
-		const populated = await this.populateTransaction(tx);
-		const signed = await this.signTransaction(populated as Transaction);
+		return this.signAndSend(tx);
+	}
+	async signAndSend(tx: Transaction) {
+		const populated = await this._contextL1().populateTransaction(tx);
+		const signed = await this._contextL1().signTransaction(populated as Transaction);
 
-		return this._contextL2().getPriorityOpResponse(
+		return getPriorityOpResponse(
 			this._contextL1(),
 			this._contextL1().sendRawTransaction(signed),
+			this._contextL2(),
 		);
 	}
 	async signTransaction(tx: Transaction): Promise<string> {
-		return this._contextL2().signTransaction(tx);
+		return this._contextL1().signTransaction(tx);
 	}
 	async sendRawTransaction(signedTx: string): Promise<TransactionHash> {
-		return this._contextL2().sendRawTransaction(signedTx);
-	}
-	async getPriorityOpResponse(
-		context: Web3ZkSyncL1 | Web3ZkSyncL2,
-		txPromise: Promise<TransactionHash>,
-	) {
-		return this._contextL2().getPriorityOpResponse(context, txPromise);
+		return this._contextL1().sendRawTransaction(signedTx);
 	}
 	/**
 	 * Estimates the amount of gas required for a request execute transaction.
@@ -1744,22 +1718,21 @@ export class AdapterL1 implements TxSender {
 	}
 
 	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {
+		tx.from = this.getAddress();
+
 		if (
-			!tx.type ||
-			(tx.type &&
-				toHex(tx.type) !== toHex(EIP712_TX_TYPE) &&
-				!(tx as Eip712TxData).customData)
+			(!tx.type || (tx.type && toHex(tx.type) !== toHex(EIP712_TX_TYPE))) &&
+			!(tx as Eip712TxData).customData
 		) {
 			return this._contextL1().populateTransaction(tx);
 		}
 
 		const populated = (await this._contextL1().populateTransaction(tx)) as Eip712TxData;
-		populated.from = this.getAddress();
 		populated.type = EIP712_TX_TYPE;
 		populated.value ??= 0;
 		populated.data ??= '0x';
 
-		return tx;
+		return populated;
 	}
 	// @ts-ignore
 	public getAddress(): string {
@@ -1864,7 +1837,7 @@ export class AdapterL2 implements TxSender {
 		});
 		const populated = await this.populateTransaction(tx as Transaction);
 		const signed = await this.signTransaction(populated as Transaction);
-		return this.getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
+		return getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
 	}
 
 	async signTransaction(tx: Transaction): Promise<string> {
@@ -1873,12 +1846,7 @@ export class AdapterL2 implements TxSender {
 	async sendRawTransaction(signedTx: string): Promise<TransactionHash> {
 		return this._contextL2().sendRawTransaction(signedTx);
 	}
-	async getPriorityOpResponse(
-		context: Web3ZkSyncL1 | Web3ZkSyncL2,
-		txPromise: Promise<TransactionHash>,
-	) {
-		return this._contextL2().getPriorityOpResponse(context, txPromise);
-	}
+
 	/**
 	 * Transfer ETH or any ERC20 token within the same interface.
 	 *
@@ -1908,22 +1876,20 @@ export class AdapterL2 implements TxSender {
 	}
 
 	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {
+		tx.from = this.getAddress();
 		if (
-			!tx.type ||
-			(tx.type &&
-				toHex(tx.type) !== toHex(EIP712_TX_TYPE) &&
-				!(tx as Eip712TxData).customData)
+			(!tx.type || (tx.type && toHex(tx.type) !== toHex(EIP712_TX_TYPE))) &&
+			!(tx as Eip712TxData).customData
 		) {
 			return this._contextL2().populateTransaction(tx);
 		}
 
 		const populated = (await this._contextL2().populateTransaction(tx)) as Eip712TxData;
-		populated.from = this.getAddress();
 		populated.type = EIP712_TX_TYPE;
 		populated.value ??= 0;
 		populated.data ??= '0x';
 
-		return tx;
+		return populated;
 	}
 }
 

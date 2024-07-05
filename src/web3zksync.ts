@@ -3,7 +3,7 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
-import { estimateGas, transactionBuilder } from 'web3-eth';
+import { estimateGas, getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
 import * as Web3 from 'web3';
 import type { Transaction } from 'web3-types';
 import { toHex } from 'web3-utils';
@@ -412,7 +412,7 @@ export class Web3ZkSync extends Web3.Web3 {
 			Object.assign(customData, { factoryDeps: transaction.factoryDeps });
 		}
 
-		return await this.estimateGasL1ToL2(
+		return this.estimateGasL1ToL2(
 			{
 				from: transaction.caller,
 				data: transaction.calldata,
@@ -503,52 +503,80 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	private async populateTransactionAndGasPrice(transaction: Transaction): Promise<Transaction> {
+		transaction.nonce =
+			transaction.nonce ?? (await this.eth.getTransactionCount(transaction.from!, 'pending'));
+
 		const populated = await transactionBuilder({
 			transaction,
 			web3Context: this,
 		});
 
-		const gasFees = await this.eth.calculateFeeData();
-		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
-			populated.maxFeePerGas = web3Utils.toBigInt(gasFees.maxFeePerGas);
-			populated.maxPriorityFeePerGas =
-				web3Utils.toBigInt(populated.maxFeePerGas) >
-				web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
-					? populated.maxFeePerGas
-					: gasFees.maxPriorityFeePerGas;
-		} else {
-			populated.maxFeePerGas = populated.gasPrice;
-			populated.maxPriorityFeePerGas = populated.gasPrice;
+		const formatted = web3Utils.format(transactionSchema, populated);
+
+		delete formatted.input;
+		delete formatted.chain;
+		delete formatted.hardfork;
+		delete formatted.networkId;
+		if (
+			formatted.accessList &&
+			Array.isArray(formatted.accessList) &&
+			formatted.accessList.length === 0
+		) {
+			delete formatted.accessList;
 		}
 
-		populated.gasLimit = await estimateGas(
-			this,
-			populated as Transaction,
-			'latest',
-			DEFAULT_RETURN_FORMAT,
-		);
+		formatted.gasLimit =
+			formatted.gasLimit ??
+			(await estimateGas(this, formatted as Transaction, 'latest', DEFAULT_RETURN_FORMAT));
 
-		populated.nonce = await this.eth.getTransactionCount(populated.from!, 'pending');
+		if (formatted.type === 0n) {
+			formatted.gasPrice =
+				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
+			return formatted;
+		}
+		if (formatted.type === 2n && formatted.gasPrice) {
+			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
+			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+			return formatted;
+		}
+		if (formatted.maxPriorityFeePerGas && formatted.maxFeePerGas) {
+			return formatted;
+		}
 
-		return populated;
+		const gasFees = await this.eth.calculateFeeData();
+		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
+			formatted.maxFeePerGas =
+				formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+			formatted.maxPriorityFeePerGas =
+				formatted.maxPriorityFeePerGas ??
+				(web3Utils.toBigInt(formatted.maxFeePerGas) >
+				web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
+					? formatted.maxFeePerGas
+					: gasFees.maxPriorityFeePerGas);
+		} else {
+			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
+			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+		}
+
+		return formatted;
 	}
 
 	async populateTransaction(transaction: Transaction) {
 		if (
-			!transaction.type ||
-			(transaction.type &&
-				toHex(transaction.type) !== toHex(EIP712_TX_TYPE) &&
-				!(transaction as Eip712TxData).customData)
+			(!transaction.type ||
+				(transaction.type && toHex(transaction.type) !== toHex(EIP712_TX_TYPE))) &&
+			!(transaction as Eip712TxData).customData
 		) {
 			return this.populateTransactionAndGasPrice(transaction);
 		}
 		const populated = (await this.populateTransactionAndGasPrice(transaction)) as Eip712TxData;
+		populated.type = BigInt(EIP712_TX_TYPE);
+		populated.value ??= 0;
+		populated.data ??= '0x';
 
-		if ((transaction as Eip712TxData).customData) {
-			populated.customData = this.fillCustomData(
-				(transaction as Eip712TxData).customData as Eip712Meta,
-			);
-		}
+		populated.customData = this.fillCustomData(
+			(transaction as Eip712TxData).customData as Eip712Meta,
+		);
 		return populated;
 	}
 

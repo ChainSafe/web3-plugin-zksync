@@ -173,6 +173,8 @@ export const BridgeAddressesSchema = {
 		l2Erc20DefaultBridge: { format: 'address' },
 		l1WethBridge: { format: 'address' },
 		l2WethBridge: { format: 'address' },
+		l2SharedDefaultBridge: { format: 'address' },
+		l1SharedDefaultBridge: { format: 'address' },
 	},
 };
 

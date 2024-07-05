@@ -6,7 +6,8 @@ import type { Web3ZkSyncL1 } from './web3zksync-l1';
 import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
 import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
-import type { EIP712Signer } from './utils';
+import { EIP712Signer, getPriorityOpResponse } from './utils';
+import type { Transaction } from 'web3-types';
 
 class Adapters extends AdapterL1 {
 	adapterL2: AdapterL2;
@@ -27,7 +28,7 @@ class Adapters extends AdapterL1 {
 	async populateTransaction(
 		tx: web3Types.Transaction,
 	): Promise<web3Types.Transaction | Eip712TxData> {
-		return super.populateTransaction(tx);
+		return this.adapterL2.populateTransaction(tx);
 	}
 
 	getDeploymentNonce() {
@@ -96,13 +97,21 @@ export class ZKSyncWallet extends Adapters {
 		}
 	}
 	public connect(provider: Web3ZkSyncL2) {
-		provider.eth.accounts.wallet.add(this.account);
+		if (!provider.eth.accounts.wallet.get(this.account.address)) {
+			provider.eth.accounts.wallet.add(
+				provider.eth.accounts.privateKeyToAccount(this.account.privateKey),
+			);
+		}
 		this.provider = provider;
 		this.provider._eip712Signer = this._eip712Signer.bind(this);
 		return this;
 	}
 	public connectToL1(provider: Web3ZkSyncL1) {
-		provider.eth.accounts.wallet.add(this.account);
+		if (!provider.eth.accounts.wallet.get(this.account.address)) {
+			provider.eth.accounts.wallet.add(
+				provider.eth.accounts.privateKeyToAccount(this.account.privateKey),
+			);
+		}
 		this.providerL1 = provider;
 		return this;
 	}
@@ -158,11 +167,13 @@ export class ZKSyncWallet extends Adapters {
 		const acc = createAccount();
 		return new ZKSyncWallet(acc.privateKey, provider, providerL1);
 	}
-	signTransaction(transaction: web3Types.Transaction): Promise<string> {
-		return super.signTransaction(transaction);
+	async signTransaction(transaction: web3Types.Transaction): Promise<string> {
+		return this._contextL2().signTransaction(
+			(await this.populateTransaction(transaction)) as Transaction,
+		);
 	}
 	sendRawTransaction(signedTx: string) {
-		return super.sendRawTransaction(signedTx);
+		return this._contextL2().sendRawTransaction(signedTx);
 	}
 
 	/**
@@ -190,7 +201,8 @@ export class ZKSyncWallet extends Adapters {
 	 * });
 	 */
 	async populateTransaction(tx: web3Types.Transaction) {
-		return super.populateTransaction(tx);
+		tx.from = tx.from ?? this.getAddress();
+		return this._contextL2().populateTransaction(tx);
 	}
 
 	async getBridgehubContractAddress() {
@@ -199,6 +211,6 @@ export class ZKSyncWallet extends Adapters {
 
 	async sendTransaction(transaction: web3Types.Transaction) {
 		const signed = await this.signTransaction(transaction);
-		return this.getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
+		return getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
 	}
 }
