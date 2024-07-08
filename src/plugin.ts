@@ -197,9 +197,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	public link(parentContext: Web3Context): void {
 		super.link(parentContext);
 
-		// override the parent behavior to use the L2 provider
-		this.provider = this.L2.provider;
-
 		this.L1 = new Web3ZkSyncL1(parentContext);
 
 		this.initContracts();
@@ -254,7 +251,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	getL2BridgeContract(address: Address): Contract<typeof IL2BridgeABI> {
 		if (!this._l2BridgeContracts[address]) {
 			this._l2BridgeContracts[address] = new Contract(IL2BridgeABI, address);
-			this._l2BridgeContracts[address].link(this);
+			this._l2BridgeContracts[address].link(this.L2);
 		}
 		return this._l2BridgeContracts[address];
 	}
@@ -266,7 +263,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	erc20(address: string): Contract<typeof IERC20ABI> {
 		if (!this._erc20Contracts[address]) {
 			this._erc20Contracts[address] = new Contract(IERC20ABI, address);
-			this._erc20Contracts[address].link(this);
+			this._erc20Contracts[address].link(this.L2);
 		}
 		return this._erc20Contracts[address];
 	}
