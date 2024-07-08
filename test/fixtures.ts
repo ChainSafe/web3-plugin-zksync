@@ -119,8 +119,10 @@ export const getBlockDetailsData = {
 export const getBridgeContractsData = {
 	output: {
 		l1Erc20DefaultBridge: '0x2ae09702f77a4940621572fbcdae2382d44a2cba',
+		l1SharedDefaultBridge: '0x3e8b2fe58675126ed30d0d12dea2a9bda72d18ae',
 		l1WethBridge: '0x0000000000000000000000000000000000000000',
 		l2Erc20DefaultBridge: '0x681a1afdc2e06776816386500d2d461a6c96cb45',
+		l2SharedDefaultBridge: '0x681a1afdc2e06776816386500d2d461a6c96cb45',
 		l2WethBridge: '0x0000000000000000000000000000000000000000',
 	},
 };
