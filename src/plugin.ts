@@ -106,7 +106,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	constructor(
 		providerOrContextL2: web3Types.SupportedProviders<any> | Web3ContextInitOptions | string,
 	) {
-		super();
+		super(providerOrContextL2);
 		if (providerOrContextL2 instanceof Web3ZkSyncL2) {
 			this.L2 = providerOrContextL2;
 		} else {
@@ -196,6 +196,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 	public link(parentContext: Web3Context): void {
 		super.link(parentContext);
+
+		// override the parent behavior to use the L2 provider
+		this.provider = this.L2.provider;
 
 		this.L1 = new Web3ZkSyncL1(parentContext);
 
