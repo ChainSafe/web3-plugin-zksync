@@ -1714,8 +1714,7 @@ export class AdapterL1 implements TxSender {
 		overrides?: TransactionOverrides;
 	}) {
 		const { method, overrides } = await this.getRequestExecuteContractMethod(transaction);
-		return overrides ? method.send(overrides as PayableTxOptions) : method;
-		// return method.populateTransaction(overrides as PayableTxOptions);
+		return method.populateTransaction(overrides as PayableTxOptions);
 	}
 
 	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {
