@@ -29,6 +29,7 @@ describe('ZkSyncPlugin rpc tests', () => {
 		// that is a proxy to the actual contract at 0x550cf73F4b50aA0DF0257f2D07630D48fA00f73a
 		// TODO: Need to check how to either get the actual contract address or how to call the proxy with now issues
 		// current error when calling the proxy is: "ContractExecutionError: Error happened while trying to execute a function inside a smart contract"
+		// related web3.js issue: https://github.com/web3/web3.js/issues/7143
 		contracts.L1.ZkSyncMainContract.options.address = '0x550cf73F4b50aA0DF0257f2D07630D48fA00f73a';
 
 		const contractName = await contracts.L1.ZkSyncMainContract.methods.getName().call();
