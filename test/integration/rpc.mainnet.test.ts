@@ -17,7 +17,7 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 	});
 
 	it('should get bridge addresses', async () => {
-		const res = await web3.zkSync.getDefaultBridgeAddresses();
+		const res = await web3.zkSync.L2.getDefaultBridgeAddresses();
 
 		expect(res.erc20L1).toBe('0x57891966931eb4bb6fb81430e6ce0a03aabde063');
 		expect(res.erc20L2).toBe('0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102');
