@@ -6,7 +6,7 @@ import type { Web3ZkSyncL1 } from './web3zksync-l1';
 import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
 import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
-import { EIP712Signer, getPriorityOpResponse } from './utils';
+import { EIP712Signer, getPriorityOpResponse, isAddressEq } from './utils';
 import type { Transaction } from 'web3-types';
 
 class Adapters extends AdapterL1 {
@@ -51,14 +51,14 @@ class Adapters extends AdapterL1 {
 	}) {
 		return this.adapterL2.withdraw(transaction);
 	}
-	transfer(transaction: {
+	async transfer(transaction: {
 		to: Address;
 		amount: web3Types.Numbers;
 		token?: Address;
 		paymasterParams?: PaymasterParams;
 		overrides?: TransactionOverrides;
 	}) {
-		return this.adapterL2.transfer(transaction);
+		return this.signAndSend(await this.adapterL2.transfer(transaction), this._contextL2());
 	}
 }
 
@@ -168,9 +168,11 @@ export class ZKSyncWallet extends Adapters {
 		return new ZKSyncWallet(acc.privateKey, provider, providerL1);
 	}
 	async signTransaction(transaction: web3Types.Transaction): Promise<string> {
-		return this._contextL2().signTransaction(
-			(await this.populateTransaction(transaction)) as Transaction,
-		);
+		const populated = (await this.populateTransaction(transaction)) as Transaction;
+		if (!isAddressEq(populated.from!, this.getAddress())) {
+			throw new Error('Transaction from mismatch');
+		}
+		return this._contextL2().signTransaction(populated);
 	}
 	sendRawTransaction(signedTx: string) {
 		return this._contextL2().sendRawTransaction(signedTx);

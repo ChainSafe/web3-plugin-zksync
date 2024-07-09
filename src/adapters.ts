@@ -1132,8 +1132,10 @@ export class AdapterL1 implements TxSender {
 		// It is assumed that the L2 fee for the transaction does not depend on its value.
 		const dummyAmount = 1n;
 		const bridgehub = await this.getBridgehubContract();
+
 		const chainId = await this._contextL2().eth.getChainId();
-		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
+		const baseTokenAddress = await this.getBaseToken();
+
 		const isETHBasedChain = isAddressEq(baseTokenAddress, ETH_ADDRESS_IN_CONTRACTS);
 
 		const tx = await this._getDepositTxWithDefaults({
@@ -1329,10 +1331,14 @@ export class AdapterL1 implements TxSender {
 	) {
 		const { l1BatchNumber, l2MessageIndex, l2TxNumberInBlock, message, proof } =
 			await this.finalizeWithdrawalParams(withdrawalHash, index);
+
+		const l1Contracts = await this.getL1BridgeContracts();
 		const contract = new (this._contextL1().eth.Contract)(
 			IL1BridgeABI,
-			(await this.getL1BridgeContracts()).shared.options.address,
+			l1Contracts.shared.options.address,
 		);
+		overrides = overrides ?? {};
+		overrides.from ??= this.getAddress();
 
 		return (
 			contract.methods
@@ -1379,13 +1385,9 @@ export class AdapterL1 implements TxSender {
 		if (await this._contextL2().isBaseToken(sender)) {
 			l1Bridge = (await this.getL1BridgeContracts()).shared;
 		} else {
-			const l2BridgeContract = new Web3.Contract(IL2BridgeABI, sender);
-			l2BridgeContract.setProvider(this._contextL2().provider);
-
-			l1Bridge = new (this._contextL1().eth.Contract)(
-				IL1BridgeABI,
-				await l2BridgeContract.methods.l1Bridge().call(),
-			);
+			const l2BridgeContract = new (this._contextL2().eth.Contract)(IL2BridgeABI, sender);
+			const l1BridgeAddress = await l2BridgeContract.methods.l1Bridge().call();
+			l1Bridge = new (this._contextL1().eth.Contract)(IL1BridgeABI, l1BridgeAddress);
 		}
 
 		return await l1Bridge.methods
@@ -1411,8 +1413,7 @@ export class AdapterL1 implements TxSender {
 			web3Utils.toHex(depositHash),
 		);
 		if (!receipt) {
-			// @todo: or throw?
-			return {} as any;
+			throw new Error('Transaction not found!');
 		}
 		const successL2ToL1LogIndex = receipt.l2ToL1Logs.findIndex(
 			l2ToL1log =>
@@ -1500,13 +1501,14 @@ export class AdapterL1 implements TxSender {
 		const tx = await this.getRequestExecuteTx(transaction);
 		return this.signAndSend(tx);
 	}
-	async signAndSend(tx: Transaction) {
-		const populated = await this._contextL1().populateTransaction(tx);
-		const signed = await this._contextL1().signTransaction(populated as Transaction);
+	async signAndSend(tx: Transaction, _context?: Web3ZkSyncL1 | Web3ZkSyncL2) {
+		const context = _context || this._contextL1();
+		const populated = await context.populateTransaction(tx);
+		const signed = await context.signTransaction(populated as Transaction);
 
 		return getPriorityOpResponse(
-			this._contextL1(),
-			this._contextL1().sendRawTransaction(signed),
+			context,
+			context.sendRawTransaction(signed),
 			this._contextL2(),
 		);
 	}
@@ -1762,8 +1764,7 @@ export class AdapterL2 implements TxSender {
 		blockTag: web3Types.BlockNumberOrTag = 'committed',
 	): Promise<bigint> {
 		if (token) {
-			const contract = new Web3.Contract(IERC20ABI, token);
-			contract.setProvider(this._contextL2().provider);
+			const contract = new (this._contextL2().eth.Contract)(IERC20ABI, token);
 			return contract.methods.balanceOf(this.getAddress()).call();
 		}
 
@@ -1837,7 +1838,11 @@ export class AdapterL2 implements TxSender {
 		});
 		const populated = await this.populateTransaction(tx as Transaction);
 		const signed = await this.signTransaction(populated as Transaction);
-		return getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
+		return getPriorityOpResponse(
+			this._contextL2(),
+			this.sendRawTransaction(signed),
+			this._contextL2(),
+		);
 	}
 
 	async signTransaction(tx: Transaction): Promise<string> {

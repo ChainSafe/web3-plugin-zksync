@@ -599,6 +599,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		if (!account) {
 			throw new Error('Account not found');
 		}
+
 		const res = await this.eth.accounts.signTransaction(tx, account?.privateKey);
 		return res.rawTransaction;
 	}

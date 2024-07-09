@@ -534,7 +534,7 @@ export declare type TransactionRequest = DeepWriteable<
  * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
  * that waits to commit a L1 transaction, including when given on optional confirmation number.
  */
-export interface PriorityOpResponse {
+export interface PriorityL1OpResponse {
 	/**
 	 * Waits for the L1 transaction to be committed, including waiting for the specified number of confirmations.
 	 * @param confirmation The number of confirmations to wait for. Defaults to 1.
@@ -544,7 +544,11 @@ export interface PriorityOpResponse {
 	wait(confirmation?: number): Promise<TransactionReceipt>;
 	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
 }
-
+export interface PriorityL2OpResponse {
+	wait(confirmation?: number): Promise<TransactionReceipt>;
+	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
+}
+export type PriorityOpResponse = PriorityL1OpResponse | PriorityL2OpResponse;
 /** A map containing accounts and their balances. */
 export type BalancesMap = { [key: string]: bigint };
 

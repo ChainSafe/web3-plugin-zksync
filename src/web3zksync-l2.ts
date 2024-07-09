@@ -4,35 +4,14 @@
 // import type { Address, HexString } from 'web3';
 
 import type { Block } from 'web3';
-import { DEFAULT_RETURN_FORMAT } from 'web3-types';
-import type {
-	BlockNumberOrTag,
-	Bytes,
-	DataFormat,
-	Numbers,
-	Transaction,
-	TransactionHash,
-} from 'web3-types';
+import { DEFAULT_RETURN_FORMAT, TransactionReceipt } from 'web3-types';
+import type { BlockNumberOrTag, Bytes, DataFormat, Numbers, Transaction } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
-import {
-	getL2HashFromPriorityOp,
-	isAddressEq,
-	isETH,
-	sleep,
-	waitTxByHashConfirmation,
-	waitTxByHashConfirmationFinalized,
-	waitTxReceipt,
-} from './utils';
+import { getL2HashFromPriorityOp, isAddressEq, isETH, sleep } from './utils';
 import { Network as ZkSyncNetwork, TransactionStatus } from './types';
-import type {
-	Address,
-	TransactionOverrides,
-	PaymasterParams,
-	PriorityOpResponse,
-	ZKTransactionReceipt,
-} from './types';
+import type { Address, TransactionOverrides, PaymasterParams, ZKTransactionReceipt } from './types';
 import { Web3ZkSync } from './web3zksync';
 import { ZKTransactionReceiptSchema } from './schemas';
 import { Abi as IEthTokenAbi } from './contracts/IEthToken';
@@ -45,7 +24,6 @@ import {
 } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
-import type { Web3ZkSyncL1 } from './web3zksync-l1';
 
 // Equivalent to both Provider and Signer in zksync-ethers
 export class Web3ZkSyncL2 extends Web3ZkSync {
@@ -111,33 +89,6 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 
 	// 	return resp;
 	// }
-
-	/**
-	 * Returns a {@link PriorityOpResponse} from L1 transaction response.
-	 *
-	 * @param context
-	 * @param l1TxPromise The L1 transaction promise.
-	 */
-	getPriorityOpResponse(
-		context: Web3ZkSyncL2 | Web3ZkSyncL1,
-		l1TxPromise: Promise<TransactionHash>,
-	): PriorityOpResponse {
-		return {
-			waitL1Commit: async () => {
-				const hash = await l1TxPromise;
-				return waitTxByHashConfirmation(context.eth, hash, 1);
-			},
-			wait: async () => {
-				const hash = await l1TxPromise;
-				return waitTxByHashConfirmation(context.eth, hash, 1);
-			},
-			waitFinalize: async () => {
-				const hash = await l1TxPromise;
-				const l2TxHash = await this.getL2TransactionFromPriorityOp(context, hash);
-				return await waitTxByHashConfirmationFinalized(this.eth, l2TxHash, 1);
-			},
-		};
-	}
 
 	async getZKTransactionReceipt<ReturnFormat extends DataFormat>(
 		transactionHash: Bytes,
@@ -206,11 +157,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 * @param context
 	 * @param txHash
 	 */
-	async getL2TransactionFromPriorityOp(
-		context: Web3ZkSyncL2 | Web3ZkSyncL1,
-		txHash: TransactionHash,
-	) {
-		const receipt = await waitTxReceipt(context.eth, txHash);
+	async getL2TransactionFromPriorityOp(receipt: TransactionReceipt) {
 		const l2Hash = getL2HashFromPriorityOp(receipt, await this.getMainContractAddress());
 
 		let status = null;
@@ -229,7 +176,11 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 */
 	// This is inefficient. Status should probably be indicated in the transaction receipt.
 	async getTransactionStatus(txHash: string): Promise<TransactionStatus> {
-		const tx = await this.eth.getTransaction(txHash);
+		let tx;
+		try {
+			tx = await this.eth.getTransaction(txHash);
+		} catch {}
+
 		if (!tx) {
 			return TransactionStatus.NotFound;
 		}
@@ -321,7 +272,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		const bridge = new this.eth.Contract(IL2BridgeABI, tx.bridgeAddress);
 
 		const populatedTx = bridge.methods
-			.withdraw(tx.from, tx.to, tx.token, tx.amount)
+			.withdraw(tx.to, tx.token, tx.amount)
 			// @ts-ignore
 			.populateTransaction(tx.overrides);
 

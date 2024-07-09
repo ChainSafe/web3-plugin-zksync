@@ -4,12 +4,23 @@ import * as web3Utils from 'web3-utils';
 import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
-import * as web3Contract from 'web3-eth-contract';
-import type { Bytes, TransactionHash, TransactionReceipt } from 'web3-types';
+import type {
+	AbiEventFragment,
+	BlockNumberOrTag,
+	Bytes,
+	LogsInput,
+	TransactionHash,
+	TransactionReceipt,
+} from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
-import type { Web3Eth } from 'web3-eth';
+import { ALL_EVENTS_ABI, Web3Eth } from 'web3-eth';
 import { keccak256, toBigInt } from 'web3-utils';
-import type { DeploymentInfo, EthereumSignature, PriorityOpResponse } from './types';
+import {
+	DeploymentInfo,
+	EthereumSignature,
+	PriorityL2OpResponse,
+	PriorityOpResponse,
+} from './types';
 import { PriorityOpTree, PriorityQueueType } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
@@ -36,7 +47,9 @@ import {
 } from './constants';
 
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
-import type { Web3ZkSyncL1 } from './web3zksync-l1';
+import { Web3ZkSyncL1 } from './web3zksync-l1';
+import { decodeEventABI } from 'web3-eth';
+import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -510,6 +523,19 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
  *
  * @example
  */
+
+let ZkSyncABIEvents: Array<AbiEventFragment & { signature: string }> | null = null;
+
+const getZkSyncEvents = () => {
+	if (ZkSyncABIEvents === null) {
+		ZkSyncABIEvents = IZkSyncABI.filter(e => e.type === 'event').map(e => ({
+			...e,
+			signature: encodeEventSignature(jsonInterfaceMethodToString(e)),
+		}));
+	}
+	return ZkSyncABIEvents;
+};
+
 export function getL2HashFromPriorityOp(
 	txReceipt: web3Types.TransactionReceipt,
 	zkSyncAddress: web3.Address,
@@ -521,14 +547,9 @@ export function getL2HashFromPriorityOp(
 		}
 
 		try {
-			// TODO: implement at web3.js Contract the parsing of the logs similar to new ethers.Interface(ABI).parseLog(...)
-			// @ts-ignore
-			const priorityQueueLog = ZkSyncMainContract.parseLog({
-				topics: log.topics as string[],
-				data: log.data,
-			});
-			if (priorityQueueLog && priorityQueueLog.args.txHash !== null) {
-				txHash = priorityQueueLog.args.txHash;
+			const decoded = decodeEventABI(ALL_EVENTS_ABI, log as LogsInput, getZkSyncEvents());
+			if (decoded && decoded.returnValues && decoded.returnValues.txHash !== null) {
+				txHash = decoded.returnValues.txHash ? String(decoded.returnValues.txHash) : null;
 			}
 		} catch {
 			// skip
@@ -603,12 +624,12 @@ export function undoL1ToL2Alias(address: string): string {
  */
 export async function getERC20DefaultBridgeData(
 	l1TokenAddress: string,
-	context: web3.Web3Context, // or maybe use RpcMethods?
+	context: web3.Web3, // or maybe use RpcMethods?
 ): Promise<string> {
 	if (isAddressEq(l1TokenAddress, LEGACY_ETH_ADDRESS)) {
 		l1TokenAddress = ETH_ADDRESS_IN_CONTRACTS;
 	}
-	const token = new web3Contract.Contract(IERC20ABI, l1TokenAddress, context);
+	const token = new context.eth.Contract(IERC20ABI, l1TokenAddress);
 	const name = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
 		? 'Ether'
 		: await token.methods.name().call();
@@ -1034,7 +1055,19 @@ export async function waitTxByHashConfirmation(
 }
 
 export const getPriorityOpResponse = (
-	context: Web3ZkSyncL2 | Web3ZkSyncL1,
+	context: Web3ZkSyncL1 | Web3ZkSyncL2,
+	l1TxPromise: Promise<TransactionHash>,
+	contextL2?: Web3ZkSyncL2,
+): PriorityOpResponse => {
+	if (context instanceof Web3ZkSyncL1) {
+		return getPriorityOpL1Response(context, l1TxPromise, contextL2);
+	} else {
+		return getPriorityOpL2Response(context, l1TxPromise);
+	}
+};
+
+export const getPriorityOpL1Response = (
+	context: Web3ZkSyncL1,
 	l1TxPromise: Promise<TransactionHash>,
 	contextL2?: Web3ZkSyncL2,
 ): PriorityOpResponse => {
@@ -1049,9 +1082,9 @@ export const getPriorityOpResponse = (
 		},
 		waitFinalize: async () => {
 			const hash = await l1TxPromise;
-			const l2TxHash = await (context as Web3ZkSyncL2).getL2TransactionFromPriorityOp(
-				context,
-				hash,
+			const receipt = await waitTxReceipt(context.eth, hash);
+			const l2TxHash = await (contextL2 as Web3ZkSyncL2).getL2TransactionFromPriorityOp(
+				receipt,
 			);
 
 			if (!contextL2) {
@@ -1069,18 +1102,38 @@ export const getPriorityOpResponse = (
 	};
 };
 
+export const getPriorityOpL2Response = (
+	context: Web3ZkSyncL2,
+	txPromise: Promise<TransactionHash>,
+): PriorityL2OpResponse => {
+	return {
+		wait: async () => {
+			const hash = await txPromise;
+			return waitTxByHashConfirmation(context.eth, hash, 1);
+		},
+		waitFinalize: async () => {
+			const hash = await txPromise;
+
+			return await waitTxByHashConfirmationFinalized(context.eth, hash, 1, 'finalized');
+		},
+	};
+};
+
 export async function waitTxByHashConfirmationFinalized(
 	web3Eth: Web3Eth,
 	txHash: TransactionHash,
 	waitConfirmations = 1,
+	blogTag?: BlockNumberOrTag,
 ): Promise<TransactionReceipt> {
 	const receipt = await waitTxReceipt(web3Eth, txHash);
 	while (true) {
-		const block = await web3Eth.getBlock('finalized');
+		const block = await web3Eth.getBlock(blogTag ?? 'latest');
 		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
 			return receipt;
 		}
 		await sleep(500);
+		// 3298012n // block.number
+		// 3303874n
 	}
 }
 
