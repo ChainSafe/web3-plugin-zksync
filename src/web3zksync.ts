@@ -75,8 +75,9 @@ export class Web3ZkSync extends Web3.Web3 {
 	constructor(
 		providerOrContext?: web3Types.SupportedProviders<any> | Web3ContextInitOptions | string,
 	) {
-		super(providerOrContext);
-
+		// @ts-ignore
+		super(providerOrContext as web3Types.SupportedProviders<any>);
+		// @ts-ignore
 		this._rpc = new RpcMethods(this.requestManager);
 
 		this._contractAddresses = {};
