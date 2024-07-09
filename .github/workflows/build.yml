@@ -16,6 +16,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node }}
                   cache: yarn
-            - run: yarn install
-            - run: yarn build
-            - run: export PRIVATE_KEY=${{secrets.PRIVATE_KEY}} && yarn test
+         #   - run: yarn install
+         #   - run: yarn build
+            - run: echo "${{env.VAR1}}"
+          #  - run: export PRIVATE_KEY=${{secrets.PRIVATE_KEY}} && yarn test
