@@ -817,6 +817,11 @@ export interface BridgeAddresses {
 	l2SharedDefaultBridge: Address;
 }
 
+export interface ContractsAddresses extends BridgeAddresses {
+	mainContract: string;
+	bridgehubContractAddress: string;
+}
+
 export interface L2ToL1Proof {
 	proof: HexString[];
 	id: Numbers;
