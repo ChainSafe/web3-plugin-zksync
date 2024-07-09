@@ -19,5 +19,3 @@ jobs:
             - run: yarn install
             - run: yarn build
             - run: yarn test
-              env:
-                  PRIVATE_KEY: '${{ secrets.PRIVATE_KEY }}'
