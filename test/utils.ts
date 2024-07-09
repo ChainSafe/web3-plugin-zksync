@@ -1,4 +1,6 @@
 export const ADDRESS1 = '0x36615Cf349d7F6344891B1e7CA7C72883F5dc049';
+export const ADDRESS3 = '0xa61464658AfeAf65CccaaFD3a512b69A83B77618';
+
 export const PRIVATE_KEY1 = '0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110';
 export const MNEMONIC1 =
 	'stuff slice staff easily soup parent arm payment cotton trade scatter struggle';

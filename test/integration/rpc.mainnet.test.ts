@@ -13,6 +13,7 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 
 	beforeAll(() => {
 		web3 = new Web3();
+		// @ts-ignore
 		web3.registerPlugin(new ZkSyncPlugin('https://mainnet.era.zksync.io'));
 	});
 

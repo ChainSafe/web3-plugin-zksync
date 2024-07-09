@@ -104,9 +104,18 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 * @param providerOrContextL2 - The provider or context for the L2 network
 	 */
 	constructor(
-		providerOrContextL2: web3Types.SupportedProviders<any> | Web3ContextInitOptions | string,
+		providerOrContextL2:
+			| string
+			| web3Types.SupportedProviders<any>
+			| Web3ContextInitOptions
+			| Web3ZkSyncL2,
 	) {
-		super(providerOrContextL2);
+		super(
+			providerOrContextL2 as
+				| string
+				| web3Types.SupportedProviders<any>
+				| Web3ContextInitOptions,
+		);
 		if (providerOrContextL2 instanceof Web3ZkSyncL2) {
 			this.L2 = providerOrContextL2;
 		} else {
@@ -165,8 +174,16 @@ export class ZkSyncPlugin extends Web3PluginBase {
 					constants.CONTRACT_DEPLOYER_ADDRESS,
 					this.L2,
 				),
-				L1MessengerContract: new Contract(IL1MessengerABI, constants.L1_MESSENGER_ADDRESS, this.L2),
-				NonceHolderContract: new Contract(INonceHolderABI, constants.NONCE_HOLDER_ADDRESS, this.L2),
+				L1MessengerContract: new Contract(
+					IL1MessengerABI,
+					constants.L1_MESSENGER_ADDRESS,
+					this.L2,
+				),
+				NonceHolderContract: new Contract(
+					INonceHolderABI,
+					constants.NONCE_HOLDER_ADDRESS,
+					this.L2,
+				),
 				L2BridgeContract: new Contract(IL2BridgeABI, l2SharedDefaultBridge, this.L2),
 			},
 		};
@@ -220,7 +237,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 */
 	get rpc(): RpcMethods {
 		if (!this._rpc) {
-			this._rpc = new RpcMethods(this.L2.requestManager as unknown as Web3RequestManager<unknown>);
+			this._rpc = new RpcMethods(
+				this.L2.requestManager as unknown as Web3RequestManager<unknown>,
+			);
 		}
 		return this._rpc;
 	}
@@ -235,8 +254,16 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 * For example, if the L1 or L2 providers were changed from testnet to mainnet, this method should be called.
 	 */
 	public updateProviders(
-		contextL1: Web3ZkSyncL1 | web3Types.SupportedProviders<any> | Web3ContextInitOptions | string,
-		contextL2: Web3ZkSyncL2 | web3Types.SupportedProviders<any> | Web3ContextInitOptions | string,
+		contextL1:
+			| Web3ZkSyncL1
+			| web3Types.SupportedProviders<any>
+			| Web3ContextInitOptions
+			| string,
+		contextL2:
+			| Web3ZkSyncL2
+			| web3Types.SupportedProviders<any>
+			| Web3ContextInitOptions
+			| string,
 	) {
 		this.L1 = contextL1 instanceof Web3ZkSyncL1 ? contextL1 : new Web3ZkSyncL1(contextL1);
 		this.L2 = contextL2 instanceof Web3ZkSyncL2 ? contextL2 : new Web3ZkSyncL2(contextL2);
@@ -285,7 +312,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l1Token;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
@@ -311,7 +340,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 						return l2WethToken;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 

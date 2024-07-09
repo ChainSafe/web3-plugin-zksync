@@ -21,8 +21,7 @@ describe('wallet', () => {
 	const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || web3Accounts.create().privateKey;
 	const wallet = new ZKSyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
 
-	it.only('should deposit', async () => {
-		console.log(wallet.getAddress());
+	it('should deposit', async () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),

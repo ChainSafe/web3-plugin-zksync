@@ -2,6 +2,9 @@ import type { Transaction } from 'web3-types';
 import { ethRpcMethods } from 'web3-rpc-methods';
 
 import { Web3ZkSyncL2 } from '../../src';
+import { getPriorityOpResponse } from '../../lib/utils';
+import { Web3ZkSyncL1 } from '../../lib';
+import { PriorityL1OpResponse } from '../../src/types';
 
 jest.mock('web3-rpc-methods');
 
@@ -44,12 +47,11 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 
 		const txPromise = web3ZkSyncL2.sendRawTransaction(signed);
 
-		const priorityOpResponse = await web3ZkSyncL2.getPriorityOpResponse(
-			web3ZkSyncL2,
-			txPromise,
-		);
+		const priorityOpResponse = await getPriorityOpResponse(new Web3ZkSyncL1(), txPromise);
 		// 'The waitL1Commit function should be properly initialized'
-		expect(typeof priorityOpResponse.waitL1Commit).toEqual('function');
+		expect(typeof (priorityOpResponse as PriorityL1OpResponse).waitL1Commit).toEqual(
+			'function',
+		);
 		// 'The wait function should be properly initialized'
 		expect(typeof priorityOpResponse.wait).toBe('function');
 		// 'The waitFinalize function should be properly initialized'
