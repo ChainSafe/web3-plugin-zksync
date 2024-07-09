@@ -3,9 +3,9 @@ import { ZkSyncPlugin } from '../../src';
 
 describe('ZkSyncPlugin tests', () => {
 	it('should register ZkSync plugin on Web3Context instance', () => {
-		const web3 = new Web3('http://some-rpc-url-l1.com');
+		const web3 = new Web3('https://sepolia.era.zksync.dev');
 		// @ts-ignore
-		web3.registerPlugin(new ZkSyncPlugin('http://some-rpc-url-l2.com'));
+		web3.registerPlugin(new ZkSyncPlugin('https://sepolia.era.zksync.dev'));
 		expect(web3.zkSync).toBeDefined();
 	});
 });

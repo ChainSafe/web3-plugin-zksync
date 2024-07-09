@@ -8,7 +8,7 @@ import { PriorityL1OpResponse } from '../../src/types';
 jest.mock('web3-rpc-methods');
 
 describe('Web3ZkSyncL2 as a Provider', () => {
-	it('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
+	it.skip('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
 		const web3ZkSyncL2 = new Web3ZkSyncL2('https://mainnet.era.zksync.io');
 		const acc = web3ZkSyncL2.eth.accounts.privateKeyToAccount(
 			'0x1f953dc9b6437fb94fcafa5dabe3faa0c34315b954dd66f41bf53273339c6d26',

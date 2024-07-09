@@ -20,7 +20,7 @@ describe('wallet', () => {
 	const l2Provider = Web3ZkSyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
 	const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || web3Accounts.create().privateKey;
 	const wallet = new ZKSyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
-
+	console.log('acc-test', String(process.env.PRIVATE_KEY).slice(0, 10));
 	it('should deposit', async () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,
