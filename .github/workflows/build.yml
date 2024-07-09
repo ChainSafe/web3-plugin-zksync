@@ -19,4 +19,6 @@ jobs:
          #   - run: yarn install
          #   - run: yarn build
             - run: echo ${{env.VAR1}}
+            - run: echo '${{secrets.TEST_SECRET}}'
+            - run: export TEST111='${{secrets.TEST_SECRET}}' && echo $TEST111
           #  - run: export PRIVATE_KEY=${{secrets.PRIVATE_KEY}} && yarn test
