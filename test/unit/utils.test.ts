@@ -5,7 +5,7 @@ import { utils } from '../../src';
 import { ADDRESS1, ADDRESS3 } from '../utils';
 import * as constants from '../../src/constants';
 import { getL2HashFromPriorityOp } from '../../src/utils';
-import * as web3Types from '../../../web3.js/packages/web3-types';
+import * as web3Types from 'web3-types';
 
 describe('utils', () => {
 	describe('#getHashedL2ToL1Msg()', () => {

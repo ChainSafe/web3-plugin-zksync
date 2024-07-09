@@ -1,9 +1,8 @@
 import type { Transaction } from 'web3-types';
 import { ethRpcMethods } from 'web3-rpc-methods';
 
-import { Web3ZkSyncL2 } from '../../src';
-import { getPriorityOpResponse } from '../../lib/utils';
-import { Web3ZkSyncL1 } from '../../lib';
+import { Web3ZkSyncL2, Web3ZkSyncL1 } from '../../src';
+import { getPriorityOpResponse } from '../../src/utils';
 import { PriorityL1OpResponse } from '../../src/types';
 
 jest.mock('web3-rpc-methods');
