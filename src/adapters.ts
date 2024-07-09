@@ -8,8 +8,9 @@ import { toBigInt, toHex, toNumber } from 'web3-utils';
 import type { Transaction, TransactionHash, TransactionReceipt } from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 
-import { EIP712Signer, getPriorityOpResponse } from './utils';
+import type { EIP712Signer } from './utils';
 import {
+	getPriorityOpResponse,
 	checkBaseCost,
 	estimateCustomBridgeDepositL2Gas,
 	estimateDefaultBridgeDepositL2Gas,

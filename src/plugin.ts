@@ -20,7 +20,7 @@ import { EIP712Transaction } from './Eip712';
 import { ZKSyncWallet } from './zksync-wallet';
 import { Web3ZkSyncL2 } from './web3zksync-l2';
 import { Web3ZkSyncL1 } from './web3zksync-l1';
-import { ContractsAddresses } from './types';
+import type { ContractsAddresses } from './types';
 
 interface ZKSyncWalletConstructor {
 	new (privateKey: string): ZKSyncWallet;

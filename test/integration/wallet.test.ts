@@ -1,5 +1,9 @@
 import * as ethAccounts from 'web3-eth-accounts';
 import * as web3Utils from 'web3-utils';
+import { toBigInt } from 'web3-utils';
+import type { Transaction } from 'web3-types';
+import type { Address } from 'web3';
+import { privateKeyToAccount } from 'web3-eth-accounts';
 import { utils, Web3ZkSyncL2, ZKSyncWallet, Web3ZkSyncL1 } from '../../src';
 import {
 	IS_ETH_BASED,
@@ -12,20 +16,18 @@ import {
 	PAYMASTER,
 	deepEqualExcluding,
 } from '../utils';
-import { Network as ZkSyncNetwork, Eip712TxData } from '../../src/types';
+import type { Eip712TxData } from '../../src/types';
+import { Network as ZkSyncNetwork } from '../../src/types';
 import {
 	ETH_ADDRESS,
 	ETH_ADDRESS_IN_CONTRACTS,
 	L2_BASE_TOKEN_ADDRESS,
 	LEGACY_ETH_ADDRESS,
+	DEFAULT_GAS_PER_PUBDATA_LIMIT,
+	EIP712_TX_TYPE,
 } from '../../src/constants';
 import { IERC20ABI } from '../../src/contracts/IERC20';
 import { getPaymasterParams } from '../../src/paymaster-utils';
-import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from '../../src/constants';
-import { toBigInt } from 'web3-utils';
-import { Transaction } from 'web3-types';
-import { Address } from 'web3';
-import { privateKeyToAccount } from 'web3-eth-accounts';
 
 jest.setTimeout(5 * 60000);
 

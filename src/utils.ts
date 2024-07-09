@@ -13,15 +13,17 @@ import type {
 	TransactionReceipt,
 } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
-import { ALL_EVENTS_ABI, Web3Eth } from 'web3-eth';
+import type { Web3Eth } from 'web3-eth';
+import { ALL_EVENTS_ABI, decodeEventABI } from 'web3-eth';
 import { keccak256, toBigInt } from 'web3-utils';
-import {
+import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
+import { PriorityOpTree, PriorityQueueType } from './types';
+import type {
 	DeploymentInfo,
 	EthereumSignature,
 	PriorityL2OpResponse,
 	PriorityOpResponse,
 } from './types';
-import { PriorityOpTree, PriorityQueueType } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
 import { IContractDeployerABI } from './contracts/IContractDeployer';
@@ -48,8 +50,6 @@ import {
 
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import { Web3ZkSyncL1 } from './web3zksync-l1';
-import { decodeEventABI } from 'web3-eth';
-import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -1093,11 +1093,7 @@ export const getPriorityOpL1Response = (
 				} as TransactionReceipt;
 			}
 
-			return await waitTxByHashConfirmationFinalized(
-				(contextL2 as Web3ZkSyncL2).eth,
-				l2TxHash,
-				1,
-			);
+			return await waitTxByHashConfirmationFinalized(contextL2.eth, l2TxHash, 1);
 		},
 	};
 };
