@@ -15,7 +15,6 @@ describe('ZkSyncPlugin rpc tests', () => {
 
 	it('contracts only works after registering the plugin', async () => {
 		expect(zkSync.Contracts).rejects.toThrow();
-		// @ts-ignore
 		web3.registerPlugin(zkSync);
 
 		// after registering the plugin, the Contracts property should be  without throwing an error

@@ -12,7 +12,6 @@ describe('ZkSyncPlugin rpc tests', () => {
 
 	beforeAll(() => {
 		web3 = new Web3();
-		// @ts-ignore
 		web3.registerPlugin(new ZkSyncPlugin('https://sepolia.era.zksync.dev'));
 	});
 
