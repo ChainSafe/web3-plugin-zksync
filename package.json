@@ -1,6 +1,6 @@
 {
 	"name": "web3-plugin-zksync",
-	"version": "0.1.5",
+	"version": "1.0.0-alpha",
 	"description": "web3.js plugin for ZkSync",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
