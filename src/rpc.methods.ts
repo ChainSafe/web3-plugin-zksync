@@ -1,11 +1,7 @@
 import type { Web3RequestManager } from 'web3-core';
 import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
-import * as web3Accounts from 'web3-eth-accounts';
-import {
-	DEFAULT_RETURN_FORMAT,
-	// Web3BaseProvider
-} from 'web3';
+import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
 import type {
 	BatchDetails,
@@ -18,7 +14,7 @@ import type {
 	TransactionDetails,
 	WalletBalances,
 	TransactionRequest,
-	TransactionOverrides,
+	Address,
 } from './types';
 import {
 	AddressSchema,
@@ -35,12 +31,6 @@ import {
 	TransactionDetailsSchema,
 	UintSchema,
 } from './schemas';
-import {
-	ETH_ADDRESS_IN_CONTRACTS,
-	L2_BASE_TOKEN_ADDRESS,
-	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
-} from './constants';
-import { isAddressEq } from './utils';
 
 // The ZkSync methods described here https://docs.zksync.io/build/api.html
 
@@ -48,36 +38,8 @@ import { isAddressEq } from './utils';
 export class RpcMethods {
 	requestManager: Web3RequestManager<unknown>;
 
-	protected _contractAddresses: {
-		bridgehubContract?: web3Types.Address;
-		mainContract?: web3Types.Address;
-		erc20BridgeL1?: web3Types.Address;
-		erc20BridgeL2?: web3Types.Address;
-		wethBridgeL1?: web3Types.Address;
-		wethBridgeL2?: web3Types.Address;
-		sharedBridgeL1?: web3Types.Address;
-		sharedBridgeL2?: web3Types.Address;
-		baseToken?: web3Types.Address;
-	};
-
-	protected contractAddresses(): {
-		bridgehubContract?: web3Types.Address;
-		mainContract?: web3Types.Address;
-		erc20BridgeL1?: web3Types.Address;
-		erc20BridgeL2?: web3Types.Address;
-		wethBridgeL1?: web3Types.Address;
-		wethBridgeL2?: web3Types.Address;
-		sharedBridgeL1?: web3Types.Address;
-		sharedBridgeL2?: web3Types.Address;
-		baseToken?: web3Types.Address;
-	} {
-		return this._contractAddresses;
-	}
-
 	constructor(requestManager: Web3RequestManager<unknown>) {
 		this.requestManager = requestManager;
-
-		this._contractAddresses = {};
 	}
 
 	private async _send(method: string, params: unknown[]): Promise<unknown> {
@@ -236,31 +198,13 @@ export class RpcMethods {
 	/**
 	 * Returns the L1 base token address.
 	 */
-	async getBaseTokenContractAddress(): Promise<web3Types.Address> {
-		if (!this.contractAddresses().baseToken) {
-			this.contractAddresses().baseToken = (await this._send(
-				'zks_getBaseTokenL1Address',
-				[],
-			)) as string;
-		}
-		return web3Utils.toChecksumAddress(this.contractAddresses().baseToken!);
-	}
+	async getBaseTokenL1Address(): Promise<web3Types.Address> {
+		const baseTokenL1Address = (await this._send(
+			'zks_getBaseTokenL1Address',
+			[],
+		)) as web3Types.Address;
 
-	/**
-	 * Returns whether the chain is ETH-based.
-	 */
-	async isEthBasedChain(): Promise<boolean> {
-		return isAddressEq(await this.getBaseTokenContractAddress(), ETH_ADDRESS_IN_CONTRACTS);
-	}
-
-	/**
-	 * Returns whether the `token` is the base token.
-	 */
-	async isBaseToken(token: web3Types.Address): Promise<boolean> {
-		return (
-			isAddressEq(token, await this.getBaseTokenContractAddress()) ||
-			isAddressEq(token, L2_BASE_TOKEN_ADDRESS)
-		);
+		return web3Utils.toChecksumAddress(baseTokenL1Address);
 	}
 
 	/**
@@ -273,46 +217,6 @@ export class RpcMethods {
 		// Unlike contract's addresses, the testnet paymaster is not cached, since it can be trivially changed
 		// on the fly by the server and should not be relied on to be constant
 		return (await this._send('zks_getTestnetPaymaster', [])) as web3Types.Address | null;
-	}
-
-	/**
-	 * Returns the addresses of the default zkSync Era bridge contracts on both L1 and L2.
-	 *
-	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getbridgecontracts zks_getBridgeContracts} JSON-RPC method.
-	 */
-	async getDefaultBridgeAddresses(): Promise<{
-		erc20L1: string;
-		erc20L2: string;
-		wethL1: string;
-		wethL2: string;
-		sharedL1: string;
-		sharedL2: string;
-	}> {
-		if (!this.contractAddresses().erc20BridgeL1) {
-			const addresses: {
-				l1Erc20DefaultBridge: string;
-				l2Erc20DefaultBridge: string;
-				l1WethBridge: string;
-				l2WethBridge: string;
-				l1SharedDefaultBridge: string;
-				l2SharedDefaultBridge: string;
-			} = (await this._send('zks_getBridgeContracts', [])) as any;
-
-			this.contractAddresses().erc20BridgeL1 = addresses.l1Erc20DefaultBridge;
-			this.contractAddresses().erc20BridgeL2 = addresses.l2Erc20DefaultBridge;
-			this.contractAddresses().wethBridgeL1 = addresses.l1WethBridge;
-			this.contractAddresses().wethBridgeL2 = addresses.l2WethBridge;
-			this.contractAddresses().sharedBridgeL1 = addresses.l1SharedDefaultBridge;
-			this.contractAddresses().sharedBridgeL2 = addresses.l2SharedDefaultBridge;
-		}
-		return {
-			erc20L1: this.contractAddresses().erc20BridgeL1!,
-			erc20L2: this.contractAddresses().erc20BridgeL2!,
-			wethL1: this.contractAddresses().wethBridgeL1!,
-			wethL2: this.contractAddresses().wethBridgeL2!,
-			sharedL1: this.contractAddresses().sharedBridgeL1!,
-			sharedL2: this.contractAddresses().sharedBridgeL2!,
-		};
 	}
 
 	/**
@@ -431,21 +335,6 @@ export class RpcMethods {
 	}
 
 	/**
-	 * Returns the address of the testnet paymaster: the paymaster that is available on testnets and enables paying fees in ERC-20 compatible tokens.
-	 *
-	 * @param returnFormat - The format of the return value.
-	 */
-	public async getTestnetPaymaster(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<web3Types.Address> {
-		return web3Utils.format(
-			AddressSchema,
-			await this._send('zks_getTestnetPaymaster', []),
-			returnFormat,
-		) as web3Types.Address;
-	}
-
-	/**
 	 * Given a transaction hash, and an index of the L2 to L1 log produced within the transaction, it returns the proof for the corresponding L2 to L1 log.
 	 *
 	 * The index of the log that can be obtained from the transaction receipt (it includes a list of every log produced by the transaction)
@@ -490,53 +379,17 @@ export class RpcMethods {
 	}
 
 	/**
-	 * Returns gas estimation for an L1 to L2 execute operation.
+	 * Retrieves the bridge hub contract address
 	 *
-	 * @param transaction The transaction details.
-	 * @param transaction.contractAddress The address of the contract.
-	 * @param transaction.calldata The transaction call data.
-	 * @param [transaction.caller] The caller's address.
-	 * @param [transaction.l2Value] The current L2 gas value.
-	 * @param [transaction.factoryDeps] An array of bytes containing contract bytecode.
-	 * @param [transaction.gasPerPubdataByte] The current gas per byte value.
-	 * @param [transaction.overrides] Transaction overrides including `gasLimit`, `gasPrice`, and `value`.
+	 * @param returnFormat - The format of the return value.
 	 */
-	// TODO (EVM-3): support refundRecipient for fee estimation
-	async estimateL1ToL2Execute(
-		transaction: {
-			contractAddress: web3Types.Address;
-			calldata: string;
-			caller?: web3Types.Address;
-			l2Value?: web3Types.Numbers;
-			factoryDeps?: web3Types.Bytes[];
-			gasPerPubdataByte?: web3Types.Numbers;
-			overrides?: TransactionOverrides;
-		},
+	public async getBridgehubContractAddress(
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<web3Types.Numbers> {
-		transaction.gasPerPubdataByte ??= REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT;
-
-		// If the `from` address is not provided, we use a random address, because
-		// due to storage slot aggregation, the gas estimation will depend on the address
-		// and so estimation for the zero address may be smaller than for the sender.
-		transaction.caller ??= web3Accounts.create().address;
-
-		const customData = {
-			gasPerPubdata: transaction.gasPerPubdataByte,
-		};
-		if (transaction.factoryDeps) {
-			Object.assign(customData, { factoryDeps: transaction.factoryDeps });
-		}
-
-		return await this.estimateGasL1ToL2(
-			{
-				from: transaction.caller,
-				data: transaction.calldata,
-				to: transaction.contractAddress,
-				value: transaction.l2Value ? web3Utils.toHex(transaction.l2Value) : undefined,
-				customData,
-			},
+	): Promise<Address> {
+		return web3Utils.format(
+			AddressSchema,
+			await this._send('zks_getBridgehubContract', []),
 			returnFormat,
-		);
+		) as Address;
 	}
 }

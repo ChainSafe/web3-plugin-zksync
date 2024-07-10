@@ -1,4 +1,5 @@
 import { Web3 } from 'web3';
+import { ethRpcMethods } from 'web3-rpc-methods';
 import { ZkSyncPlugin } from '../../src';
 import {
 	estimateData,
@@ -11,12 +12,12 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 	let web3: Web3;
 
 	beforeAll(() => {
-		web3 = new Web3('https://mainnet.era.zksync.io');
-		web3.registerPlugin(new ZkSyncPlugin());
+		web3 = new Web3();
+		web3.registerPlugin(new ZkSyncPlugin('https://mainnet.era.zksync.io'));
 	});
 
 	it('should get bridge addresses', async () => {
-		const res = await web3.zkSync.getDefaultBridgeAddresses();
+		const res = await web3.zkSync.L2.getDefaultBridgeAddresses();
 
 		expect(res.erc20L1).toBe('0x57891966931eb4bb6fb81430e6ce0a03aabde063');
 		expect(res.erc20L2).toBe('0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102');
@@ -53,5 +54,12 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 		const latestBatchDetails = await web3.zkSync.rpc.getL1BatchDetails(latestBatchIndex);
 		const blockDetails = await web3.zkSync.rpc.getBlockDetails(latestBatchDetails.number);
 		expect(blockDetails.number).toBeDefined();
+	});
+	it.skip('transactionReceipt', async () => {
+		const res = await ethRpcMethods.getTransactionReceipt(
+			web3.requestManager,
+			'0x8cee929f16b4738a8ae6cf4bd4f43d5be0e5f028e4db45a0bde6203ef242c30e',
+		);
+		console.log('res', res);
 	});
 });

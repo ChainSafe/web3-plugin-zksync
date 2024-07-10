@@ -1,8 +1,5 @@
 // import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
 import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
-// // TODO: // is it needed to be re-exported from web3
-// import { watchTransactionForConfirmations } from 'web3-eth/lib/types/utils/watch_transaction_for_confirmations.js';
-
 import type {
 	Bytes,
 	HexString,
@@ -15,10 +12,14 @@ import type {
 
 import type { RpcMethods } from './rpc.methods';
 
+export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
+
 export type { Bytes, HexString, Numbers } from 'web3-types';
 export interface TransactionOverrides extends Omit<Transaction, 'to' | 'data' | 'input'> {}
 
 export const ZeroAddress: Address = '0x0000000000000000000000000000000000000000';
+export const ZeroHash: string =
+	'0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /** 0x-prefixed, hex encoded, ethereum account address. */
 export type Address = string;
@@ -521,24 +522,33 @@ export interface L2ToL1Log {
  * A `TransactionRequest` is an extension of {@link ethers.TransactionRequest} with additional features for interacting
  * with zkSync Era.
  */
-export declare type TransactionRequest = TransactionWithSenderAPI & {
-	/** The custom data for EIP712 transaction metadata. */
-	customData?: null | Eip712Meta;
-};
+export declare type TransactionRequest = DeepWriteable<
+	TransactionWithSenderAPI & {
+		/** The custom data for EIP712 transaction metadata. */
+		customData?: null | Eip712Meta;
+		type?: TransactionWithSenderAPI['type'] & Numbers;
+	}
+>;
 
 /**
  * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
  * that waits to commit a L1 transaction, including when given on optional confirmation number.
  */
-export interface PriorityOpResponse extends Transaction {
+export interface PriorityL1OpResponse {
 	/**
 	 * Waits for the L1 transaction to be committed, including waiting for the specified number of confirmations.
 	 * @param confirmation The number of confirmations to wait for. Defaults to 1.
 	 * @returns A promise that resolves to the transaction receipt once committed.
 	 */
 	waitL1Commit(confirmation?: number): Promise<TransactionReceipt>;
+	wait(confirmation?: number): Promise<TransactionReceipt>;
+	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
 }
-
+export interface PriorityL2OpResponse {
+	wait(confirmation?: number): Promise<TransactionReceipt>;
+	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
+}
+export type PriorityOpResponse = PriorityL1OpResponse | PriorityL2OpResponse;
 /** A map containing accounts and their balances. */
 export type BalancesMap = { [key: string]: bigint };
 
@@ -803,6 +813,13 @@ export interface BridgeAddresses {
 	l2Erc20DefaultBridge: Address;
 	l1WethBridge: Address;
 	l2WethBridge: Address;
+	l1SharedDefaultBridge: Address;
+	l2SharedDefaultBridge: Address;
+}
+
+export interface ContractsAddresses extends BridgeAddresses {
+	mainContract: string;
+	bridgehubContractAddress: string;
 }
 
 export interface L2ToL1Proof {
@@ -860,17 +877,22 @@ export interface TypedDataField {
 	type: string;
 }
 
-export type Eip712TxData = FeeMarketEIP1559TxData & {
+export type Eip712TxData = Omit<FeeMarketEIP1559TxData, 'gasPrice'> & {
 	/** The custom data for EIP712 transaction metadata. */
 	customData?: null | Eip712Meta;
 	from?: Address;
 	hash?: string;
 	signature?: string;
+	/**
+	 * The transaction's gas price. To be used if maxPriorityFeePerGas and maxFeePerGas were not provided
+	 */
+	gasPrice?: Numbers | Uint8Array | null;
 };
+
 export type Eip712SignedInput = FeeMarketEIP1559TxData & {
 	customData?: null | Eip712Meta;
 	data: Bytes;
-	value: Bytes;
+	value: Numbers;
 	nonce: Numbers;
 	gasLimit: Numbers;
 	maxFeePerGas: Numbers;
@@ -883,3 +905,15 @@ export type Eip712SignedInput = FeeMarketEIP1559TxData & {
 	paymasterInput: Bytes;
 	[key: string]: unknown;
 };
+
+export type ZKTransactionReceipt = TransactionReceipt & {
+	l1BatchNumber: Numbers;
+	l1BatchTxIndex: Numbers;
+	l2ToL1Logs: L2ToL1Log[];
+	logs: TransactionReceipt['logs'] & {
+		l1BatchNumber: Numbers;
+	};
+};
+
+export interface OverridesReadOnly extends Omit<TransactionRequest, 'to' | 'data'> {}
+export type Overrides = DeepWriteable<OverridesReadOnly>;

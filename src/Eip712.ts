@@ -3,7 +3,7 @@ import type { Bytes, Eip712TypedData, Numbers } from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Utils from 'web3-utils';
 import type * as web3Accounts from 'web3-eth-accounts';
-import { BaseTransaction, toUint8Array } from 'web3-eth-accounts';
+import { BaseTransaction, bigIntToUint8Array, toUint8Array } from 'web3-eth-accounts';
 import { RLP } from '@ethereumjs/rlp';
 import type { Address } from 'web3';
 import {
@@ -62,27 +62,37 @@ function arrayToPaymasterParams(arr: Uint8Array): PaymasterParams | undefined {
 
 export class EIP712 {
 	static getSignInput(transaction: Eip712TxData): Eip712SignedInput {
-		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0n);
-		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
-		const gasPerPubdataByteLimit = toHex(
-			transaction.customData?.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT,
-		);
+		const maxFeePerGas = toBigInt(transaction.maxFeePerGas || transaction.gasPrice || 0n);
+		const maxPriorityFeePerGas = toBigInt(transaction.maxPriorityFeePerGas || maxFeePerGas);
+		const gasPerPubdataByteLimit =
+			transaction.customData?.gasPerPubdata || DEFAULT_GAS_PER_PUBDATA_LIMIT;
 		return {
 			txType: transaction.type || EIP712_TX_TYPE,
-			from: transaction.from ? toHex(transaction.from) : undefined,
-			to: transaction.to ? toHex(transaction.to) : undefined,
-			gasLimit: transaction.gasLimit ? toBigInt(transaction.gasLimit) : 0,
+			from: transaction.from
+				? typeof transaction.from === 'string'
+					? transaction.from
+					: toHex(transaction.from)
+				: undefined,
+			to: transaction.to
+				? typeof transaction.to === 'string'
+					? transaction.to
+					: toHex(transaction.to)
+				: undefined,
+			gasLimit: transaction.gasLimit ? toBigInt(transaction.gasLimit) : 0n,
 			gasPerPubdataByteLimit: gasPerPubdataByteLimit,
-			customData: transaction.customData,
 			maxFeePerGas,
 			maxPriorityFeePerGas,
 			paymaster: transaction.customData?.paymasterParams?.paymaster || ZERO_ADDRESS,
 			nonce: transaction.nonce ? toBigInt(transaction.nonce) : 0,
-			value: transaction.value ? toHex(transaction.value) : '0x0',
+			value: transaction.value ? toBigInt(transaction.value) : 0n,
 			data: transaction.data ? toHex(transaction.data) : '0x',
 			factoryDeps:
 				transaction.customData?.factoryDeps?.map((dep: Bytes) => hashBytecode(dep)) || [],
 			paymasterInput: transaction.customData?.paymasterParams?.paymasterInput || '0x',
+			customData:
+				transaction.customData && Object.keys(transaction.customData).length > 0
+					? transaction.customData
+					: undefined,
 		};
 	}
 
@@ -241,14 +251,17 @@ export class EIP712 {
 		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0);
 		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
 
-		const nonce = toHex(transaction.nonce || 0);
+		let gasLimitBytes = new Uint8Array();
+		if (transaction.gasLimit && toHex(transaction.gasLimit) !== '0x0') {
+			gasLimitBytes = toBytes(transaction.gasLimit);
+		}
+
+		const nonce = toBigInt(transaction.nonce || 0);
 		const fields: Array<Uint8Array | Uint8Array[] | string | number | string[]> = [
-			nonce === '0x0' ? new Uint8Array() : toBytes(nonce),
+			nonce === 0n ? new Uint8Array() : bigIntToUint8Array(nonce),
 			maxPriorityFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxPriorityFeePerGas),
 			maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
-			toHex(transaction.gasLimit || 0) === '0x0'
-				? new Uint8Array()
-				: toBytes(transaction.gasLimit!),
+			gasLimitBytes,
 			transaction.to ? web3Utils.toChecksumAddress(toHex(transaction.to)) : '0x',
 			toHex(transaction.value || 0) === '0x0'
 				? new Uint8Array()
@@ -320,6 +333,31 @@ export class EIP712Signer {
 
 	sign(tx: Eip712TxData): SignatureObject | undefined {
 		return new EIP712Transaction(tx).sign(toBytes(this.web3Account.privateKey)).getSignature();
+	}
+
+	/**
+	 * Hashes the transaction request using EIP712.
+	 *
+	 * @param transaction The transaction request that needs to be hashed.
+	 * @returns A hash (digest) of the transaction request.
+	 *
+	 * @throws {Error} If `transaction.chainId` is not set.
+	 */
+	static getSignedDigest(transaction: Eip712TxData): Bytes {
+		if (!transaction.chainId) {
+			throw Error("Transaction chainId isn't set!");
+		}
+
+		return EIP712.txHash(transaction);
+
+		// const domain = {
+		// 	name: 'zkSync',
+		// 	version: '2',
+		// 	chainId: transaction.chainId,
+		// };
+		// TODO: Implement replacement of the following line
+		// @ts-ignore
+		// return ethers.TypedDataEncoder.hash(domain, EIP712_TYPES, EIP712.getSignInput(transaction));
 	}
 
 	/**

@@ -1,28 +1,29 @@
-// import { AbiCoder, BigNumberish, Bytes, ethers, SignatureLike } from 'ethers';
-
 import { sha256 } from 'ethereum-cryptography/sha256.js';
-// import { secp256k1 } from '@noble/curves/secp256k1';
-// import { keccak256 } from '@ethersproject/keccak256';
-
 import * as web3 from 'web3';
-
 import * as web3Utils from 'web3-utils';
 import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Types from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
-import * as web3Contract from 'web3-eth-contract';
-import type { Bytes } from 'web3-types';
+import type {
+	AbiEventFragment,
+	BlockNumberOrTag,
+	Bytes,
+	LogsInput,
+	TransactionHash,
+	TransactionReceipt,
+} from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
-import type { DeploymentInfo, EthereumSignature } from './types';
-import {
-	// PaymasterParams,
-	PriorityOpTree,
-	PriorityQueueType,
-	// Transaction,
-	// TransactionRequest,
+import type { Web3Eth } from 'web3-eth';
+import { ALL_EVENTS_ABI, decodeEventABI } from 'web3-eth';
+import { keccak256, toBigInt } from 'web3-utils';
+import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
+import { PriorityOpTree, PriorityQueueType } from './types';
+import type {
+	DeploymentInfo,
+	EthereumSignature,
+	PriorityL2OpResponse,
+	PriorityOpResponse,
 } from './types';
-// import { EIP712Signer } from './signer';
-// import { IERC20__factory } from './typechain';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
 import { IBridgehubABI } from './contracts/IBridgehub';
 import { IContractDeployerABI } from './contracts/IContractDeployer';
@@ -47,13 +48,10 @@ import {
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import type { RpcMethods } from './rpc.methods';
+import type { Web3ZkSyncL2 } from './web3zksync-l2';
+import { Web3ZkSyncL1 } from './web3zksync-l1';
 
-export * from './Eip712';
-
-// export * from './paymaster-utils';
-// export * from './smart-account-utils';
-// export { EIP712_TYPES } from './signer';
+export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
 /**
  * The web3.js Contract instance for the `ZkSync` interface.
@@ -114,12 +112,17 @@ export const NonceHolderContract = new web3.Contract(INonceHolderABI);
  * consider adding the next few functions to web3.js:
  * */
 
-export const toBytes = (number: web3Types.Numbers | Uint8Array) =>
-	web3Utils.hexToBytes(
+export const evenHex = (hex: string) => {
+	return hex.length % 2 === 0 ? hex : `0x0${hex.slice(2)}`;
+};
+export const toBytes = (number: web3Types.Numbers | Uint8Array) => {
+	const hex =
 		typeof number === 'number' || typeof number === 'bigint'
 			? web3Utils.numberToHex(number)
-			: web3Utils.bytesToHex(number),
-	);
+			: web3Utils.bytesToHex(number);
+
+	return web3Utils.hexToBytes(evenHex(hex));
+};
 
 export function concat(bytes: web3Types.Bytes[]): string {
 	return '0x' + bytes.map(d => web3Utils.toHex(d).substring(2)).join('');
@@ -202,6 +205,7 @@ export class SignatureObject {
 			this.v = BigInt(signature.v!);
 		}
 	}
+
 	static getNormalizedV(v: number): 27 | 28 {
 		if (v === 0 || v === 27) {
 			return 27;
@@ -213,15 +217,19 @@ export class SignatureObject {
 		// Otherwise, EIP-155 v means odd is 27 and even is 28
 		return v & 1 ? 27 : 28;
 	}
+
 	concat(datas: ReadonlyArray<Bytes>): string {
 		return '0x' + datas.map(d => web3Utils.toHex(d).substring(2)).join('');
 	}
+
 	get yParity(): 0 | 1 {
 		return this.v === 27n ? 0 : 1;
 	}
+
 	public get serialized(): string {
 		return this.concat([this.r, this.s, this.yParity ? '0x1c' : '0x1b']);
 	}
+
 	public toString() {
 		return `${this.r}${this.s.slice(2)}${web3Utils.toHex(this.v).slice(2)}`;
 	}
@@ -515,6 +523,19 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
  *
  * @example
  */
+
+let ZkSyncABIEvents: Array<AbiEventFragment & { signature: string }> | null = null;
+
+const getZkSyncEvents = () => {
+	if (ZkSyncABIEvents === null) {
+		ZkSyncABIEvents = IZkSyncABI.filter(e => e.type === 'event').map(e => ({
+			...e,
+			signature: encodeEventSignature(jsonInterfaceMethodToString(e)),
+		}));
+	}
+	return ZkSyncABIEvents;
+};
+
 export function getL2HashFromPriorityOp(
 	txReceipt: web3Types.TransactionReceipt,
 	zkSyncAddress: web3.Address,
@@ -526,14 +547,9 @@ export function getL2HashFromPriorityOp(
 		}
 
 		try {
-			// TODO: implement at web3.js Contract the parsing of the logs similar to new ethers.Interface(ABI).parseLog(...)
-			// @ts-ignore
-			const priorityQueueLog = ZkSyncMainContract.parseLog({
-				topics: log.topics as string[],
-				data: log.data,
-			});
-			if (priorityQueueLog && priorityQueueLog.args.txHash !== null) {
-				txHash = priorityQueueLog.args.txHash;
+			const decoded = decodeEventABI(ALL_EVENTS_ABI, log as LogsInput, getZkSyncEvents());
+			if (decoded && decoded.returnValues && decoded.returnValues.txHash !== null) {
+				txHash = decoded.returnValues.txHash ? String(decoded.returnValues.txHash) : null;
 			}
 		} catch {
 			// skip
@@ -608,13 +624,12 @@ export function undoL1ToL2Alias(address: string): string {
  */
 export async function getERC20DefaultBridgeData(
 	l1TokenAddress: string,
-	context: web3.Web3Context, // or maybe use RpcMethods?
+	context: web3.Web3, // or maybe use RpcMethods?
 ): Promise<string> {
 	if (isAddressEq(l1TokenAddress, LEGACY_ETH_ADDRESS)) {
 		l1TokenAddress = ETH_ADDRESS_IN_CONTRACTS;
 	}
-	const token = new web3Contract.Contract(IERC20ABI, l1TokenAddress, context);
-
+	const token = new context.eth.Contract(IERC20ABI, l1TokenAddress);
 	const name = isAddressEq(l1TokenAddress, ETH_ADDRESS_IN_CONTRACTS)
 		? 'Ether'
 		: await token.methods.name().call();
@@ -625,7 +640,10 @@ export async function getERC20DefaultBridgeData(
 		? 18
 		: await token.methods.decimals().call();
 
-	return web3Abi.encodeParameters(['string', 'string', 'uint256'], [name, symbol, decimals]);
+	return web3Abi.encodeParameters(
+		['string', 'string', 'uint256'],
+		[name, symbol, Number(decimals)],
+	);
 }
 
 /**
@@ -785,11 +803,11 @@ async function isSignatureCorrect(
  * const message = "Hello, world!";
  * const signature = await new Wallet(PRIVATE_KEY).signMessage(message);
  * const isValidSignature = await utils.isMessageSignatureCorrect(
- * 			web3,
- * 			ADDRESS,
- * 			message,
- * 			signature,
- * 		);
+ *            web3,
+ *            ADDRESS,
+ *            message,
+ *            signature,
+ *        );
  * // isValidSignature = true
  */
 export async function isMessageSignatureCorrect(
@@ -874,8 +892,8 @@ export async function isTypedDataSignatureCorrect(
  *
  */
 export async function estimateDefaultBridgeDepositL2Gas(
-	providerL1: web3.Web3Eth,
-	providerL2: RpcMethods,
+	providerL1: web3.Web3,
+	providerL2: Web3ZkSyncL2,
 	token: web3.Address,
 	amount: web3Types.Numbers,
 	to: web3.Address,
@@ -902,7 +920,7 @@ export async function estimateDefaultBridgeDepositL2Gas(
 		const l2BridgeAddress = bridgeAddresses.sharedL2;
 		const bridgeData = await getERC20DefaultBridgeData(token, providerL1);
 
-		return await estimateCustomBridgeDepositL2Gas(
+		return estimateCustomBridgeDepositL2Gas(
 			providerL2,
 			l1BridgeAddress,
 			l2BridgeAddress,
@@ -959,7 +977,7 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
  *
  */
 export async function estimateCustomBridgeDepositL2Gas(
-	providerL2: RpcMethods,
+	providerL2: Web3ZkSyncL2,
 	l1BridgeAddress: web3.Address,
 	l2BridgeAddress: web3.Address,
 	token: web3.Address,
@@ -971,7 +989,7 @@ export async function estimateCustomBridgeDepositL2Gas(
 	l2Value?: web3Types.Numbers,
 ): Promise<web3Types.Numbers> {
 	const calldata = await getERC20BridgeCalldata(token, from, to, amount, bridgeData);
-	return await providerL2.estimateL1ToL2Execute({
+	return providerL2.estimateL1ToL2Execute({
 		caller: applyL1ToL2Alias(l1BridgeAddress),
 		contractAddress: l2BridgeAddress,
 		gasPerPubdataByte: gasPerPubdataByte,
@@ -1008,4 +1026,128 @@ export function toJSON(object: any): string {
  */
 export function isAddressEq(a: web3.Address, b: web3.Address): boolean {
 	return a.toLowerCase() === b.toLowerCase();
+}
+
+export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
+	while (true) {
+		try {
+			const receipt = await web3Eth.getTransactionReceipt(txHash);
+			if (receipt && receipt.blockNumber) {
+				return receipt;
+			}
+		} catch {}
+		await sleep(500);
+	}
+}
+export async function waitTxByHashConfirmation(
+	web3Eth: Web3Eth,
+	txHash: TransactionHash,
+	waitConfirmations = 1,
+): Promise<TransactionReceipt> {
+	const receipt = await waitTxReceipt(web3Eth, txHash);
+	while (true) {
+		const blockNumber = await web3Eth.getBlockNumber();
+		if (toBigInt(blockNumber) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+			return receipt;
+		}
+		await sleep(500);
+	}
+}
+
+export const getPriorityOpResponse = (
+	context: Web3ZkSyncL1 | Web3ZkSyncL2,
+	l1TxPromise: Promise<TransactionHash>,
+	contextL2?: Web3ZkSyncL2,
+): PriorityOpResponse => {
+	if (context instanceof Web3ZkSyncL1) {
+		return getPriorityOpL1Response(context, l1TxPromise, contextL2);
+	} else {
+		return getPriorityOpL2Response(context, l1TxPromise);
+	}
+};
+
+export const getPriorityOpL1Response = (
+	context: Web3ZkSyncL1,
+	l1TxPromise: Promise<TransactionHash>,
+	contextL2?: Web3ZkSyncL2,
+): PriorityOpResponse => {
+	return {
+		waitL1Commit: async () => {
+			const hash = await l1TxPromise;
+			return waitTxByHashConfirmation(context.eth, hash, 1);
+		},
+		wait: async () => {
+			const hash = await l1TxPromise;
+			return waitTxByHashConfirmation(context.eth, hash, 1);
+		},
+		waitFinalize: async () => {
+			const hash = await l1TxPromise;
+			const receipt = await waitTxReceipt(context.eth, hash);
+			const l2TxHash = await (contextL2 as Web3ZkSyncL2).getL2TransactionFromPriorityOp(
+				receipt,
+			);
+
+			if (!contextL2) {
+				return {
+					transactionHash: l2TxHash,
+				} as TransactionReceipt;
+			}
+
+			return await waitTxByHashConfirmationFinalized(contextL2.eth, l2TxHash, 1);
+		},
+	};
+};
+
+export const getPriorityOpL2Response = (
+	context: Web3ZkSyncL2,
+	txPromise: Promise<TransactionHash>,
+): PriorityL2OpResponse => {
+	return {
+		wait: async () => {
+			const hash = await txPromise;
+			return waitTxByHashConfirmation(context.eth, hash, 1);
+		},
+		waitFinalize: async () => {
+			const hash = await txPromise;
+
+			return await waitTxByHashConfirmationFinalized(context.eth, hash, 1, 'finalized');
+		},
+	};
+};
+
+export async function waitTxByHashConfirmationFinalized(
+	web3Eth: Web3Eth,
+	txHash: TransactionHash,
+	waitConfirmations = 1,
+	blogTag?: BlockNumberOrTag,
+): Promise<TransactionReceipt> {
+	const receipt = await waitTxReceipt(web3Eth, txHash);
+	while (true) {
+		const block = await web3Eth.getBlock(blogTag ?? 'latest');
+		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+			return receipt;
+		}
+		await sleep(500);
+		// 3298012n // block.number
+		// 3303874n
+	}
+}
+
+/**
+ * A simple hashing function which operates on UTF-8 strings to compute an 32-byte identifier.
+ * This simply computes the UTF-8 bytes and computes the [[keccak256]].
+ * @param value
+ */
+export function id(value: string): string {
+	return keccak256(value);
+}
+
+export function dataSlice(data: Bytes, start?: number, end?: number): string {
+	const bytes = toBytes(data);
+	if (end != null && end > bytes.length) {
+		throw new Error('cannot slice beyond data bounds');
+	}
+	return web3Utils.toHex(
+		bytes.slice(start == null ? 0 : start, end == null ? bytes.length : end),
+	);
 }
