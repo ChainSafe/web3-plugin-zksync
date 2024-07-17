@@ -20,17 +20,14 @@ describe('wallet', () => {
 	const l2Provider = Web3ZkSyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
 	const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || web3Accounts.create().privateKey;
 	const wallet = new ZKSyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
-	console.log('acc-test', String(process.env.PRIVATE_KEY).slice(0, 10));
 	it('should deposit', async () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),
-			amount: 10000_000000_000000n,
+			amount: 1n,
 			refundRecipient: wallet.getAddress(),
 		});
 		const receipt = await tx.wait();
-
-		console.log(`Tx: ${receipt.transactionHash}`);
 
 		expect(receipt.status).toBe(1n);
 		expect(receipt.transactionHash).toBeDefined();
@@ -40,11 +37,9 @@ describe('wallet', () => {
 		const tx = await wallet.withdraw({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),
-			amount: 10n,
+			amount: 1n,
 		});
 		const receipt = await tx.wait();
-
-		console.log(`Tx: ${receipt.transactionHash}`);
 
 		expect(receipt.status).toBe(1n);
 		expect(receipt.transactionHash).toBeDefined();
