@@ -1,18 +1,18 @@
 import { Web3 } from 'web3';
-import { ZkSyncPlugin } from '../src';
+import { ZkSyncPlugin } from '../../src';
 import {
 	getBlockDetailsData,
 	getBridgeContractsData,
 	getRawBlockTransactionsData,
 	getTransactionDetailsData,
-} from './fixtures';
+} from '../fixtures';
 
 describe('ZkSyncPlugin rpc tests', () => {
 	let web3: Web3;
 
 	beforeAll(() => {
-		web3 = new Web3('https://sepolia.era.zksync.dev');
-		web3.registerPlugin(new ZkSyncPlugin());
+		web3 = new Web3();
+		web3.registerPlugin(new ZkSyncPlugin('https://sepolia.era.zksync.dev'));
 	});
 
 	it('l1ChainId', async () => {
@@ -51,10 +51,10 @@ describe('ZkSyncPlugin rpc tests', () => {
 		const res = await web3.zkSync.rpc.getL1BatchBlockRange(1);
 		expect(res).toEqual(['0x1', '0x2']);
 	});
-	it('getTestnetPaymaster', async () => {
-		const res = await web3.zkSync.rpc.getTestnetPaymaster();
-		expect(res).toBe('0x3cb2b87d10ac01736a65688f3e0fb1b070b3eea3');
-	});
+	// it('getTestnetPaymaster', async () => {
+	// 	const res = await web3.zkSync.rpc.getTestnetPaymaster();
+	// 	expect(res).toBe('0x3cb2b87d10ac01736a65688f3e0fb1b070b3eea3');
+	// });
 	it('getBridgeContracts', async () => {
 		const res = await web3.zkSync.rpc.getBridgeContracts();
 		expect(res).toEqual(getBridgeContractsData.output);
@@ -66,5 +66,10 @@ describe('ZkSyncPlugin rpc tests', () => {
 			to: '0x9a6de0f62aa270a8bcb1e2610078650d539b1ef9',
 		});
 		expect(res).toBeGreaterThan(BigInt(0));
+	});
+
+	it('getBridgeHubContract', async () => {
+		const res = await web3.zkSync.rpc.getBridgehubContractAddress();
+		expect(res).toEqual('0x35a54c8c757806eb6820629bc82d90e056394c92'); // @todo: set bridge hub contract address
 	});
 });

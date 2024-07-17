@@ -1,6 +1,6 @@
 import type { Web3RequestManager } from 'web3-core';
-import { format, toNumber } from 'web3-utils';
-import type { Address, Bytes, HexString32Bytes, Numbers, TransactionWithSenderAPI } from 'web3';
+import * as web3Utils from 'web3-utils';
+import type * as web3Types from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
 import type {
@@ -9,10 +9,12 @@ import type {
 	BridgeAddresses,
 	EstimateFee,
 	L2ToL1Proof,
-	Proof,
+	StorageProof,
 	RawBlockTransaction,
 	TransactionDetails,
 	WalletBalances,
+	TransactionRequest,
+	Address,
 } from './types';
 import {
 	AddressSchema,
@@ -32,6 +34,7 @@ import {
 
 // The ZkSync methods described here https://docs.zksync.io/build/api.html
 
+// TODO: Think about inheritance from Web3Eth
 export class RpcMethods {
 	requestManager: Web3RequestManager<unknown>;
 
@@ -52,7 +55,11 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async l1ChainId(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<bigint> {
-		return format(IntSchema, await this._send('zks_L1ChainId', []), returnFormat) as bigint;
+		return web3Utils.format(
+			IntSchema,
+			await this._send('zks_L1ChainId', []),
+			returnFormat,
+		) as bigint;
 	}
 
 	/**
@@ -63,7 +70,11 @@ export class RpcMethods {
 	public async getL1BatchNumber(
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<bigint> {
-		return format(IntSchema, await this._send('zks_L1BatchNumber', []), returnFormat) as bigint;
+		return web3Utils.format(
+			IntSchema,
+			await this._send('zks_L1BatchNumber', []),
+			returnFormat,
+		) as bigint;
 	}
 
 	/**
@@ -73,13 +84,13 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getL1BatchDetails(
-		number: Numbers,
+		number: web3Types.Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<BatchDetails> {
-		return format(
+		return web3Utils.format(
 			BatchDetailsSchema,
 			await this._send('zks_getL1BatchDetails', [
-				typeof number === 'number' ? number : Number(toNumber(number)),
+				typeof number === 'number' ? number : Number(web3Utils.toNumber(number)),
 			]),
 			returnFormat,
 		) as BatchDetails;
@@ -96,13 +107,13 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getBlockDetails(
-		number: Numbers,
+		number: web3Types.Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<BlockDetails> {
-		return format(
+		return web3Utils.format(
 			BlockDetailsSchema,
 			await this._send('zks_getBlockDetails', [
-				typeof number === 'number' ? number : Number(toNumber(number)),
+				typeof number === 'number' ? number : Number(web3Utils.toNumber(number)),
 			]),
 			returnFormat,
 		) as BlockDetails;
@@ -115,10 +126,10 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getTransactionDetails(
-		txHash: Bytes,
+		txHash: web3Types.Bytes,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<TransactionDetails> {
-		return format(
+		return web3Utils.format(
 			TransactionDetailsSchema,
 			await this._send('zks_getTransactionDetails', [txHash]),
 			returnFormat,
@@ -132,10 +143,10 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getBytecodeByHash(
-		bytecodeHash: Bytes,
+		bytecodeHash: web3Types.Bytes,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Uint8Array> {
-		return format(
+		return web3Utils.format(
 			BytesSchema,
 			await this._send('zks_getBytecodeByHash', [bytecodeHash]),
 			returnFormat,
@@ -149,15 +160,19 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getRawBlockTransactions(
-		number: Numbers,
+		number: web3Types.Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<RawBlockTransaction[]> {
 		const result = await this._send('zks_getRawBlockTransactions', [
-			typeof number === 'number' ? number : Number(toNumber(number)),
+			typeof number === 'number' ? number : Number(web3Utils.toNumber(number)),
 		]);
 		if (Array.isArray(result)) {
 			return result.map(tx => {
-				return format(RawBlockTransactionSchema, tx, returnFormat) as RawBlockTransaction;
+				return web3Utils.format(
+					RawBlockTransactionSchema,
+					tx,
+					returnFormat,
+				) as RawBlockTransaction;
 			});
 		}
 		return [];
@@ -170,14 +185,38 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async estimateFee(
-		transaction: Partial<TransactionWithSenderAPI>,
+		transaction: Partial<web3Types.TransactionWithSenderAPI>,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<EstimateFee> {
-		return format(
+		return web3Utils.format(
 			EstimateFeeSchema,
 			await this._send('zks_estimateFee', [transaction]),
 			returnFormat,
 		) as EstimateFee;
+	}
+
+	/**
+	 * Returns the L1 base token address.
+	 */
+	async getBaseTokenL1Address(): Promise<web3Types.Address> {
+		const baseTokenL1Address = (await this._send(
+			'zks_getBaseTokenL1Address',
+			[],
+		)) as web3Types.Address;
+
+		return web3Utils.toChecksumAddress(baseTokenL1Address);
+	}
+
+	/**
+	 * Returns the testnet {@link https://docs.zksync.io/build/developer-reference/account-abstraction.html#paymasters paymaster address}
+	 * if available, or `null`.
+	 *
+	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-gettestnetpaymaster zks_getTestnetPaymaster} JSON-RPC method.
+	 */
+	async getTestnetPaymasterAddress(): Promise<web3Types.Address | null> {
+		// Unlike contract's addresses, the testnet paymaster is not cached, since it can be trivially changed
+		// on the fly by the server and should not be relied on to be constant
+		return (await this._send('zks_getTestnetPaymaster', [])) as web3Types.Address | null;
 	}
 
 	/**
@@ -187,14 +226,14 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async estimateGasL1ToL2(
-		transaction: Partial<TransactionWithSenderAPI>,
+		transaction: Partial<TransactionRequest>,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Numbers> {
-		return format(
+	): Promise<web3Types.Numbers> {
+		return web3Utils.format(
 			UintSchema,
 			await this._send('zks_estimateGasL1ToL2', [transaction]),
 			returnFormat,
-		) as Numbers;
+		) as web3Types.Numbers;
 	}
 
 	/**
@@ -204,7 +243,7 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getAllAccountBalances(
-		address: Address,
+		address: web3Types.Address,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<WalletBalances> {
 		const res = (await this._send('zks_getAllAccountBalances', [address])) as WalletBalances;
@@ -212,11 +251,11 @@ export class RpcMethods {
 			return {};
 		}
 		for (let i = 0; i < Object.keys(res).length; i++) {
-			res[Object.keys(res)[i]] = format(
+			res[Object.keys(res)[i]] = web3Utils.format(
 				UintSchema,
 				res[Object.keys(res)[i]],
 				returnFormat,
-			) as Numbers;
+			) as web3Types.Numbers;
 		}
 
 		return res;
@@ -229,12 +268,12 @@ export class RpcMethods {
 	 */
 	public async getMainContract(
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Address> {
-		return format(
+	): Promise<web3Types.Address> {
+		return web3Utils.format(
 			AddressSchema,
 			await this._send('zks_getMainContract', []),
 			returnFormat,
-		) as Address;
+		) as web3Types.Address;
 	}
 
 	/**
@@ -245,16 +284,16 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getL1BatchBlockRange(
-		number: Numbers,
+		number: web3Types.Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Bytes[]> {
-		return format(
+	): Promise<web3Types.Bytes[]> {
+		return web3Utils.format(
 			BytesArraySchema,
 			await this._send('zks_getL1BatchBlockRange', [
-				typeof number === 'number' ? number : Number(toNumber(number)),
+				typeof number === 'number' ? number : Number(web3Utils.toNumber(number)),
 			]),
 			returnFormat,
-		) as Bytes[];
+		) as web3Types.Bytes[];
 	}
 
 	/**
@@ -267,20 +306,22 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getProof(
-		address: Address,
+		address: web3Types.Address,
 		keys: string[],
-		l1BatchNumber: Numbers,
+		l1BatchNumber: web3Types.Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Proof> {
+	): Promise<StorageProof> {
 		const res = (await this._send('zks_getProof', [
 			address,
 			keys,
-			typeof l1BatchNumber === 'number' ? l1BatchNumber : Number(toNumber(l1BatchNumber)),
-		])) as Proof;
-		const result = format(ProofSchema, res, returnFormat) as Proof;
+			typeof l1BatchNumber === 'number'
+				? l1BatchNumber
+				: Number(web3Utils.toNumber(l1BatchNumber)),
+		])) as StorageProof;
+		const result = web3Utils.format(ProofSchema, res, returnFormat) as StorageProof;
 		result.storageProof = [];
 		for (let i = 0; i < res.storageProof.length; i++) {
-			result.storageProof[i] = format(
+			result.storageProof[i] = web3Utils.format(
 				{
 					type: 'object',
 					properties: ProofSchema.properties.storageProof.properties,
@@ -294,21 +335,6 @@ export class RpcMethods {
 	}
 
 	/**
-	 * Returns the address of the testnet paymaster: the paymaster that is available on testnets and enables paying fees in ERC-20 compatible tokens.
-	 *
-	 * @param returnFormat - The format of the return value.
-	 */
-	public async getTestnetPaymaster(
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Address> {
-		return format(
-			AddressSchema,
-			await this._send('zks_getTestnetPaymaster', []),
-			returnFormat,
-		) as Address;
-	}
-
-	/**
 	 * Given a transaction hash, and an index of the L2 to L1 log produced within the transaction, it returns the proof for the corresponding L2 to L1 log.
 	 *
 	 * The index of the log that can be obtained from the transaction receipt (it includes a list of every log produced by the transaction)
@@ -318,19 +344,19 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getL2ToL1LogProof(
-		txHash: HexString32Bytes,
-		l2ToL1LogIndex?: Numbers,
+		txHash: web3Types.HexString32Bytes,
+		l2ToL1LogIndex?: web3Types.Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<L2ToL1Proof> {
-		const params: [HexString32Bytes, number?] = [txHash];
+		const params: [web3Types.HexString32Bytes, number?] = [txHash];
 		if (l2ToL1LogIndex) {
 			params.push(
 				typeof l2ToL1LogIndex === 'number'
 					? l2ToL1LogIndex
-					: Number(toNumber(l2ToL1LogIndex)),
+					: Number(web3Utils.toNumber(l2ToL1LogIndex)),
 			);
 		}
-		return format(
+		return web3Utils.format(
 			L2ToL1ProofSchema,
 			await this._send('zks_getL2ToL1LogProof', params),
 			returnFormat,
@@ -345,10 +371,25 @@ export class RpcMethods {
 	public async getBridgeContracts(
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<BridgeAddresses> {
-		return format(
+		return web3Utils.format(
 			BridgeAddressesSchema,
 			await this._send('zks_getBridgeContracts', []),
 			returnFormat,
 		) as BridgeAddresses;
+	}
+
+	/**
+	 * Retrieves the bridge hub contract address
+	 *
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async getBridgehubContractAddress(
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<Address> {
+		return web3Utils.format(
+			AddressSchema,
+			await this._send('zks_getBridgehubContract', []),
+			returnFormat,
+		) as Address;
 	}
 }
