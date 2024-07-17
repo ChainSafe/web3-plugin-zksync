@@ -9,6 +9,7 @@
 .prettierrc.json
 .prettierignore
 *.log
+.idea
 
 coverage/
 benchmark/

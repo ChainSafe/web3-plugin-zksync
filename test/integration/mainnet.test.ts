@@ -1,5 +1,5 @@
 import { Web3 } from 'web3';
-import { ZkSyncPlugin } from '../src';
+import { ZkSyncPlugin } from '../../src';
 
 const EXAMPLE_ERC20_TOKEN = {
 	address: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4',
@@ -12,8 +12,8 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 	let web3: Web3;
 
 	beforeAll(() => {
-		web3 = new Web3('https://mainnet.era.zksync.io');
-		web3.registerPlugin(new ZkSyncPlugin());
+		web3 = new Web3();
+		web3.registerPlugin(new ZkSyncPlugin('https://mainnet.era.zksync.io'));
 	});
 
 	it('should get L1 token address', async () => {
