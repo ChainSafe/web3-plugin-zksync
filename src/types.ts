@@ -5,12 +5,11 @@ import type {
 	HexString,
 	Numbers,
 	Transaction,
-	EIP1193Provider,
 	TransactionWithSenderAPI,
 	TransactionReceipt,
 } from 'web3-types';
 
-import type { RpcMethods } from './rpc.methods';
+import { Web3ZkSyncL2 } from './web3zksync-l2';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -543,8 +542,10 @@ export interface PriorityL1OpResponse {
 	waitL1Commit(confirmation?: number): Promise<TransactionReceipt>;
 	wait(confirmation?: number): Promise<TransactionReceipt>;
 	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
+	hash: string;
 }
 export interface PriorityL2OpResponse {
+	hash: string;
 	wait(confirmation?: number): Promise<TransactionReceipt>;
 	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
 }
@@ -763,42 +764,37 @@ export interface StorageProof {
  *  @param [provider] The provider is used to fetch data from the network if it is required for signing.
  *  @returns A promise that resolves to the serialized signature in hexadecimal format.
  */
-export type PayloadSigner = (
-	payload: Bytes,
-	secret?: any,
-	provider?: null | EIP1193Provider<RpcMethods>,
-) => Promise<string>;
-
-// /**
-//  * Populates missing fields in a transaction with default values.
-//  *
-//  * @param transaction The transaction that needs to be populated.
-//  * @param [secret] The secret used for populating the transaction.
-//  * @param [provider] The provider is used to fetch data from the network if it is required for signing.
-//  * @returns A promise that resolves to the populated transaction.
-//  */
-// export type TransactionBuilder = (
-// 	transaction: TransactionRequest,
-// 	secret?: any,
-// 	provider?: null | EIP1193Provider<RpcMethods>,
-// ) => Promise<TransactionLike>;
-
-// /**
-//  * Encapsulates the required input parameters for creating a signer for `SmartAccount`.
-//  */
-// export interface SmartAccountSigner {
-// 	/** Address to which the `SmartAccount` is bound. */
-// 	address: string;
-// 	/** Secret in any form that can be used for signing different payloads. */
-// 	secret: any;
-// 	/** Custom method for signing different payloads. */
-// 	payloadSigner?: PayloadSigner;
-// 	/** Custom method for populating transaction requests. */
-// 	transactionBuilder?: TransactionBuilder;
-// }
+export type PayloadSigner = (payload: Bytes, secret?: any, provider?: Web3ZkSyncL2) => string;
 
 export interface WalletBalances {
 	[key: Address]: Numbers;
+}
+/**
+ * Populates missing fields in a transaction with default values.
+ *
+ * @param transaction The transaction that needs to be populated.
+ * @param [secret] The secret used for populating the transaction.
+ * @param [provider] The provider is used to fetch data from the network if it is required for signing.
+ * @returns A promise that resolves to the populated transaction.
+ */
+export type TransactionBuilder = (
+	transaction: Eip712TxData,
+	secret?: any,
+	provider?: Web3ZkSyncL2,
+) => Promise<Eip712TxData>;
+
+/**
+ * Encapsulates the required input parameters for creating a signer for `SmartAccount`.
+ */
+export interface SmartAccountSigner {
+	/** Address to which the `SmartAccount` is bound. */
+	address: string;
+	/** Secret in any form that can be used for signing different payloads. */
+	secret: any;
+	/** Custom method for signing different payloads. */
+	payloadSigner?: PayloadSigner;
+	/** Custom method for populating transaction requests. */
+	transactionBuilder?: TransactionBuilder;
 }
 
 export interface TokenInfo {
@@ -917,3 +913,13 @@ export type ZKTransactionReceipt = TransactionReceipt & {
 
 export interface OverridesReadOnly extends Omit<TransactionRequest, 'to' | 'data'> {}
 export type Overrides = DeepWriteable<OverridesReadOnly>;
+export interface NameResolver {
+	/**
+	 *  Resolve to the address for the ENS %%name%%.
+	 *
+	 *  Resolves to ``null`` if the name is unconfigued. Use
+	 *  [[resolveAddress]] (passing this object as %%resolver%%) to
+	 *  throw for names that are unconfigured.
+	 */
+	resolveName(name: string): Promise<null | string>;
+}

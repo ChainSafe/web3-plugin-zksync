@@ -15,9 +15,9 @@ import type {
 import { toUint8Array } from 'web3-eth-accounts';
 import type { Web3Eth } from 'web3-eth';
 import { ALL_EVENTS_ABI, decodeEventABI } from 'web3-eth';
-import { keccak256, toBigInt } from 'web3-utils';
+import { isAddress, keccak256, toBigInt } from 'web3-utils';
 import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
-import { PriorityOpTree, PriorityQueueType } from './types';
+import { NameResolver, PriorityOpTree, PriorityQueueType } from './types';
 import type {
 	DeploymentInfo,
 	EthereumSignature,
@@ -50,6 +50,7 @@ import {
 
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import { Web3ZkSyncL1 } from './web3zksync-l1';
+import { Address } from 'web3';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -115,11 +116,9 @@ export const NonceHolderContract = new web3.Contract(INonceHolderABI);
 export const evenHex = (hex: string) => {
 	return hex.length % 2 === 0 ? hex : `0x0${hex.slice(2)}`;
 };
+
 export const toBytes = (number: web3Types.Numbers | Uint8Array) => {
-	const hex =
-		typeof number === 'number' || typeof number === 'bigint'
-			? web3Utils.numberToHex(number)
-			: web3Utils.bytesToHex(number);
+	const hex = web3Utils.toHex(number);
 
 	return web3Utils.hexToBytes(evenHex(hex));
 };
@@ -249,14 +248,10 @@ export const MessagePrefix: string = '\x19Ethereum Signed Message:\n';
  */
 export function hashMessage(message: Uint8Array | string): string {
 	if (typeof message === 'string') {
-		message = web3Accounts.toUint8Array(message);
+		message = toUtf8Bytes(message);
 	}
 	return web3Utils.keccak256(
-		concat([
-			web3Accounts.toUint8Array(MessagePrefix),
-			web3Accounts.toUint8Array(String(message.length)),
-			message,
-		]),
+		concat([toUtf8Bytes(MessagePrefix), toUtf8Bytes(String(message.length)), message]),
 	);
 }
 
@@ -1058,7 +1053,7 @@ export const getPriorityOpResponse = (
 	context: Web3ZkSyncL1 | Web3ZkSyncL2,
 	l1TxPromise: Promise<TransactionHash>,
 	contextL2?: Web3ZkSyncL2,
-): PriorityOpResponse => {
+): Promise<PriorityOpResponse> => {
 	if (context instanceof Web3ZkSyncL1) {
 		return getPriorityOpL1Response(context, l1TxPromise, contextL2);
 	} else {
@@ -1066,22 +1061,21 @@ export const getPriorityOpResponse = (
 	}
 };
 
-export const getPriorityOpL1Response = (
+export const getPriorityOpL1Response = async (
 	context: Web3ZkSyncL1,
 	l1TxPromise: Promise<TransactionHash>,
 	contextL2?: Web3ZkSyncL2,
-): PriorityOpResponse => {
+): Promise<PriorityOpResponse> => {
+	const hash = await l1TxPromise;
 	return {
+		hash,
 		waitL1Commit: async () => {
-			const hash = await l1TxPromise;
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		wait: async () => {
-			const hash = await l1TxPromise;
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		waitFinalize: async () => {
-			const hash = await l1TxPromise;
 			const receipt = await waitTxReceipt(context.eth, hash);
 			const l2TxHash = await (contextL2 as Web3ZkSyncL2).getL2TransactionFromPriorityOp(
 				receipt,
@@ -1098,18 +1092,17 @@ export const getPriorityOpL1Response = (
 	};
 };
 
-export const getPriorityOpL2Response = (
+export const getPriorityOpL2Response = async (
 	context: Web3ZkSyncL2,
 	txPromise: Promise<TransactionHash>,
-): PriorityL2OpResponse => {
+): Promise<PriorityL2OpResponse> => {
+	const hash = await txPromise;
 	return {
+		hash,
 		wait: async () => {
-			const hash = await txPromise;
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		waitFinalize: async () => {
-			const hash = await txPromise;
-
 			return await waitTxByHashConfirmationFinalized(context.eth, hash, 1, 'finalized');
 		},
 	};
@@ -1139,7 +1132,7 @@ export async function waitTxByHashConfirmationFinalized(
  * @param value
  */
 export function id(value: string): string {
-	return keccak256(value);
+	return keccak256(toUtf8Bytes(value));
 }
 
 export function dataSlice(data: Bytes, start?: number, end?: number): string {
@@ -1150,4 +1143,86 @@ export function dataSlice(data: Bytes, start?: number, end?: number): string {
 	return web3Utils.toHex(
 		bytes.slice(start == null ? 0 : start, end == null ? bytes.length : end),
 	);
+}
+
+export function toUtf8Bytes(str: string): Uint8Array {
+	if (typeof str !== 'string') {
+		throw new Error(`invalid string value ${str}`);
+	}
+
+	let result: Array<number> = [];
+	for (let i = 0; i < str.length; i++) {
+		const c = str.charCodeAt(i);
+
+		if (c < 0x80) {
+			result.push(c);
+		} else if (c < 0x800) {
+			result.push((c >> 6) | 0xc0);
+			result.push((c & 0x3f) | 0x80);
+		} else if ((c & 0xfc00) == 0xd800) {
+			i++;
+			const c2 = str.charCodeAt(i);
+
+			if (!(i < str.length && (c2 & 0xfc00) === 0xdc00)) {
+				throw new Error(`invalid surrogate pair ${str}`);
+			}
+
+			// Surrogate Pair
+			const pair = 0x10000 + ((c & 0x03ff) << 10) + (c2 & 0x03ff);
+			result.push((pair >> 18) | 0xf0);
+			result.push(((pair >> 12) & 0x3f) | 0x80);
+			result.push(((pair >> 6) & 0x3f) | 0x80);
+			result.push((pair & 0x3f) | 0x80);
+		} else {
+			result.push((c >> 12) | 0xe0);
+			result.push(((c >> 6) & 0x3f) | 0x80);
+			result.push((c & 0x3f) | 0x80);
+		}
+	}
+
+	return new Uint8Array(result);
+}
+export function getAddress(address: string): string {
+	if (!isAddress(address)) {
+		throw new Error(`Invalid address ${address}`);
+	}
+	return address;
+}
+async function checkAddress(target: any, promise: Promise<null | string>): Promise<string> {
+	const result = await promise;
+	if (result == null || result === '0x0000000000000000000000000000000000000000') {
+		if (typeof target === 'string') {
+			throw new Error(`ENS name resolution failed for ${target}`);
+		}
+		throw new Error(`invalid AddressLike value; did not resolve to a value address`);
+	}
+	return getAddress(result);
+}
+export interface Addressable {
+	/**
+	 *  Get the object address.
+	 */
+	getAddress(): Promise<string>;
+}
+export function resolveAddress(
+	target: Address | Addressable | Promise<string>,
+	resolver?: null | NameResolver,
+): string | Promise<string> {
+	if (typeof target === 'string') {
+		if (target.match(/^0x[0-9a-f]{40}$/i)) {
+			return getAddress(target);
+		}
+
+		if (resolver == null) {
+			throw new Error('ENS name resolution requires a provider');
+		}
+
+		return checkAddress(target, resolver.resolveName(target));
+	} else if (target && typeof (target as Addressable).getAddress === 'function') {
+		return checkAddress(target, (target as Addressable).getAddress());
+	} else if (target && typeof (target as Promise<string>).then === 'function') {
+		return checkAddress(target, target as Promise<string>);
+	}
+
+	throw new Error('unsupported addressable value');
 }

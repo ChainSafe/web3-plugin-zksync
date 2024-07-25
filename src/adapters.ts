@@ -158,13 +158,7 @@ export class AdapterL1 implements TxSender {
 	 */
 	async getBalanceL1(token?: Address, blockTag?: web3Types.BlockNumberOrTag): Promise<bigint> {
 		token ??= LEGACY_ETH_ADDRESS;
-		if (isETH(token)) {
-			return await this._contextL1().eth.getBalance(this.getAddress(), blockTag);
-		} else {
-			const erc20 = new (this._contextL1().eth.Contract)(IERC20ABI, token);
-
-			return await erc20.methods.balanceOf(this.getAddress()).call();
-		}
+		return await this._contextL1().getBalance(this.getAddress(), blockTag, token);
 	}
 
 	/**
@@ -1764,12 +1758,7 @@ export class AdapterL2 implements TxSender {
 		token?: Address,
 		blockTag: web3Types.BlockNumberOrTag = 'committed',
 	): Promise<bigint> {
-		if (token) {
-			const contract = new (this._contextL2().eth.Contract)(IERC20ABI, token);
-			return contract.methods.balanceOf(this.getAddress()).call();
-		}
-
-		return await this._contextL2().eth.getBalance(this.getAddress(), blockTag);
+		return await this._contextL2().getBalance(this.getAddress(), blockTag, token);
 	}
 
 	/**
@@ -1864,13 +1853,13 @@ export class AdapterL2 implements TxSender {
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 * @returns A Promise resolving to a transfer transaction response.
 	 */
-	async transfer(transaction: {
+	async transferTx(transaction: {
 		to: Address;
 		amount: web3Types.Numbers;
 		token?: Address;
 		paymasterParams?: PaymasterParams;
 		overrides?: TransactionOverrides;
-	}) {
+	}): Promise<Transaction> {
 		return this._contextL2().getTransferTx({
 			from: this.getAddress(),
 			...transaction,

@@ -5,7 +5,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import { estimateGas, getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
 import * as Web3 from 'web3';
-import type { Transaction } from 'web3-types';
+import type { BlockNumberOrTag, Transaction } from 'web3-types';
 import { toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import type {
@@ -32,7 +32,7 @@ import {
 	LEGACY_ETH_ADDRESS,
 	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
-import { EIP712, type EIP712Signer, isAddressEq } from './utils';
+import { EIP712, type EIP712Signer, isAddressEq, isETH } from './utils';
 import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
@@ -210,10 +210,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 * Returns whether the `token` is the base token.
 	 */
 	async isBaseToken(token: web3Types.Address): Promise<boolean> {
-		return (
-			isAddressEq(token, await this.getBaseTokenContractAddress()) ||
-			isAddressEq(token, L2_BASE_TOKEN_ADDRESS)
-		);
+		return isETH(token) || isAddressEq(token, await this.getBaseTokenContractAddress());
 	}
 
 	/**
@@ -570,6 +567,9 @@ export class Web3ZkSync extends Web3.Web3 {
 		) {
 			return this.populateTransactionAndGasPrice(transaction);
 		}
+		if (transaction.type && toHex(transaction.type) === toHex(EIP712_TX_TYPE)) {
+			delete transaction.type;
+		}
 		const populated = (await this.populateTransactionAndGasPrice(transaction)) as Eip712TxData;
 		populated.type = BigInt(EIP712_TX_TYPE);
 		populated.value ??= 0;
@@ -605,26 +605,21 @@ export class Web3ZkSync extends Web3.Web3 {
 		return res.rawTransaction;
 	}
 	async sendRawTransaction(signedTx: string) {
-		// tx.chainId = await this._contextL2().eth.getChainId();
-		// const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
-		// const data = { ...tx, ...other };
-		// @ts-ignore
-		// return this._contextL2().eth.sendTransaction(data);
-
-		//
-		// const populated = await this.populateTransaction(tx);
-
-		// const signedTx = await this.signTransaction(populated);
-
-		// data.nonce = await this._contextL2().eth.getTransactionCount(this.getAddress(), 'pending');
-		// const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
-		// const dataWithGas = { ...data, ...other, gasLimit: 5000000n };
-		//
-		// dataWithGas.customData = {
-		// 	customSignature: signer.sign(dataWithGas)?.serialized,
-		// };
-		//
-		// const serialized = EIP712.serialize(dataWithGas);
 		return ethRpcMethods.sendRawTransaction(this.requestManager, signedTx);
+	}
+	async getBalance(
+		address: Address,
+		blockTag?: BlockNumberOrTag,
+		tokenAddress?: Address,
+	): Promise<bigint> {
+		if (!tokenAddress || (await this.isBaseToken(tokenAddress))) {
+			return this.eth.getBalance(address, blockTag);
+		} else {
+			try {
+				return this.getTokenBalance(tokenAddress, address);
+			} catch {
+				return 0n;
+			}
+		}
 	}
 }

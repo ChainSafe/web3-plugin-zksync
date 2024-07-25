@@ -259,8 +259,10 @@ export class EIP712 {
 		const nonce = toBigInt(transaction.nonce || 0);
 		const fields: Array<Uint8Array | Uint8Array[] | string | number | string[]> = [
 			nonce === 0n ? new Uint8Array() : bigIntToUint8Array(nonce),
-			maxPriorityFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxPriorityFeePerGas),
-			maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
+			!maxPriorityFeePerGas || maxPriorityFeePerGas === '0x0'
+				? new Uint8Array()
+				: toBytes(maxPriorityFeePerGas),
+			!maxFeePerGas || maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
 			gasLimitBytes,
 			transaction.to ? web3Utils.toChecksumAddress(toHex(transaction.to)) : '0x',
 			toHex(transaction.value || 0) === '0x0'
@@ -348,16 +350,7 @@ export class EIP712Signer {
 			throw Error("Transaction chainId isn't set!");
 		}
 
-		return EIP712.txHash(transaction);
-
-		// const domain = {
-		// 	name: 'zkSync',
-		// 	version: '2',
-		// 	chainId: transaction.chainId,
-		// };
-		// TODO: Implement replacement of the following line
-		// @ts-ignore
-		// return ethers.TypedDataEncoder.hash(domain, EIP712_TYPES, EIP712.getSignInput(transaction));
+		return web3Abi.getEncodedEip712Data(EIP712.txTypedData(transaction), true);
 	}
 
 	/**
