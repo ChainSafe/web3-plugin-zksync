@@ -799,9 +799,7 @@ describe('Wallet', () => {
 					amount,
 					refundRecipient: wallet.getAddress(),
 				});
-				console.log('tx', tx);
 				const result = await tx.wait();
-				console.log('result', result);
 				const l2BalanceAfterDeposit = await wallet.getBalance();
 				const l1BalanceAfterDeposit = await wallet.getBalanceL1();
 				expect(result).not.toBeNull();
@@ -926,7 +924,6 @@ describe('Wallet', () => {
 				});
 				const receipt = await response.wait();
 				expect(receipt.transactionHash).toBeDefined();
-				// console.log('rr', rr);
 				// try {
 				// 	await response.waitFinalize();
 				// } catch (error) {
@@ -1667,7 +1664,7 @@ describe('Wallet', () => {
 				amount: amount,
 			});
 			const receipt = await result.wait();
-			console.log('receipt', receipt);
+			expect(receipt.transactionHash).toBeDefined();
 			const balanceAfterTransfer = await provider.getTokenBalance(l2USDC, ADDRESS2);
 			expect(result).not.toBeNull();
 			expect(balanceAfterTransfer - balanceBeforeTransfer).toEqual(amount);
