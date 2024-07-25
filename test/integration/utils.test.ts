@@ -20,9 +20,9 @@ describe('utils', () => {
 				web3Accounts.privateKeyToAccount(PRIVATE_KEY),
 				270,
 			);
-			const signature = eip712Signer.sign(tx) as utils.SignatureObject;
+			const signature = await eip712Signer.sign(tx);
 			const web3 = new Web3('https://sepolia.era.zksync.dev');
-			expect(signature.serialized).toBe(
+			expect(signature).toBe(
 				'0x5ea12f3d54a1624d7e7f5161dbf6ab746c3335e643b2966264e740cf8e10e9b64b0251fb79d9a5b11730387085a0d58f105926f72e20242ecb274639991939ca1b',
 			);
 			const isValidSignature = await utils.isTypedDataSignatureCorrect(
@@ -31,7 +31,7 @@ describe('utils', () => {
 				eip712Signer.getDomain(),
 				constants.EIP712_TYPES,
 				utils.EIP712.getSignInput(tx),
-				signature.serialized,
+				signature,
 			);
 			expect(isValidSignature).toBe(true);
 		});

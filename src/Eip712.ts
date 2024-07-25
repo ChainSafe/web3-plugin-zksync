@@ -3,7 +3,7 @@ import type { Bytes, Eip712TypedData, Numbers } from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Utils from 'web3-utils';
 import type * as web3Accounts from 'web3-eth-accounts';
-import { BaseTransaction, bigIntToUint8Array, toUint8Array } from 'web3-eth-accounts';
+import { BaseTransaction, bigIntToUint8Array, pureSign, toUint8Array } from 'web3-eth-accounts';
 import { RLP } from '@ethereumjs/rlp';
 import type { Address } from 'web3';
 import {
@@ -19,7 +19,7 @@ import type {
 	EthereumSignature,
 	PaymasterParams,
 } from './types';
-import type { SignatureLike } from './utils';
+import { SignatureLike } from './utils';
 import { concat, hashBytecode, SignatureObject, toBytes } from './utils';
 
 function handleAddress(value?: Uint8Array): string | null {
@@ -333,8 +333,9 @@ export class EIP712Signer {
 		};
 	}
 
-	sign(tx: Eip712TxData): SignatureObject | undefined {
-		return new EIP712Transaction(tx).sign(toBytes(this.web3Account.privateKey)).getSignature();
+	async sign(tx: Eip712TxData): Promise<string> {
+		const hash = web3Abi.getEncodedEip712Data(EIP712.txTypedData(tx), true);
+		return pureSign(hash, this.web3Account.privateKey).signature;
 	}
 
 	/**
@@ -395,7 +396,6 @@ export class EIP712Transaction extends BaseTransaction<EIP712Transaction> {
 		});
 	}
 	public ecsign(msgHash: Uint8Array, privateKey: Uint8Array, chainId?: bigint) {
-		// @ts-ignore-next-time until new web3js release
 		const { s, r, v } = this._ecsign(msgHash, privateKey, chainId);
 		this.signature = new SignatureObject(toUint8Array(r), toUint8Array(s), toBigInt(v));
 		return this.signature;

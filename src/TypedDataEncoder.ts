@@ -541,7 +541,6 @@ export class TypedDataEncoder {
 			return domainFieldNames.indexOf(a.name) - domainFieldNames.indexOf(b.name);
 		});
 
-		console.log('domainFields', domainFields);
 		return TypedDataEncoder.hashStruct('EIP712Domain', { EIP712Domain: domainFields }, domain);
 	}
 
@@ -568,8 +567,6 @@ export class TypedDataEncoder {
 		types: Record<string, Array<TypedDataField>>,
 		value: Record<string, any>,
 	): string {
-		const enc = TypedDataEncoder.encode(domain, types, value);
-		console.log('TypedDataEncoder.encode(domain, types, value)', enc);
 		return keccak256(TypedDataEncoder.encode(domain, types, value));
 	}
 

@@ -583,18 +583,17 @@ export class Web3ZkSync extends Web3.Web3 {
 
 	async signTransaction(tx: Transaction): Promise<string> {
 		if (tx.type && toHex(tx.type) === toHex(EIP712_TX_TYPE)) {
-			const data = EIP712.getSignInput(tx as Eip712TxData);
-			// @ts-ignore
-			delete data.txType;
-			data.type = EIP712_TX_TYPE;
 			const signer = await this._eip712Signer();
-			data.chainId = signer.getDomain().chainId;
-			data.customData = {
-				customSignature: signer.sign(data)?.serialized,
+			tx.chainId = signer.getDomain().chainId;
+			// @ts-ignore
+			tx.customData = {
+				// @ts-ignore
+				...(tx.customData || {}),
+				customSignature: await signer.sign(tx as Eip712TxData),
 			};
-			return EIP712.serialize(data);
+			// @ts-ignore
+			return EIP712.serialize(tx);
 		}
-
 		const account = this.eth.accounts.wallet.get(tx.from!);
 
 		if (!account) {
