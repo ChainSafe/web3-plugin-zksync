@@ -3,7 +3,7 @@ import { TransactionBuilder, PayloadSigner, Eip712TxData } from './types';
 import { privateKeyToAccount, pureSign, Web3Account } from 'web3-eth-accounts';
 import { EIP712_TX_TYPE } from './constants';
 import { Web3ZkSyncL2 } from './web3zksync-l2';
-import type * as web3Types from '../../web3.js/packages/web3-types';
+import type * as web3Types from 'web3-types';
 import * as utils from './utils';
 
 /**

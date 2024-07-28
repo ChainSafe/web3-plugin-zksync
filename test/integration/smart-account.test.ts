@@ -405,7 +405,7 @@ describe('SmartAccount', () => {
 			// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toBeTruthy();
 		});
 
-		it.only('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
+		it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
 			const amount = 7_000_000_000n;
 			const minimalAllowance = 1n;
 

@@ -22,10 +22,9 @@ import {
 } from './smart-account-utils';
 import * as Web3EthAccounts from 'web3-eth-accounts';
 import { Web3ZkSyncL2 } from './web3zksync-l2';
-import type * as web3Types from '../../web3.js/packages/web3-types';
+import type * as web3Types from 'web3-types';
 import { AdapterL2 } from './adapters';
 import { EIP712, EIP712Signer, getPriorityOpResponse, hashMessage, resolveAddress } from './utils';
-import type { BlockNumberOrTag, Transaction } from '../../web3.js/packages/web3-types';
 import { pureSign } from 'web3-eth-accounts';
 import { TypedDataEncoder } from './TypedDataEncoder';
 
@@ -96,7 +95,7 @@ export class SmartAccount extends AdapterL2 {
 	getAddress() {
 		return this._account.address;
 	}
-	getNonce(blockNumber: BlockNumberOrTag = 'latest') {
+	getNonce(blockNumber: web3Types.BlockNumberOrTag = 'latest') {
 		return this.provider.eth.getTransactionCount(this.getAddress(), blockNumber);
 	}
 	/**
@@ -265,7 +264,7 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: ethers.parseEther('1'),
 	 * });
 	 */
-	async signTransaction(tx: Transaction | Eip712TxData): Promise<string> {
+	async signTransaction(tx: web3Types.Transaction | Eip712TxData): Promise<string> {
 		const populatedTx = (await this.populateTransaction(tx)) as Eip712TxData;
 		const populatedTxHash = EIP712Signer.getSignedDigest(populatedTx);
 
@@ -274,8 +273,6 @@ export class SmartAccount extends AdapterL2 {
 			customSignature: this.payloadSigner(populatedTxHash, this.secret, this.provider),
 		};
 		return EIP712.serialize(populatedTx);
-
-		// return super.signTransaction(populatedTx as Transaction);
 	}
 
 	/**
@@ -303,7 +300,7 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: ethers.parseEther('1'),
 	 * });
 	 */
-	async sendTransaction(tx: Transaction) {
+	async sendTransaction(tx: web3Types.Transaction) {
 		checkProvider(this, 'broadcastTransaction');
 		const signedTx = await this.signTransaction(tx);
 		return getPriorityOpResponse(
@@ -541,7 +538,7 @@ export class SmartAccount extends AdapterL2 {
 		overrides?: TransactionOverrides;
 	}): Promise<PriorityOpResponse> {
 		const transferTx = await super.transferTx(transaction);
-		return this.sendTransaction(transferTx as Transaction);
+		return this.sendTransaction(transferTx as web3Types.Transaction);
 	}
 }
 
