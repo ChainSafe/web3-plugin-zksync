@@ -59,7 +59,10 @@ class Adapters extends AdapterL1 {
 		paymasterParams?: PaymasterParams;
 		overrides?: TransactionOverrides;
 	}) {
-		return this.signAndSend(await this.adapterL2.transfer(transaction), this._contextL2());
+		return this.signAndSend(
+			(await this.adapterL2.transferTx(transaction)) as Transaction,
+			this._contextL2(),
+		);
 	}
 }
 
@@ -142,6 +145,9 @@ export class ZKSyncWallet extends Adapters {
 	}
 	getAddress(): any {
 		return this.account.address;
+	}
+	get address() {
+		return this.getAddress();
 	}
 	deposit(transaction: {
 		token: Address;

@@ -3,7 +3,7 @@ import type { Bytes, Eip712TypedData, Numbers } from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Utils from 'web3-utils';
 import type * as web3Accounts from 'web3-eth-accounts';
-import { BaseTransaction, bigIntToUint8Array, toUint8Array } from 'web3-eth-accounts';
+import { BaseTransaction, bigIntToUint8Array, signMessageWithPrivateKey, toUint8Array } from 'web3-eth-accounts';
 import { RLP } from '@ethereumjs/rlp';
 import type { Address } from 'web3';
 import {
@@ -19,7 +19,7 @@ import type {
 	EthereumSignature,
 	PaymasterParams,
 } from './types';
-import type { SignatureLike } from './utils';
+import { SignatureLike } from './utils';
 import { concat, hashBytecode, SignatureObject, toBytes } from './utils';
 
 function handleAddress(value?: Uint8Array): string | null {
@@ -259,8 +259,10 @@ export class EIP712 {
 		const nonce = toBigInt(transaction.nonce || 0);
 		const fields: Array<Uint8Array | Uint8Array[] | string | number | string[]> = [
 			nonce === 0n ? new Uint8Array() : bigIntToUint8Array(nonce),
-			maxPriorityFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxPriorityFeePerGas),
-			maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
+			!maxPriorityFeePerGas || maxPriorityFeePerGas === '0x0'
+				? new Uint8Array()
+				: toBytes(maxPriorityFeePerGas),
+			!maxFeePerGas || maxFeePerGas === '0x0' ? new Uint8Array() : toBytes(maxFeePerGas),
 			gasLimitBytes,
 			transaction.to ? web3Utils.toChecksumAddress(toHex(transaction.to)) : '0x',
 			toHex(transaction.value || 0) === '0x0'
@@ -331,8 +333,9 @@ export class EIP712Signer {
 		};
 	}
 
-	sign(tx: Eip712TxData): SignatureObject | undefined {
-		return new EIP712Transaction(tx).sign(toBytes(this.web3Account.privateKey)).getSignature();
+	async sign(tx: Eip712TxData): Promise<string> {
+		const hash = web3Abi.getEncodedEip712Data(EIP712.txTypedData(tx), true);
+		return signMessageWithPrivateKey(hash, this.web3Account.privateKey).signature;
 	}
 
 	/**
@@ -348,16 +351,7 @@ export class EIP712Signer {
 			throw Error("Transaction chainId isn't set!");
 		}
 
-		return EIP712.txHash(transaction);
-
-		// const domain = {
-		// 	name: 'zkSync',
-		// 	version: '2',
-		// 	chainId: transaction.chainId,
-		// };
-		// TODO: Implement replacement of the following line
-		// @ts-ignore
-		// return ethers.TypedDataEncoder.hash(domain, EIP712_TYPES, EIP712.getSignInput(transaction));
+		return web3Abi.getEncodedEip712Data(EIP712.txTypedData(transaction), true);
 	}
 
 	/**
@@ -402,7 +396,6 @@ export class EIP712Transaction extends BaseTransaction<EIP712Transaction> {
 		});
 	}
 	public ecsign(msgHash: Uint8Array, privateKey: Uint8Array, chainId?: bigint) {
-		// @ts-ignore-next-time until new web3js release
 		const { s, r, v } = this._ecsign(msgHash, privateKey, chainId);
 		this.signature = new SignatureObject(toUint8Array(r), toUint8Array(s), toBigInt(v));
 		return this.signature;
