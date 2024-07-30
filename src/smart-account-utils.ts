@@ -1,6 +1,6 @@
 import { toBytes, concat } from './utils';
 import { TransactionBuilder, PayloadSigner, Eip712TxData } from './types';
-import { privateKeyToAccount, pureSign, Web3Account } from 'web3-eth-accounts';
+import { privateKeyToAccount, signMessageWithPrivateKey, Web3Account } from 'web3-eth-accounts';
 import { EIP712_TX_TYPE } from './constants';
 import { Web3ZkSyncL2 } from './web3zksync-l2';
 import type * as web3Types from 'web3-types';
@@ -62,7 +62,7 @@ import * as utils from './utils';
 export const signPayloadWithECDSA: PayloadSigner = (payload, secret: string | Web3Account) => {
 	const account = typeof secret === 'string' ? privateKeyToAccount(secret) : secret;
 
-	return pureSign(payload.toString(), account.privateKey).signature;
+	return signMessageWithPrivateKey(payload.toString(), account.privateKey).signature;
 };
 
 /**

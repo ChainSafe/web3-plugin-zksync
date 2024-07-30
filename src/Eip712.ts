@@ -3,7 +3,7 @@ import type { Bytes, Eip712TypedData, Numbers } from 'web3-types';
 import * as web3Abi from 'web3-eth-abi';
 import * as web3Utils from 'web3-utils';
 import type * as web3Accounts from 'web3-eth-accounts';
-import { BaseTransaction, bigIntToUint8Array, pureSign, toUint8Array } from 'web3-eth-accounts';
+import { BaseTransaction, bigIntToUint8Array, signMessageWithPrivateKey, toUint8Array } from 'web3-eth-accounts';
 import { RLP } from '@ethereumjs/rlp';
 import type { Address } from 'web3';
 import {
@@ -335,7 +335,7 @@ export class EIP712Signer {
 
 	async sign(tx: Eip712TxData): Promise<string> {
 		const hash = web3Abi.getEncodedEip712Data(EIP712.txTypedData(tx), true);
-		return pureSign(hash, this.web3Account.privateKey).signature;
+		return signMessageWithPrivateKey(hash, this.web3Account.privateKey).signature;
 	}
 
 	/**

@@ -25,7 +25,7 @@ import { Web3ZkSyncL2 } from './web3zksync-l2';
 import type * as web3Types from 'web3-types';
 import { AdapterL2 } from './adapters';
 import { EIP712, EIP712Signer, getPriorityOpResponse, hashMessage, resolveAddress } from './utils';
-import { pureSign } from 'web3-eth-accounts';
+import { signMessageWithPrivateKey } from 'web3-eth-accounts';
 import { TypedDataEncoder } from './TypedDataEncoder';
 
 function checkProvider(signer: SmartAccount, operation: string): Web3ZkSyncL2 {
@@ -332,7 +332,7 @@ export class SmartAccount extends AdapterL2 {
 	 * const signedMessage = await account.signMessage('Hello World!');
 	 */
 	signMessage(message: string | Uint8Array): string {
-		const signature = pureSign(hashMessage(message), this.secret);
+		const signature = signMessageWithPrivateKey(hashMessage(message), this.secret);
 		return signature.signature;
 	}
 
