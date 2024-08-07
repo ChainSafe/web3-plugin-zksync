@@ -207,20 +207,25 @@ export class ZKSyncWallet extends Adapters {
 	 *
 	 * @example
 	 *
-	 * import { Wallet, Provider, types, utils } from "zksync-ethers";
-	 * import { ethers } from "ethers";
+	 * import { Transaction, utils, Web3 } from "web3";
+	 * import { types, ZkSyncPlugin, ZKSyncWallet } from "web3-plugin-zksync";
 	 *
-	 * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
+	 * async function main() {
+	 *   const web3: Web3 = new Web3("https://rpc.sepolia.org");
+	 *   web3.registerPlugin(new ZkSyncPlugin("https://sepolia.era.zksync.dev"));
 	 *
-	 * const provider = Provider.getDefaultProvider(types.Network.Sepolia);
-	 * const ethProvider = ethers.getDefaultProvider("sepolia");
-	 * const wallet = new Wallet(PRIVATE_KEY, provider, ethProvider);
+	 *   const zksync: ZkSyncPlugin = web3.zkSync;
+	 *   const PRIVATE_KEY: string = "<WALLET_PRIVATE_KEY>";
+	 *   const wallet: ZKSyncWallet = new zksync.ZkWallet(PRIVATE_KEY);
 	 *
-	 * const populatedTx = await wallet.populateTransaction({
-	 *   type: utils.EIP712_TX_TYPE,
-	 *   to: RECEIVER,
-	 *   value: 7_000_000_000n,
-	 * });
+	 *   const EIP712_TX_TYPE = 0x71;
+	 *   const TO_ADDRESS = "<TO_ADDRESS>";
+	 *   const populatedTx: types.Eip712TxData | Transaction = await wallet.populateTransaction({
+	 *     type: utils.toHex(EIP712_TX_TYPE),
+	 *     to: TO_ADDRESS,
+	 *     value: utils.toHex(7_000_000_000),
+	 *   });
+	 * }
 	 */
 	async populateTransaction(tx: web3Types.Transaction) {
 		tx.from = tx.from ?? this.getAddress();
