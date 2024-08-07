@@ -97,7 +97,7 @@ export class RpcMethods {
 	}
 
 	/**
-	 * Returns additional zkSync-specific information about the L2 block.
+	 * Returns additional ZKsync-specific information about the L2 block.
 	 *
 	 * committed: The batch is closed and the state transition it creates exists on layer 1.
 	 * proven: The batch proof has been created, submitted, and accepted on layer 1.
@@ -262,7 +262,7 @@ export class RpcMethods {
 	}
 
 	/**
-	 * Returns the address of the zkSync Era contract.
+	 * Returns the address of the ZKsync Era contract.
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */

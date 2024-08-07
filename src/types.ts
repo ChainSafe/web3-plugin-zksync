@@ -519,7 +519,7 @@ export interface L2ToL1Log {
 
 /**
  * A `TransactionRequest` is an extension of {@link ethers.TransactionRequest} with additional features for interacting
- * with zkSync Era.
+ * with ZKsync Era.
  */
 export declare type TransactionRequest = DeepWriteable<
 	TransactionWithSenderAPI & {

@@ -355,7 +355,7 @@ export class EIP712Signer {
 	}
 
 	/**
-	 * Returns zkSync Era EIP712 domain.
+	 * Returns ZKsync Era EIP712 domain.
 	 */
 	getDomain(): Eip712TypedData['domain'] {
 		return this.eip712Domain;
