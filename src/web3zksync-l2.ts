@@ -298,7 +298,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	/**
 	 * Creates a new `Provider` from provided URL or network name.
 	 *
-	 * @param zksyncNetwork The type of zkSync network.
+	 * @param zksyncNetwork The type of ZKsync network.
 	 *
 	 * @example
 	 *

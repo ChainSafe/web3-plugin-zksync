@@ -379,7 +379,7 @@ export function getDeployedContracts(receipt: web3Types.TransactionReceipt): Dep
  * @param salt A randomization element used to create the contract address.
  * @param input The ABI-encoded constructor arguments, if any.
  *
- * @remarks The implementation of `create2Address` in zkSync Era may differ slightly from Ethereum.
+ * @remarks The implementation of `create2Address` in ZKsync Era may differ slightly from Ethereum.
  *
  * @example
  *
@@ -514,7 +514,7 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
  * Returns the hash of the L2 priority operation from a given transaction receipt and L2 address.
  *
  * @param txReceipt The receipt of the L1 transaction.
- * @param zkSyncAddress The address of the zkSync Era main contract.
+ * @param zkSyncAddress The address of the ZKsync Era main contract.
  *
  * @example
  */
@@ -872,7 +872,7 @@ export async function isTypedDataSignatureCorrect(
  * Returns an estimation of the L2 gas required for token bridging via the default ERC20 bridge.
  *
  * @param providerL1 The Ethers provider for the L1 network.
- * @param providerL2 The zkSync provider for the L2 network.
+ * @param providerL2 The ZKsync provider for the L2 network.
  * @param token The address of the token to be bridged.
  * @param amount The deposit amount.
  * @param to The recipient address on the L2 network.
@@ -953,7 +953,7 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
 /**
  * Returns an estimation of the L2 gas required for token bridging via the custom ERC20 bridge.
  *
- * @param providerL2 The zkSync provider for the L2 network.
+ * @param providerL2 The ZKsync provider for the L2 network.
  * @param l1BridgeAddress The address of the custom L1 bridge.
  * @param l2BridgeAddress The address of the custom L2 bridge.
  * @param token The address of the token to be bridged.
