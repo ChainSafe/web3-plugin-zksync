@@ -73,7 +73,14 @@ export type ZKSyncContractsCollection = {
 };
 
 export class ZkSyncPlugin extends Web3PluginBase {
+	/**
+	 * Connection to the L1 chain (derived from the Web3 object the plugin is registered with)
+	 */
 	public L1: Web3ZkSyncL1 | undefined;
+
+	/**
+	 * Connection to the ZKsync Era chain
+	 */
 	public L2: Web3ZkSyncL2;
 	public pluginNamespace = 'zkSync';
 	public _rpc?: RpcMethods;
@@ -81,6 +88,10 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	public _erc20Contracts: Record<Address, Contract<typeof IERC20ABI>>;
 
 	private contracts: ZKSyncContractsCollection | undefined;
+
+	/**
+	 * Returns initialized instances of the main contract and bridging contracts, calling {@link initContracts} if necessary
+	 */
 	public get Contracts(): Promise<ZKSyncContractsCollection> {
 		if (this.contracts) {
 			return Promise.resolve(this.contracts);
@@ -88,7 +99,14 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		return this.initContracts();
 	}
 
+	/**
+	 * Addresses for the main contract and bridging contracts
+	 */
 	contractsAddresses: Promise<ContractsAddresses>;
+
+	/**
+	 * Returns addresses for the main contract and bridging contracts, calling {@link initContractsAddresses} if necessary
+	 */
 	public get ContractsAddresses(): Promise<ContractsAddresses> {
 		if (this.contractsAddresses) {
 			return Promise.resolve(this.contractsAddresses);
@@ -96,11 +114,25 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		return this.initContractsAddresses();
 	}
 
+	/**
+	 * Returns a convenience constructor for creating a {@link ZKSyncWallet} that uses the plugin's {@link L1} and {@link L2} providers
+	 *
+	 * @example
+	 *
+	 * import { Web3 } from "web3";
+	 * import { ZkSyncPlugin } from "web3-plugin-zksync";
+	 *
+	 * const web3 = new Web3("https://rpc.sepolia.org");
+	 * web3.registerPlugin(new ZkSyncPlugin("https://sepolia.era.zksync.dev"));
+	 *
+	 * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
+	 * const zkWallet = new web3.ZKsync.ZkWallet(PRIVATE_KEY);
+	 */
 	// the wallet type in this class is different from the parent class. So, they should have different names.
 	ZkWallet: ZKSyncWalletConstructor;
 
 	/**
-	 * Constructor
+	 * Create a new ZKsync plugin for the provided L2 network
 	 * @param providerOrContextL2 - The provider or context for the L2 network
 	 */
 	constructor(
@@ -140,6 +172,10 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this.initWallet();
 	}
 
+	/**
+	 * Initializes a {@link ZKSyncContractsCollection} with the contracts' ABIs and addresses for the plugin's {@link L1} and {@link L2} providers
+	 * Use {@link ZkSyncPlugin.Contracts} to make use of caching
+	 */
 	public async initContracts() {
 		if (!this.L1 || !this.L2) {
 			throw new Error(
@@ -193,8 +229,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	}
 
 	/**
-	 * Try to fill the contract addresses
-	 * @returns True if the contract addresses were successfully filled, false otherwise
+	 * Populate the main contract and bridging contract addresses for the plugin's {@link L1} and {@link L2} providers
+	 * Use {@link ZkSyncPlugin.ContractsAddresses} to make use of caching
+	 * @returns The contract addresses
 	 */
 	public async initContractsAddresses() {
 		const [mainContract, bridgehubContractAddress, bridgeContracts] = await Promise.all([
