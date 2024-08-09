@@ -518,8 +518,7 @@ export interface L2ToL1Log {
 }
 
 /**
- * A `TransactionRequest` is an extension of {@link ethers.TransactionRequest} with additional features for interacting
- * with zkSync Era.
+ * A transaction request that includes additional features for interacting with ZKsync Era.
  */
 export declare type TransactionRequest = DeepWriteable<
 	TransactionWithSenderAPI & {
@@ -530,7 +529,7 @@ export declare type TransactionRequest = DeepWriteable<
 >;
 
 /**
- * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
+ * Interface representation of priority op response with a function
  * that waits to commit a L1 transaction, including when given on optional confirmation number.
  */
 export interface PriorityL1OpResponse {

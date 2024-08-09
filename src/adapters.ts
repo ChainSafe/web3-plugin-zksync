@@ -76,7 +76,7 @@ export class AdapterL1 implements TxSender {
 	}
 
 	/**
-	 * Returns `Contract` wrapper of the zkSync Era smart contract.
+	 * Returns `Contract` wrapper of the ZKsync Era smart contract.
 	 */
 	async getMainContract(
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
@@ -166,7 +166,7 @@ export class AdapterL1 implements TxSender {
 	 *
 	 * @param token The Ethereum address of the token.
 	 * @param [bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge, either `L1EthBridge` or `L1Erc20Bridge`.
+	 * Defaults to the default ZKsync Era bridge, either `L1EthBridge` or `L1Erc20Bridge`.
 	 * @param [blockTag] The block in which an allowance should be checked.
 	 * Defaults to 'committed', i.e., the latest processed block.
 	 */
@@ -193,7 +193,7 @@ export class AdapterL1 implements TxSender {
 	 * Returns the L2 token address equivalent for a L1 token address as they are not necessarily equal.
 	 * The ETH address is set to the zero address.
 	 *
-	 * @remarks Only works for tokens bridged on default zkSync Era bridges.
+	 * @remarks Only works for tokens bridged on default ZKsync Era bridges.
 	 *
 	 * @param token The address of the token on L1.
 	 */
@@ -202,7 +202,7 @@ export class AdapterL1 implements TxSender {
 	}
 
 	/**
-	 * Bridging ERC20 tokens from L1 requires approving the tokens to the zkSync Era smart contract.
+	 * Bridging ERC20 tokens from L1 requires approving the tokens to the ZKsync Era smart contract.
 	 *
 	 * @param token The L1 address of the token.
 	 * @param amount The amount of the token to be approved.
@@ -347,7 +347,7 @@ export class AdapterL1 implements TxSender {
 	 * explicitly stated in the overrides, this field will be equal to the tip the operator will receive on top of
 	 * the base cost of the transaction.
 	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
+	 * Defaults to the default ZKsync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.approveERC20] Whether or not token approval should be performed under the hood.
 	 * Set this flag to true if you bridge an ERC20 token and didn't call the {@link approveERC20} function beforehand.
 	 * @param [transaction.approveBaseERC20] Whether or not base token approval should be performed under the hood.
@@ -636,7 +636,7 @@ export class AdapterL1 implements TxSender {
 	 * explicitly stated in the overrides, this field will be equal to the tip the operator will receive on top of the
 	 * base cost of the transaction.
 	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
+	 * Defaults to the default ZKsync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.l2GasLimit] Maximum amount of L2 gas that the transaction can consume during execution on L2.
 	 * @param [transaction.gasPerPubdataByte] The L2 gas price for each published L1 calldata byte.
 	 * @param [transaction.customBridgeData] Additional data that can be sent to a bridge.
@@ -681,7 +681,7 @@ export class AdapterL1 implements TxSender {
 	 * @param [transaction.operatorTip] (currently not used) If the ETH value passed with the transaction is not
 	 * explicitly stated in the overrides, this field will be equal to the tip the operator will receive on top of the
 	 * base cost of the transaction.
-	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used. Defaults to the default zkSync
+	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used. Defaults to the default ZKsync
 	 * Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.l2GasLimit] Maximum amount of L2 gas that the transaction can consume during execution on L2.
 	 * @param [transaction.gasPerPubdataByte] The L2 gas price for each published L1 calldata byte.
@@ -1105,7 +1105,7 @@ export class AdapterL1 implements TxSender {
 	 * @param transaction.token The address of the token to deposit. ETH by default.
 	 * @param [transaction.to] The address that will receive the deposited tokens on L2.
 	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
+	 * Defaults to the default ZKsync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.customBridgeData] Additional data that can be sent to a bridge.
 	 * @param [transaction.gasPerPubdataByte] The L2 gas price for each published L1 calldata byte.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L1 `gasLimit`, `gasPrice`, `value`, etc.

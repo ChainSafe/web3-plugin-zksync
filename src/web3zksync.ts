@@ -38,8 +38,8 @@ import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
 
 /**
- * The base class for interacting with zkSync Era.
- * It extends the `Web3Eth` class and provides additional methods for interacting with zkSync Era.
+ * The base class for interacting with ZKsync Era.
+ * It extends the `Web3Eth` class and provides additional methods for interacting with ZKsync Era.
  * It is the base class for the `Web3ZkSyncL1` and `Web3ZkSyncL2`.
  */
 // Note: Code logic here is similar to JsonRpcApiProvider class in zksync-ethers
@@ -121,7 +121,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns additional zkSync-specific information about the L2 block.
+	 * Returns additional ZKsync-specific information about the L2 block.
 	 *
 	 * committed: The batch is closed and the state transition it creates exists on layer 1.
 	 * proven: The batch proof has been created, submitted, and accepted on layer 1.
@@ -226,7 +226,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns the addresses of the default zkSync Era bridge contracts on both L1 and L2.
+	 * Returns the addresses of the default ZKsync Era bridge contracts on both L1 and L2.
 	 *
 	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getbridgecontracts zks_getBridgeContracts} JSON-RPC method.
 	 */
@@ -285,7 +285,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns the address of the zkSync Era contract.
+	 * Returns the address of the ZKsync Era contract.
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
@@ -426,7 +426,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 * Returns the L2 token address equivalent for a L1 token address as they are not equal.
 	 * ETH address is set to zero address.
 	 *
-	 * @remarks Only works for tokens bridged on default zkSync Era bridges.
+	 * @remarks Only works for tokens bridged on default ZKsync Era bridges.
 	 *
 	 * @param token The address of the token on L1.
 	 */
@@ -448,7 +448,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns the main zkSync Era smart contract address.
+	 * Returns the main ZKsync Era smart contract address.
 	 *
 	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getmaincontract zks_getMainContract} JSON-RPC method.
 	 */

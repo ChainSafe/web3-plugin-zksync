@@ -339,10 +339,6 @@ export function getHashedL2ToL1Msg(
  * Returns a log containing details of all deployed contracts related to a transaction receipt.
  *
  * @param receipt The transaction receipt containing deployment information.
- *
- * @example
- *
- *
  */
 export function getDeployedContracts(receipt: web3Types.TransactionReceipt): DeploymentInfo[] {
 	const addressBytesLen = 40;
@@ -379,7 +375,7 @@ export function getDeployedContracts(receipt: web3Types.TransactionReceipt): Dep
  * @param salt A randomization element used to create the contract address.
  * @param input The ABI-encoded constructor arguments, if any.
  *
- * @remarks The implementation of `create2Address` in zkSync Era may differ slightly from Ethereum.
+ * @remarks The implementation of `create2Address` in ZKsync Era may differ slightly from Ethereum.
  *
  * @example
  *
@@ -510,15 +506,6 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
 	return hash;
 }
 
-/**
- * Returns the hash of the L2 priority operation from a given transaction receipt and L2 address.
- *
- * @param txReceipt The receipt of the L1 transaction.
- * @param zkSyncAddress The address of the zkSync Era main contract.
- *
- * @example
- */
-
 let ZkSyncABIEvents: Array<AbiEventFragment & { signature: string }> | null = null;
 
 const getZkSyncEvents = () => {
@@ -531,6 +518,12 @@ const getZkSyncEvents = () => {
 	return ZkSyncABIEvents;
 };
 
+/**
+ * Returns the hash of the L2 priority operation from a given transaction receipt and L2 address.
+ * @param txReceipt The receipt of the L1 transaction.
+ * @param zkSyncAddress The address of the ZKsync Era main contract.
+ * @returns The hash of the L2 priority operation.
+ */
 export function getL2HashFromPriorityOp(
 	txReceipt: web3Types.TransactionReceipt,
 	zkSyncAddress: web3.Address,
@@ -649,10 +642,6 @@ export async function getERC20DefaultBridgeData(
  * @param l2Receiver The recipient address on L2.
  * @param amount The gas fee for the number of tokens to bridge.
  * @param bridgeData Additional bridge data.
- *
- * @example
- *
- *
  */
 export async function getERC20BridgeCalldata(
 	l1TokenAddress: string,
@@ -717,9 +706,6 @@ function isECDSASignatureCorrect(
  *
  * @see
  * {@link isMessageSignatureCorrect} and {@link isTypedDataSignatureCorrect} to validate signatures.
- *
- * @example
- *
  */
 async function isEIP1271SignatureCorrect(
 	context: web3.Web3Context, // or maybe use RpcMethods?
@@ -872,7 +858,7 @@ export async function isTypedDataSignatureCorrect(
  * Returns an estimation of the L2 gas required for token bridging via the default ERC20 bridge.
  *
  * @param providerL1 The Ethers provider for the L1 network.
- * @param providerL2 The zkSync provider for the L2 network.
+ * @param providerL2 The ZKsync provider for the L2 network.
  * @param token The address of the token to be bridged.
  * @param amount The deposit amount.
  * @param to The recipient address on the L2 network.
@@ -881,10 +867,6 @@ export async function isTypedDataSignatureCorrect(
  *
  * @see
  * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#default-bridges Default bridges documentation}.
- *
- * @example
- *
- *
  */
 export async function estimateDefaultBridgeDepositL2Gas(
 	providerL1: web3.Web3,
@@ -953,7 +935,7 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
 /**
  * Returns an estimation of the L2 gas required for token bridging via the custom ERC20 bridge.
  *
- * @param providerL2 The zkSync provider for the L2 network.
+ * @param providerL2 The ZKsync provider for the L2 network.
  * @param l1BridgeAddress The address of the custom L1 bridge.
  * @param l2BridgeAddress The address of the custom L2 bridge.
  * @param token The address of the token to be bridged.
@@ -966,10 +948,6 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
  *
  * @see
  * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#custom-bridges-on-l1-and-l2 Custom bridges documentation}.
- *
- * @example
- *
- *
  */
 export async function estimateCustomBridgeDepositL2Gas(
 	providerL2: Web3ZkSyncL2,
