@@ -12,7 +12,7 @@ import * as utils from './utils';
  * @param payload The payload that needs to be signed.
  * @param secret The ECDSA private key.
  *
- * @example Sign EIP712 transaction hash.
+ * @example <caption>Sign EIP712 transaction hash.</caption>
  *
  * import { EIP712Signer, signPayloadWithECDSA, types } from "web3-plugin-zksync";
  *
@@ -28,7 +28,7 @@ import * as utils from './utils';
  * const txHash = EIP712Signer.getSignedDigest(tx);
  * const result = signPayloadWithECDSA(txHash, PRIVATE_KEY);
  *
- * @example Sign message hash.
+ * @example <caption>Sign message hash.</caption>
  *
  * import { signPayloadWithECDSA } from "web3-plugin-zksync";
  * import { hashMessage } from "web3-eth-accounts";
@@ -56,7 +56,7 @@ export const signPayloadWithECDSA: PayloadSigner = (payload, secret: string | We
  *
  * @throws {Error} If the `secret` is not an array of at least two elements.
  *
- * @example Sign EIP712 transaction hash.
+ * @example <caption>Sign EIP712 transaction hash.</caption>
  *
  * import { EIP712Signer, signPayloadWithMultipleECDSA, types } from "web3-plugin-zksync";
  *
@@ -73,7 +73,7 @@ export const signPayloadWithECDSA: PayloadSigner = (payload, secret: string | We
  * const txHash = EIP712Signer.getSignedDigest(tx);
  * const result = signPayloadWithMultipleECDSA(typedDataHash, [PRIVATE_KEY1, PRIVATE_KEY2]);
  *
- * @example Sign message hash.
+ * @example <caption>Sign message hash.</caption>
  *
  * import { signPayloadWithMultipleECDSA } from "web3-plugin-zksync";
  * import { hashMessage } from "web3-eth-accounts";

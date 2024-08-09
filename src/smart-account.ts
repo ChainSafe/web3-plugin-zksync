@@ -399,7 +399,7 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @returns A Promise resolving to a withdrawal transaction response.
 	 *
-	 * @example Withdraw ETH.
+	 * @example <caption>Withdraw ETH.</caption>
 	 *
 	 * import { constants, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
 	 *
@@ -417,7 +417,7 @@ export class SmartAccount extends AdapterL2 {
 	 *   amount: 10_000_000n,
 	 * });
 	 *
-	 * @example Withdraw ETH using paymaster to facilitate fee payment with an ERC20 token.
+	 * @example <caption>Withdraw ETH using paymaster to facilitate fee payment with an ERC20 token.</caption>
 	 *
 	 * import { constants, paymasterUtils, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
 	 *
@@ -468,7 +468,7 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @returns A Promise resolving to a transfer transaction response.
 	 *
-	 * @example Transfer ETH.
+	 * @example <caption>Transfer ETH.</caption>
 	 *
 	 * import { constants, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
 	 *
@@ -491,7 +491,7 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * console.log(`The sum of ${receipt.value} ETH was transferred to ${receipt.to}`);
 	 *
-	 * @example Transfer ETH using paymaster to facilitate fee payment with an ERC20 token.
+	 * @example <caption>Transfer ETH using paymaster to facilitate fee payment with an ERC20 token.</caption>
 	 *
 	 * import { constants, paymasterUtils, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
 	 *
