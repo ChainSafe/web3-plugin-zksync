@@ -14,50 +14,31 @@ import * as utils from './utils';
  *
  * @example Sign EIP712 transaction hash.
  *
- * import { EIP712Signer, types, utils } from "zksync-ethers";
+ * import { EIP712Signer, signPayloadWithECDSA, types } from "web3-plugin-zksync";
  *
  * const PRIVATE_KEY = "<PRIVATE_KEY>";
  *
- * const tx: types.TransactionRequest = {
+ * const tx: types.Eip712TxData = {
  *   chainId: 270,
- *   from: ADDRESS,
+ *   from: "<ADDRESS>",
  *   to: "<RECEIVER>",
  *   value: 7_000_000_000,
  * };
  *
  * const txHash = EIP712Signer.getSignedDigest(tx);
- * const result = await utils.signPayloadWithECDSA(txHash, PRIVATE_KEY);
+ * const result = signPayloadWithECDSA(txHash, PRIVATE_KEY);
  *
  * @example Sign message hash.
  *
- * import { utils } from "zksync-ethers";
- * import { hashMessage } from "ethers";
+ * import { signPayloadWithECDSA } from "web3-plugin-zksync";
+ * import { hashMessage } from "web3-eth-accounts";
  *
  * const PRIVATE_KEY = "<PRIVATE_KEY>";
  *
  * const message = 'Hello World!';
  * const messageHash = hashMessage(message);
  *
- * const result = await utils.signPayloadWithECDSA(messageHash, PRIVATE_KEY);
- *
- * @example Sign typed data hash.
- *
- * import { utils } from "zksync-ethers";
- * import { TypedDataEncoder } from "ethers";
- *
- * const PRIVATE_KEY = "<PRIVATE_KEY>";
- *
- * const typedDataHash = TypedDataEncoder.hash(
- *   {name: 'Example', version: '1', chainId: 270},
- *   {
- *     Person: [
- *       {name: 'name', type: 'string'},
- *       {name: 'age', type: 'uint8'},
- *     ],
- *   },
- *   {name: 'John', age: 30}
- * );
- * const result = await utils.signPayloadWithECDSA(typedDataHash, PRIVATE_KEY);
+ * const result = signPayloadWithECDSA(messageHash, PRIVATE_KEY);
  */
 export const signPayloadWithECDSA: PayloadSigner = (payload, secret: string | Web3Account) => {
 	const account = typeof secret === 'string' ? privateKeyToAccount(secret) : secret;
@@ -77,25 +58,25 @@ export const signPayloadWithECDSA: PayloadSigner = (payload, secret: string | We
  *
  * @example Sign EIP712 transaction hash.
  *
- * import { EIP712Signer, types, utils } from "zksync-ethers";
+ * import { EIP712Signer, signPayloadWithMultipleECDSA, types } from "web3-plugin-zksync";
  *
  * const PRIVATE_KEY1 = "<PRIVATE_KEY1>";
  * const PRIVATE_KEY2 = "<PRIVATE_KEY2>";
  *
- * const tx: types.TransactionRequest = {
+ * const tx: types.Eip712TxData = {
  *   chainId: 270,
- *   from: ADDRESS,
+ *   from: "<ADDRESS>",
  *   to: "<RECEIVER>",
  *   value: 7_000_000_000,
  * };
  *
  * const txHash = EIP712Signer.getSignedDigest(tx);
- * const result = await utils.signPayloadWithMultipleECDSA(typedDataHash, [PRIVATE_KEY1, PRIVATE_KEY2]);
+ * const result = signPayloadWithMultipleECDSA(typedDataHash, [PRIVATE_KEY1, PRIVATE_KEY2]);
  *
  * @example Sign message hash.
  *
- * import { utils } from "zksync-ethers";
- * import { hashMessage } from "ethers";
+ * import { signPayloadWithMultipleECDSA } from "web3-plugin-zksync";
+ * import { hashMessage } from "web3-eth-accounts";
  *
  * const PRIVATE_KEY1 = "<PRIVATE_KEY1>";
  * const PRIVATE_KEY2 = "<PRIVATE_KEY2>";
@@ -103,27 +84,7 @@ export const signPayloadWithECDSA: PayloadSigner = (payload, secret: string | We
  * const message = 'Hello World!';
  * const messageHash = hashMessage(message);
  *
- * const result = await utils.signPayloadWithMultipleECDSA(typedDataHash, [PRIVATE_KEY1, PRIVATE_KEY2]);
- *
- * @example Sign typed data hash.
- *
- * import { utils } from "zksync-ethers";
- * import { TypedDataEncoder } from "ethers";
- *
- * const PRIVATE_KEY1 = "<PRIVATE_KEY1>";
- * const PRIVATE_KEY2 = "<PRIVATE_KEY2>";
- *
- * const typedDataHash = TypedDataEncoder.hash(
- *   {name: 'Example', version: '1', chainId: 270},
- *   {
- *     Person: [
- *       {name: 'name', type: 'string'},
- *       {name: 'age', type: 'uint8'},
- *     ],
- *   },
- *   {name: 'John', age: 30}
- * );
- * const result = await utils.signPayloadWithMultipleECDSA(typedDataHash, [PRIVATE_KEY1, PRIVATE_KEY2]);
+ * const result = signPayloadWithMultipleECDSA(typedDataHash, [PRIVATE_KEY1, PRIVATE_KEY2]);
  */
 export const signPayloadWithMultipleECDSA: PayloadSigner = (
 	payload,
@@ -163,13 +124,13 @@ export const signPayloadWithMultipleECDSA: PayloadSigner = (
  *
  * @example
  *
- * import { Provider, types, utils } from "zksync-ethers";
+ * import { populateTransactionECDSA, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
  *
  * const PRIVATE_KEY = "<PRIVATE_KEY>";
  *
- * const provider = Provider.getDefaultProvider(types.Network.Sepolia);
+ * const provider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
  *
- * const populatedTx = await utils.populateTransactionECDSA(
+ * const populatedTx = populateTransactionECDSA(
  *   {
  *     chainId: 270,
  *     to: "<RECEIVER>",
@@ -218,14 +179,15 @@ export const populateTransactionECDSA: TransactionBuilder = async (
  *
  * @example
  *
- * import { Provider, types, utils } from "zksync-ethers";
+ *
+ * import { populateTransactionMultisigECDSA, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
  *
  * const PRIVATE_KEY1 = "<PRIVATE_KEY1>";
  * const PRIVATE_KEY2 = "<PRIVATE_KEY2>";
  *
- * const provider = Provider.getDefaultProvider(types.Network.Sepolia);
+ * const provider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
  *
- * const populatedTx = await utils.populateTransactionMultisigECDSA(
+ * const populatedTx = await populateTransactionMultisigECDSA(
  *   {
  *     chainId: 270,
  *     to: "<RECEIVER>",
