@@ -3,6 +3,7 @@ export { Web3ZkSyncL1 } from './web3zksync-l1';
 export { Web3ZkSyncL2 } from './web3zksync-l2';
 export { ZKSyncWallet } from './zksync-wallet';
 export * from './Eip712';
+export * from './paymaster-utils';
 export * from './smart-account';
 export * from './smart-account-utils';
 export * as utils from './utils';
