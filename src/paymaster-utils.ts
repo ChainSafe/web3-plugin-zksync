@@ -49,14 +49,14 @@ export function getGeneralPaymasterInput(paymasterInput: GeneralPaymasterInput) 
  * @example Create general-based parameters.
  *
  * const paymasterAddress = "0x0a67078A35745947A37A552174aFe724D8180c25";
- * const paymasterParams = utils.getPaymasterParams(paymasterAddress, {
+ * const paymasterParams = getPaymasterParams(paymasterAddress, {
  *   type: "General",
  *   innerInput: new Uint8Array(),
  * });
  *
  * @example Create approval-based parameters.
  *
- * const result = utils.getPaymasterParams("0x0a67078A35745947A37A552174aFe724D8180c25", {
+ * const result = getPaymasterParams("0x0a67078A35745947A37A552174aFe724D8180c25", {
  *   type: "ApprovalBased",
  *   token: "0x65C899B5fb8Eb9ae4da51D67E1fc417c7CB7e964",
  *   minimalAllowance: BigInt(1),
