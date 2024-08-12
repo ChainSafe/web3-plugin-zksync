@@ -42,6 +42,18 @@ class Adapters extends AdapterL1 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
+	/**
+	 * Initiates the withdrawal process which withdraws ETH or any ERC20 token
+	 * from the associated account on L2 network to the target account on L1 network.
+	 *
+	 * @param transaction Withdrawal transaction request.
+	 * @param transaction.token The address of the token. Defaults to ETH.
+	 * @param transaction.amount The amount of the token to withdraw.
+	 * @param [transaction.to] The address of the recipient on L1.
+	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
+	 * @param [transaction.paymasterParams] Paymaster parameters.
+	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
+	 */
 	withdraw(transaction: {
 		token: Address;
 		amount: web3Types.Numbers;
