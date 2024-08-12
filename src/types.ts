@@ -10,6 +10,7 @@ import type {
 } from 'web3-types';
 
 import { Web3ZkSyncL2 } from './web3zksync-l2';
+import { Log, TransactionReceiptBase } from '../../web3.js/packages/web3-types/src';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -736,7 +737,7 @@ export interface RawBlockTransaction {
 
 /** Contains parameters for finalizing the withdrawal transaction. */
 export interface FinalizeWithdrawalParams {
-	l1BatchNumber: number | null;
+	l1BatchNumber: number | null | Numbers;
 	l2MessageIndex: number;
 	l2TxNumberInBlock: number | null;
 	message: any;
@@ -901,13 +902,19 @@ export type Eip712SignedInput = FeeMarketEIP1559TxData & {
 	[key: string]: unknown;
 };
 
-export type ZKTransactionReceipt = TransactionReceipt & {
+export type ZKTransactionReceiptLog = Log & {
+	l1BatchNumber: Numbers;
+};
+
+export type ZKTransactionReceipt = TransactionReceiptBase<
+	Numbers,
+	Bytes,
+	Bytes,
+	ZKTransactionReceiptLog
+> & {
 	l1BatchNumber: Numbers;
 	l1BatchTxIndex: Numbers;
 	l2ToL1Logs: L2ToL1Log[];
-	logs: TransactionReceipt['logs'] & {
-		l1BatchNumber: Numbers;
-	};
 };
 
 export interface OverridesReadOnly extends Omit<TransactionRequest, 'to' | 'data'> {}

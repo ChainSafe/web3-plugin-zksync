@@ -7,7 +7,7 @@ import {
 	signPayloadWithMultipleECDSA,
 } from '../../src/smart-account-utils';
 import { ADDRESS1, PRIVATE_KEY1, ADDRESS2, ADDRESS3, deepEqualExcluding } from '../utils';
-import { Eip712TxData } from '../../lib/types';
+import { Eip712TxData } from '../../src/types';
 import { TypedDataEncoder } from '../../src/TypedDataEncoder';
 
 describe('signPayloadWithECDSA()', () => {

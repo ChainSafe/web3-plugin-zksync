@@ -51,6 +51,7 @@ import {
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 import { Web3ZkSyncL1 } from './web3zksync-l1';
 import { Address } from 'web3';
+import { ethRpcMethods } from 'web3-rpc-methods';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -1004,7 +1005,10 @@ export function isAddressEq(a: web3.Address, b: web3.Address): boolean {
 export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
 	while (true) {
 		try {
-			const receipt = await web3Eth.getTransactionReceipt(txHash);
+			const receipt = await ethRpcMethods.getTransactionReceipt(
+				web3Eth.requestManager,
+				txHash,
+			);
 			if (receipt && receipt.blockNumber) {
 				return receipt;
 			}
@@ -1092,15 +1096,13 @@ export async function waitTxByHashConfirmationFinalized(
 	waitConfirmations = 1,
 	blogTag?: BlockNumberOrTag,
 ): Promise<TransactionReceipt> {
-	const receipt = await waitTxReceipt(web3Eth, txHash);
 	while (true) {
-		const block = await web3Eth.getBlock(blogTag ?? 'latest');
+		const receipt = await waitTxReceipt(web3Eth, txHash);
+		const block = await web3Eth.getBlock(blogTag ?? 'finalized');
 		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
 			return receipt;
 		}
 		await sleep(500);
-		// 3298012n // block.number
-		// 3303874n
 	}
 }
 

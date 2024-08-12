@@ -1,11 +1,11 @@
 import type * as web3Types from 'web3-types';
 import * as web3Utils from 'web3-utils';
 import * as Web3EthAbi from 'web3-eth-abi';
-import { DEFAULT_RETURN_FORMAT } from 'web3';
+import { DEFAULT_RETURN_FORMAT, HexString } from 'web3';
 import * as Web3 from 'web3';
 import type { PayableMethodObject, PayableTxOptions } from 'web3-eth-contract';
 import { toBigInt, toHex, toNumber } from 'web3-utils';
-import type { Transaction, TransactionHash, TransactionReceipt } from 'web3-types';
+import type { Bytes, Numbers, Transaction, TransactionHash, TransactionReceipt } from 'web3-types';
 import type { Web3ZkSyncL2 } from './web3zksync-l2';
 
 import type { EIP712Signer } from './utils';
@@ -36,7 +36,7 @@ import {
 	LEGACY_ETH_ADDRESS,
 	EIP712_TX_TYPE,
 } from './constants';
-import type {
+import {
 	Address,
 	FinalizeWithdrawalParams,
 	FullDepositFee,
@@ -45,6 +45,7 @@ import type {
 	PriorityOpResponse,
 	WalletBalances,
 	Eip712TxData,
+	ZKTransactionReceiptLog,
 } from './types';
 import { ZeroAddress, ZeroHash } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
@@ -1235,20 +1236,32 @@ export class AdapterL1 implements TxSender {
 		return this._contextL2().getPriorityOpConfirmation(txHash, index);
 	}
 
-	async _getWithdrawalLog(withdrawalHash: web3Types.Bytes, index = 0) {
+	async _getWithdrawalLog(
+		withdrawalHash: web3Types.Bytes,
+		index = 0,
+	): Promise<{
+		log: ZKTransactionReceiptLog;
+		l1BatchTxId: Numbers;
+	}> {
 		const hash = web3Utils.toHex(withdrawalHash);
 		const receipt = await this._contextL2().getZKTransactionReceipt(hash);
 		if (!receipt) {
 			// @todo: or throw?
-			return {};
+			return {
+				// @ts-ignore
+				log: {},
+				l1BatchTxId: 0n,
+			};
 		}
+
+		const topic = id('L1MessageSent(address,bytes32,bytes)');
 		// @ts-ignore
 		const log = (receipt?.logs || []).filter(
 			// @ts-ignore
-			log =>
-				isAddressEq(String(log?.address), L1_MESSENGER_ADDRESS) &&
-				log?.topics &&
-				String(log?.topics[0]) === id('L1MessageSent(address,bytes32,bytes)'),
+			l =>
+				isAddressEq(String(l?.address), L1_MESSENGER_ADDRESS) &&
+				l?.topics &&
+				String(l?.topics[0]) === topic,
 		)[index];
 
 		return {
@@ -1298,13 +1311,13 @@ export class AdapterL1 implements TxSender {
 		if (!proof) {
 			throw new Error('Log proof not found!');
 		}
-		const message = Web3EthAbi.decodeParameters(['bytes'], log?.data)[0];
+		const message = Web3EthAbi.decodeParameters(['bytes'], log.data as HexString)[0];
 		return {
 			l1BatchNumber: log.l1BatchNumber,
 			l2MessageIndex: Number(toNumber(proof.id)),
 			l2TxNumberInBlock: l1BatchTxId ? Number(toNumber(l1BatchTxId)) : null,
 			message,
-			sender,
+			sender: sender as Address,
 			proof: proof.proof,
 		};
 	}
@@ -1361,7 +1374,7 @@ export class AdapterL1 implements TxSender {
 	async isWithdrawalFinalized(withdrawalHash: web3Types.Bytes, index = 0): Promise<boolean> {
 		const { log } = await this._getWithdrawalLog(withdrawalHash, index);
 		const { l2ToL1LogIndex } = await this._getWithdrawalL2ToL1Log(withdrawalHash, index);
-		const sender = dataSlice(log.topics[1], 12);
+		const sender = dataSlice((log && log.topics && log.topics[1]) as unknown as Bytes, 12);
 		// `getLogProof` is called not to get proof but
 		// to get the index of the corresponding L2->L1 log,
 		// which is returned as `proof.id`.
@@ -1386,7 +1399,7 @@ export class AdapterL1 implements TxSender {
 		}
 
 		return await l1Bridge.methods
-			.isWithdrawalFinalized(chainId, log.l1BatchNumber, proof.id)
+			.isWithdrawalFinalized(chainId, log!.l1BatchNumber, proof.id)
 			.call();
 	}
 
