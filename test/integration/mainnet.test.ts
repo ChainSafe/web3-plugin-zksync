@@ -1,5 +1,5 @@
 import { Web3 } from 'web3';
-import { ZkSyncPlugin } from '../../src';
+import { ZKsyncPlugin } from '../../src';
 
 const EXAMPLE_ERC20_TOKEN = {
 	address: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4',
@@ -13,15 +13,15 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 
 	beforeAll(() => {
 		web3 = new Web3();
-		web3.registerPlugin(new ZkSyncPlugin('https://mainnet.era.zksync.io'));
+		web3.registerPlugin(new ZKsyncPlugin('https://mainnet.era.zksync.io'));
 	});
 
 	it('should get L1 token address', async () => {
-		const res = await web3.zkSync.getL1Address(EXAMPLE_ERC20_TOKEN.address);
+		const res = await web3.ZKsync.getL1Address(EXAMPLE_ERC20_TOKEN.address);
 		expect(res).toBe(EXAMPLE_ERC20_TOKEN.l1Address);
 	});
 	it('should get L2 token address', async () => {
-		const res = await web3.zkSync.getL2Address(EXAMPLE_ERC20_TOKEN.address);
+		const res = await web3.ZKsync.getL2Address(EXAMPLE_ERC20_TOKEN.address);
 		expect(res).toBe(EXAMPLE_ERC20_TOKEN.l2Address);
 	});
 });

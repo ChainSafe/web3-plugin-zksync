@@ -1,4 +1,4 @@
-import { SmartAccount, types, Web3ZkSyncL2 } from '../../src';
+import { SmartAccount, types, Web3ZKsyncL2 } from '../../src';
 import {
 	IS_ETH_BASED,
 	PRIVATE_KEY1,
@@ -18,7 +18,7 @@ const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || PRIVATE_KEY1;
 const mainAccount = privateKeyToAccount(PRIVATE_KEY);
 jest.setTimeout(60000);
 describe('SmartAccount', () => {
-	const provider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	// const ethProvider = new Web3ZkSyncL1(
 	// 	'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
 	// );
@@ -72,7 +72,7 @@ describe('SmartAccount', () => {
 
 	describe('#connect()', () => {
 		it('should return a `SmartAccount` with provided `provider` as a provider', async () => {
-			const newProvider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Mainnet);
+			const newProvider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Mainnet);
 			let account = new SmartAccount(
 				{ address: mainAccount.address, secret: mainAccount.privateKey },
 				provider,

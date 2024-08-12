@@ -27,7 +27,7 @@ import { IERC20ABI } from './contracts/IERC20';
 import * as utils from './utils';
 
 // Equivalent to both Provider and Signer in zksync-ethers
-export class Web3ZkSyncL2 extends Web3ZkSync {
+export class Web3ZKsyncL2 extends Web3ZkSync {
 	eip712!: utils.EIP712Signer;
 	async getZKTransactionReceipt<ReturnFormat extends DataFormat>(
 		transactionHash: Bytes,
@@ -308,18 +308,18 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 */
 	static initWithDefaultProvider(
 		zksyncNetwork: ZkSyncNetwork = ZkSyncNetwork.Localhost,
-	): Web3ZkSyncL2 {
+	): Web3ZKsyncL2 {
 		switch (zksyncNetwork) {
 			case ZkSyncNetwork.Localhost:
-				return new Web3ZkSyncL2('http://localhost:3050');
+				return new Web3ZKsyncL2('http://localhost:3050');
 			case ZkSyncNetwork.Sepolia:
-				return new Web3ZkSyncL2('https://sepolia.era.zksync.dev');
+				return new Web3ZKsyncL2('https://sepolia.era.zksync.dev');
 			case ZkSyncNetwork.Mainnet:
-				return new Web3ZkSyncL2('https://mainnet.era.zksync.io');
+				return new Web3ZKsyncL2('https://mainnet.era.zksync.io');
 			case ZkSyncNetwork.EraTestNode:
-				return new Web3ZkSyncL2('http://localhost:8011');
+				return new Web3ZKsyncL2('http://localhost:8011');
 			default:
-				return new Web3ZkSyncL2('http://localhost:3050');
+				return new Web3ZKsyncL2('http://localhost:3050');
 		}
 	}
 }
