@@ -1,6 +1,6 @@
 import { Web3 } from 'web3';
 import { QuickNodeProvider, Network } from 'web3-rpc-providers';
-import type { ZKSyncContractsCollection } from 'src/plugin';
+import type { ZKSyncContractsCollection } from 'src/types';
 import { ZKsyncPlugin } from '../../src';
 
 describe('ZkSyncPlugin rpc tests', () => {

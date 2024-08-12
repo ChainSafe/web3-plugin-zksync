@@ -2,6 +2,8 @@ export { ZKsyncPlugin } from './plugin';
 export { Web3ZKsyncL1 } from './web3zksync-l1';
 export { Web3ZKsyncL2 } from './web3zksync-l2';
 export { ZKsyncWallet } from './zksync-wallet';
+export { RpcMethods } from './rpc.methods';
+export { TypedDataEncoder } from './TypedDataEncoder';
 export * from './Eip712';
 export * from './paymaster-utils';
 export * from './smart-account';

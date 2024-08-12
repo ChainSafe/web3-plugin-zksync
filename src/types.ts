@@ -1,5 +1,6 @@
 // import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
 import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
+import type { Contract } from 'web3-eth-contract';
 import type {
 	Bytes,
 	HexString,
@@ -10,6 +11,15 @@ import type {
 } from 'web3-types';
 
 import { Web3ZKsyncL2 } from './web3zksync-l2';
+import type { IERC20ABI } from './contracts/IERC20';
+import type { IL2BridgeABI } from './contracts/IL2Bridge';
+import type { IZkSyncABI } from './contracts/IZkSyncStateTransition';
+import type { IBridgehubABI } from './contracts/IBridgehub';
+import type { IContractDeployerABI } from './contracts/IContractDeployer';
+import type { IL1MessengerABI } from './contracts/IL1Messenger';
+import type { IERC1271ABI } from './contracts/IERC1271';
+import type { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
+import type { INonceHolderABI } from './contracts/INonceHolder';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -922,3 +932,49 @@ export interface NameResolver {
 	 */
 	resolveName(name: string): Promise<null | string>;
 }
+
+export type ZKSyncContractsCollection = {
+	Generic: {
+		/**
+		 * The web3.js Contract instance for the `IERC20` interface, which is utilized for interacting with ERC20 tokens.
+		 */
+		IERC20Contract: Contract<typeof IERC20ABI>;
+		/**
+		 * The web3.js Contract instance for the `IERC1271` interface, which is utilized for signature validation by contracts.
+		 */
+		IERC1271Contract: Contract<typeof IERC1271ABI>;
+	};
+	L1: {
+		/**
+		 * The web3.js Contract instance for the `ZkSync` interface.
+		 */
+		ZkSyncMainContract: Contract<typeof IZkSyncABI>;
+		/**
+		 * The ABI of the `Bridgehub` interface.
+		 */
+		BridgehubContract: Contract<typeof IBridgehubABI>;
+		/**
+		 * The web3.js Contract instance for the `IL1Bridge` interface, which is utilized for transferring ERC20 tokens from L1 to L2.
+		 */
+		L1BridgeContract: Contract<typeof IL1BridgeABI>;
+	};
+	L2: {
+		/**
+		 * The web3.js Contract instance for the `IContractDeployer` interface, which is utilized for deploying smart contracts.
+		 */
+		ContractDeployerContract: Contract<typeof IContractDeployerABI>;
+		/**
+		 * The web3.js Contract instance for the `IL1Messenger` interface, which is utilized for sending messages from the L2 to L1.
+		 */
+		L1MessengerContract: Contract<typeof IL1MessengerABI>;
+		/**
+		 * The web3.js Contract instance for the `IL2Bridge` interface, which is utilized for transferring ERC20 tokens from L2 to L1.
+		 */
+		L2BridgeContract: Contract<typeof IL2BridgeABI>;
+
+		/**
+		 * The web3.js Contract instance for the `INonceHolder` interface, which is utilized for managing deployment nonces.
+		 */
+		NonceHolderContract: Contract<typeof INonceHolderABI>;
+	};
+};
