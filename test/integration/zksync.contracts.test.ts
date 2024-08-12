@@ -1,16 +1,16 @@
 import { Web3 } from 'web3';
 import { QuickNodeProvider, Network } from 'web3-rpc-providers';
 import type { ZKSyncContractsCollection } from 'src/plugin';
-import { ZkSyncPlugin } from '../../src';
+import { ZKsyncPlugin } from '../../src';
 
 describe('ZkSyncPlugin rpc tests', () => {
 	let web3: Web3;
-	let zkSync: ZkSyncPlugin;
+	let zkSync: ZKsyncPlugin;
 	let contracts: ZKSyncContractsCollection;
 
 	beforeAll(async () => {
 		web3 = new Web3(new QuickNodeProvider(Network.ETH_SEPOLIA));
-		zkSync = new ZkSyncPlugin('https://sepolia.era.zksync.dev');
+		zkSync = new ZKsyncPlugin('https://sepolia.era.zksync.dev');
 	});
 
 	it('contracts only works after registering the plugin', async () => {

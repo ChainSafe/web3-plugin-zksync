@@ -6,7 +6,7 @@ import * as Web3 from 'web3';
 import type { PayableMethodObject, PayableTxOptions } from 'web3-eth-contract';
 import { toBigInt, toHex, toNumber } from 'web3-utils';
 import type { Transaction, TransactionHash, TransactionReceipt } from 'web3-types';
-import type { Web3ZkSyncL2 } from './web3zksync-l2';
+import type { Web3ZKsyncL2 } from './web3zksync-l2';
 
 import type { EIP712Signer } from './utils';
 import {
@@ -54,7 +54,7 @@ import { IL1BridgeABI } from './contracts/IL1Bridge';
 import { Abi as IL1SharedBridgeABI } from './contracts/IL1SharedBridge';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
-import type { Web3ZkSyncL1 } from './web3zksync-l1';
+import type { Web3ZKsyncL1 } from './web3zksync-l1';
 
 interface TxSender {
 	getAddress(): Promise<Address>;
@@ -64,14 +64,14 @@ export class AdapterL1 implements TxSender {
 	/**
 	 * Returns a provider instance for connecting to an L2 network.
 	 */
-	protected _contextL2(): Web3ZkSyncL2 {
+	protected _contextL2(): Web3ZKsyncL2 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
 	/**
 	 * Returns a context (provider + Signer) instance for connecting to a L1 network.
 	 */
-	protected _contextL1(): Web3ZkSyncL1 {
+	protected _contextL1(): Web3ZKsyncL1 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
@@ -1496,7 +1496,7 @@ export class AdapterL1 implements TxSender {
 		const tx = await this.getRequestExecuteTx(transaction);
 		return this.signAndSend(tx);
 	}
-	async signAndSend(tx: Transaction, _context?: Web3ZkSyncL1 | Web3ZkSyncL2) {
+	async signAndSend(tx: Transaction, _context?: Web3ZKsyncL1 | Web3ZKsyncL2) {
 		const context = _context || this._contextL1();
 		const populated = await context.populateTransaction(tx);
 		const signed = await context.signTransaction(populated as Transaction);
@@ -1741,7 +1741,7 @@ export class AdapterL2 implements TxSender {
 	/**
 	 * Returns a context (provider + Signer) instance for connecting to an L2 network.
 	 */
-	_contextL2(): Web3ZkSyncL2 {
+	_contextL2(): Web3ZKsyncL2 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 	async _eip712Signer(): Promise<EIP712Signer> {

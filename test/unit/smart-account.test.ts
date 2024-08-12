@@ -1,4 +1,4 @@
-import { EIP712Signer, Web3ZkSyncL2, types } from '../../src';
+import { EIP712Signer, Web3ZKsyncL2, types } from '../../src';
 import { hashMessage } from '../../src/utils';
 import {
 	populateTransactionECDSA,
@@ -116,7 +116,7 @@ describe('signPayloadWithMultipleECDSA()', () => {
 });
 
 describe('populateTransaction()', () => {
-	const provider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 
 	it('should populate `tx.from` to address derived from private key if it not set', async () => {
 		const tx: Eip712TxData = {

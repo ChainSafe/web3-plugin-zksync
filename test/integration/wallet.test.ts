@@ -4,7 +4,7 @@ import { toBigInt } from 'web3-utils';
 import type { Transaction } from 'web3-types';
 import type { Address } from 'web3';
 import { privateKeyToAccount } from 'web3-eth-accounts';
-import { utils, Web3ZkSyncL2, ZKSyncWallet, Web3ZkSyncL1 } from '../../src';
+import { utils, Web3ZKsyncL2, ZKsyncWallet, Web3ZKsyncL1 } from '../../src';
 import {
 	IS_ETH_BASED,
 	ADDRESS1,
@@ -33,23 +33,23 @@ import { getPaymasterParams } from '../../src/paymaster-utils';
 jest.setTimeout(5 * 60000);
 
 describe('Wallet', () => {
-	const provider = Web3ZkSyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
-	const ethProvider = new Web3ZkSyncL1(
+	const provider = Web3ZKsyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
+	const ethProvider = new Web3ZKsyncL1(
 		'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
 	);
 	const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || PRIVATE_KEY1;
-	const wallet = new ZKSyncWallet(PRIVATE_KEY, provider, ethProvider);
+	const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, ethProvider);
 	const walletAddress = privateKeyToAccount(PRIVATE_KEY).address;
 	describe('#constructor()', () => {
 		it('`Wallet(privateKey, provider)` should return a `Wallet` with L2 provider', async () => {
-			const wallet = new ZKSyncWallet(PRIVATE_KEY, provider);
+			const wallet = new ZKsyncWallet(PRIVATE_KEY, provider);
 
 			expect(wallet.account.privateKey).toEqual(PRIVATE_KEY);
 			expect(wallet.provider).toEqual(provider);
 		});
 
 		it('`Wallet(privateKey, provider, ethProvider)` should return a `Wallet` with L1 and L2 provider', async () => {
-			const wallet = new ZKSyncWallet(PRIVATE_KEY, provider, ethProvider);
+			const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, ethProvider);
 
 			expect(wallet.account.privateKey).toEqual(PRIVATE_KEY);
 			expect(wallet.provider).toEqual(provider);
@@ -203,7 +203,7 @@ describe('Wallet', () => {
 
 	describe('#connect()', () => {
 		it('should return a `Wallet` with provided `provider` as L2 provider', async () => {
-			const w = new ZKSyncWallet(PRIVATE_KEY);
+			const w = new ZKsyncWallet(PRIVATE_KEY);
 			w.connect(provider);
 			expect(w.account.privateKey).toEqual(PRIVATE_KEY);
 			expect(w.provider).toEqual(provider);
@@ -212,7 +212,7 @@ describe('Wallet', () => {
 
 	describe('#connectL1()', () => {
 		it('should return a `Wallet` with provided `provider` as L1 provider', async () => {
-			const w = new ZKSyncWallet(PRIVATE_KEY);
+			const w = new ZKsyncWallet(PRIVATE_KEY);
 			w.connectToL1(ethProvider);
 			expect(w.account.privateKey).toEqual(PRIVATE_KEY);
 			expect(w.providerL1).toEqual(ethProvider);
@@ -529,7 +529,7 @@ describe('Wallet', () => {
 
 	describe('#createRandom()', () => {
 		it('should return a random `Wallet` with L2 provider', async () => {
-			const wallet = ZKSyncWallet.createRandom(provider);
+			const wallet = ZKsyncWallet.createRandom(provider);
 			expect(wallet.account.privateKey).not.toBeNull();
 			expect(wallet.provider).toEqual(provider);
 		});
@@ -1018,7 +1018,7 @@ describe('Wallet', () => {
 			it('should throw Not enough balance for deposit!', async () => {
 				//Not enough allowance to cover the deposit!
 				expect(async () => {
-					const randomWallet = new ZKSyncWallet(
+					const randomWallet = new ZKsyncWallet(
 						wallet.providerL1!.eth.accounts.create().privateKey,
 						provider,
 						ethProvider,
@@ -1033,7 +1033,7 @@ describe('Wallet', () => {
 		} else {
 			it('should throw an error when there is not enough base token allowance to cover the deposit', async () => {
 				try {
-					await new ZKSyncWallet(
+					await new ZKsyncWallet(
 						ethAccounts.create().privateKey,
 						provider,
 						ethProvider,
@@ -1098,7 +1098,7 @@ describe('Wallet', () => {
 
 			it('should throw an error when there is not enough token allowance to cover the deposit', async () => {
 				const token = DAI_L1;
-				const randomWallet = new ZKSyncWallet(
+				const randomWallet = new ZKsyncWallet(
 					ethAccounts.create().privateKey,
 					provider,
 					ethProvider,

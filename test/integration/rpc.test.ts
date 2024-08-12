@@ -1,5 +1,5 @@
 import { Web3 } from 'web3';
-import { ZkSyncPlugin } from '../../src';
+import { ZKsyncPlugin } from '../../src';
 import {
 	getBlockDetailsData,
 	getBridgeContractsData,
@@ -12,43 +12,43 @@ describe('ZkSyncPlugin rpc tests', () => {
 
 	beforeAll(() => {
 		web3 = new Web3();
-		web3.registerPlugin(new ZkSyncPlugin('https://sepolia.era.zksync.dev'));
+		web3.registerPlugin(new ZKsyncPlugin('https://sepolia.era.zksync.dev'));
 	});
 
 	it('l1ChainId', async () => {
-		const res = await web3.zkSync.rpc.l1ChainId();
+		const res = await web3.ZKsync.rpc.l1ChainId();
 		expect(res).toBe(BigInt(11155111));
 	});
 	it('getL1BatchNumber', async () => {
-		const res = await web3.zkSync.rpc.getL1BatchNumber();
+		const res = await web3.ZKsync.rpc.getL1BatchNumber();
 		expect(res).toBeGreaterThan(BigInt(0));
 	});
 	it('getBlockDetails', async () => {
-		const res = await web3.zkSync.rpc.getBlockDetails(getBlockDetailsData.input);
+		const res = await web3.ZKsync.rpc.getBlockDetails(getBlockDetailsData.input);
 		expect(res).toEqual(getBlockDetailsData.output);
 	});
 	it('getTransactionDetails', async () => {
-		const res = await web3.zkSync.rpc.getTransactionDetails(getTransactionDetailsData.input);
+		const res = await web3.ZKsync.rpc.getTransactionDetails(getTransactionDetailsData.input);
 		expect(res).toEqual(getTransactionDetailsData.output);
 	});
 	it('getBytecodeByHash', async () => {
-		const res = await web3.zkSync.rpc.getBytecodeByHash(
+		const res = await web3.ZKsync.rpc.getBytecodeByHash(
 			'0x086227fafad2bc4d08a122ebb690d958edcd43352d38d31646968480f496827c',
 		);
 		expect(res).toBeDefined();
 	});
 	it('getRawBlockTransactions', async () => {
-		const res = await web3.zkSync.rpc.getRawBlockTransactions(
+		const res = await web3.ZKsync.rpc.getRawBlockTransactions(
 			getRawBlockTransactionsData.input,
 		);
 		expect(res).toEqual(getRawBlockTransactionsData.output);
 	});
 	it('getMainContract', async () => {
-		const res = await web3.zkSync.rpc.getMainContract();
+		const res = await web3.ZKsync.rpc.getMainContract();
 		expect(res).toBe('0x9a6de0f62aa270a8bcb1e2610078650d539b1ef9');
 	});
 	it('getL1BatchBlockRange', async () => {
-		const res = await web3.zkSync.rpc.getL1BatchBlockRange(1);
+		const res = await web3.ZKsync.rpc.getL1BatchBlockRange(1);
 		expect(res).toEqual(['0x1', '0x2']);
 	});
 	// it('getTestnetPaymaster', async () => {
@@ -56,12 +56,12 @@ describe('ZkSyncPlugin rpc tests', () => {
 	// 	expect(res).toBe('0x3cb2b87d10ac01736a65688f3e0fb1b070b3eea3');
 	// });
 	it('getBridgeContracts', async () => {
-		const res = await web3.zkSync.rpc.getBridgeContracts();
+		const res = await web3.ZKsync.rpc.getBridgeContracts();
 		expect(res).toEqual(getBridgeContractsData.output);
 	});
 
 	it('estimateGasL1ToL2', async () => {
-		const res = await web3.zkSync.rpc.estimateGasL1ToL2({
+		const res = await web3.ZKsync.rpc.estimateGasL1ToL2({
 			from: '0x3cb2b87d10ac01736a65688f3e0fb1b070b3eea3',
 			to: '0x9a6de0f62aa270a8bcb1e2610078650d539b1ef9',
 		});
@@ -69,7 +69,7 @@ describe('ZkSyncPlugin rpc tests', () => {
 	});
 
 	it('getBridgeHubContract', async () => {
-		const res = await web3.zkSync.rpc.getBridgehubContractAddress();
+		const res = await web3.ZKsync.rpc.getBridgehubContractAddress();
 		expect(res).toEqual('0x35a54c8c757806eb6820629bc82d90e056394c92'); // @todo: set bridge hub contract address
 	});
 });

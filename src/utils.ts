@@ -48,8 +48,8 @@ import {
 	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import type { Web3ZkSyncL2 } from './web3zksync-l2';
-import { Web3ZkSyncL1 } from './web3zksync-l1';
+import type { Web3ZKsyncL2 } from './web3zksync-l2';
+import { Web3ZKsyncL1 } from './web3zksync-l1';
 import { Address } from 'web3';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
@@ -857,7 +857,7 @@ export async function isTypedDataSignatureCorrect(
 /**
  * Returns an estimation of the L2 gas required for token bridging via the default ERC20 bridge.
  *
- * @param providerL1 The Ethers provider for the L1 network.
+ * @param providerL1 The provider for the L1 network.
  * @param providerL2 The ZKsync provider for the L2 network.
  * @param token The address of the token to be bridged.
  * @param amount The deposit amount.
@@ -870,7 +870,7 @@ export async function isTypedDataSignatureCorrect(
  */
 export async function estimateDefaultBridgeDepositL2Gas(
 	providerL1: web3.Web3,
-	providerL2: Web3ZkSyncL2,
+	providerL2: Web3ZKsyncL2,
 	token: web3.Address,
 	amount: web3Types.Numbers,
 	to: web3.Address,
@@ -950,7 +950,7 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
  * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#custom-bridges-on-l1-and-l2 Custom bridges documentation}.
  */
 export async function estimateCustomBridgeDepositL2Gas(
-	providerL2: Web3ZkSyncL2,
+	providerL2: Web3ZKsyncL2,
 	l1BridgeAddress: web3.Address,
 	l2BridgeAddress: web3.Address,
 	token: web3.Address,
@@ -1028,11 +1028,11 @@ export async function waitTxByHashConfirmation(
 }
 
 export const getPriorityOpResponse = (
-	context: Web3ZkSyncL1 | Web3ZkSyncL2,
+	context: Web3ZKsyncL1 | Web3ZKsyncL2,
 	l1TxPromise: Promise<TransactionHash>,
-	contextL2?: Web3ZkSyncL2,
+	contextL2?: Web3ZKsyncL2,
 ): Promise<PriorityOpResponse> => {
-	if (context instanceof Web3ZkSyncL1) {
+	if (context instanceof Web3ZKsyncL1) {
 		return getPriorityOpL1Response(context, l1TxPromise, contextL2);
 	} else {
 		return getPriorityOpL2Response(context, l1TxPromise);
@@ -1040,9 +1040,9 @@ export const getPriorityOpResponse = (
 };
 
 export const getPriorityOpL1Response = async (
-	context: Web3ZkSyncL1,
+	context: Web3ZKsyncL1,
 	l1TxPromise: Promise<TransactionHash>,
-	contextL2?: Web3ZkSyncL2,
+	contextL2?: Web3ZKsyncL2,
 ): Promise<PriorityOpResponse> => {
 	const hash = await l1TxPromise;
 	return {
@@ -1055,7 +1055,7 @@ export const getPriorityOpL1Response = async (
 		},
 		waitFinalize: async () => {
 			const receipt = await waitTxReceipt(context.eth, hash);
-			const l2TxHash = await (contextL2 as Web3ZkSyncL2).getL2TransactionFromPriorityOp(
+			const l2TxHash = await (contextL2 as Web3ZKsyncL2).getL2TransactionFromPriorityOp(
 				receipt,
 			);
 
@@ -1071,7 +1071,7 @@ export const getPriorityOpL1Response = async (
 };
 
 export const getPriorityOpL2Response = async (
-	context: Web3ZkSyncL2,
+	context: Web3ZKsyncL2,
 	txPromise: Promise<TransactionHash>,
 ): Promise<PriorityL2OpResponse> => {
 	const hash = await txPromise;

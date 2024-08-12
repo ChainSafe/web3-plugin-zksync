@@ -21,14 +21,14 @@ import {
 	signPayloadWithMultipleECDSA,
 } from './smart-account-utils';
 import * as Web3EthAccounts from 'web3-eth-accounts';
-import { Web3ZkSyncL2 } from './web3zksync-l2';
+import { Web3ZKsyncL2 } from './web3zksync-l2';
 import type * as web3Types from 'web3-types';
 import { AdapterL2 } from './adapters';
 import { EIP712, EIP712Signer, getPriorityOpResponse, hashMessage, resolveAddress } from './utils';
 import { signMessageWithPrivateKey } from 'web3-eth-accounts';
 import { TypedDataEncoder } from './TypedDataEncoder';
 
-function checkProvider(signer: SmartAccount, operation: string): Web3ZkSyncL2 {
+function checkProvider(signer: SmartAccount, operation: string): Web3ZKsyncL2 {
 	if (signer._contextL2()) {
 		return signer._contextL2();
 	}
@@ -48,7 +48,7 @@ export class SmartAccount extends AdapterL2 {
 	/** Custom method for populating transaction requests. */
 	protected transactionBuilder: TransactionBuilder;
 	private _account: Web3EthAccounts.Web3Account;
-	private _provider?: Web3ZkSyncL2;
+	private _provider?: Web3ZKsyncL2;
 
 	/**
 	 * Creates a `SmartAccount` instance with provided `signer` and `provider`.
@@ -59,18 +59,18 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
 	 * );
 	 */
-	constructor(signer: SmartAccountSigner, provider?: Web3ZkSyncL2) {
+	constructor(signer: SmartAccountSigner, provider?: Web3ZKsyncL2) {
 		super();
 		this._provider = provider;
 
@@ -78,7 +78,7 @@ export class SmartAccount extends AdapterL2 {
 		this.payloadSigner = signer.payloadSigner || signPayloadWithECDSA;
 		this.transactionBuilder = signer.transactionBuilder || populateTransactionECDSA;
 	}
-	_contextL2(): Web3ZkSyncL2 {
+	_contextL2(): Web3ZKsyncL2 {
 		return this._provider!;
 	}
 	get provider() {
@@ -105,21 +105,21 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const sepoliaProvider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const sepoliaProvider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const sepoliaAccount = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   sepoliaProvider
 	 * );
 	 *
-	 * const mainnetProvider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Mainnet);
+	 * const mainnetProvider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Mainnet);
 	 * const mainnetAccount = sepoliaAccount.connect(mainnetProvider);
 	 */
-	connect(provider?: Web3ZkSyncL2 | null): SmartAccount {
+	connect(provider?: Web3ZKsyncL2 | null): SmartAccount {
 		return new SmartAccount(
 			{
 				address: this.getAddress(),
@@ -139,12 +139,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -162,12 +162,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -185,12 +185,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -212,12 +212,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { constants, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { constants, SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -245,12 +245,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -280,12 +280,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -313,12 +313,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -340,12 +340,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example
 	 *
-	 * import { SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -401,12 +401,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example <caption>Withdraw ETH.</caption>
 	 *
-	 * import { constants, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { constants, SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -419,7 +419,7 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example <caption>Withdraw ETH using paymaster to facilitate fee payment with an ERC20 token.</caption>
 	 *
-	 * import { constants, paymasterUtils, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { constants, paymasterUtils, SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
@@ -427,7 +427,7 @@ export class SmartAccount extends AdapterL2 {
 	 * const token = "0x927488F48ffbc32112F1fF721759649A89721F8F"; // Crown token which can be minted for free
 	 * const paymaster = "0x13D0D8550769f59aa241a41897D4859c87f7Dd46"; // Paymaster for Crown token
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -470,12 +470,12 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example <caption>Transfer ETH.</caption>
 	 *
-	 * import { constants, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { constants, SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -493,7 +493,7 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * @example <caption>Transfer ETH using paymaster to facilitate fee payment with an ERC20 token.</caption>
 	 *
-	 * import { constants, paymasterUtils, SmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { constants, paymasterUtils, SmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
@@ -501,7 +501,7 @@ export class SmartAccount extends AdapterL2 {
 	 * const token = "0x927488F48ffbc32112F1fF721759649A89721F8F"; // Crown token which can be minted for free
 	 * const paymaster = "0x13D0D8550769f59aa241a41897D4859c87f7Dd46"; // Paymaster for Crown token
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = new SmartAccount(
 	 *   {address: ADDRESS, secret: PRIVATE_KEY},
 	 *   l2
@@ -548,15 +548,15 @@ export class ECDSASmartAccount {
 	 *
 	 * @example
 	 *
-	 * import { ECDSASmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { ECDSASmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY = "<PRIVATE_KEY>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 * const account = ECDSASmartAccount.create(ADDRESS, PRIVATE_KEY, l2);
 	 */
-	static create(address: string, secret: string, provider: Web3ZkSyncL2): SmartAccount {
+	static create(address: string, secret: string, provider: Web3ZKsyncL2): SmartAccount {
 		return new SmartAccount({ address, secret }, provider);
 	}
 }
@@ -576,13 +576,13 @@ export class MultisigECDSASmartAccount {
 	 *
 	 * @example
 	 *
-	 * import { MultisigECDSASmartAccount, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+	 * import { MultisigECDSASmartAccount, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
 	 *
 	 * const ADDRESS = "<ADDRESS>";
 	 * const PRIVATE_KEY1 = "<PRIVATE_KEY1>";
 	 * const PRIVATE_KEY2 = "<PRIVATE_KEY2>";
 	 *
-	 * const l2 = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	 * const l2 = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 	 *
 	 * const account = MultisigECDSASmartAccount.create(
 	 *   multisigAddress,
@@ -590,7 +590,7 @@ export class MultisigECDSASmartAccount {
 	 *   l2
 	 * );
 	 */
-	static create(address: string, secret: string[], provider: Web3ZkSyncL2): SmartAccount {
+	static create(address: string, secret: string[], provider: Web3ZKsyncL2): SmartAccount {
 		return new SmartAccount(
 			{
 				address,

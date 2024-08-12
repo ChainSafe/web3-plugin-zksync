@@ -2,7 +2,7 @@ import { toBytes, concat } from './utils';
 import { TransactionBuilder, PayloadSigner, Eip712TxData } from './types';
 import { privateKeyToAccount, signMessageWithPrivateKey, Web3Account } from 'web3-eth-accounts';
 import { EIP712_TX_TYPE } from './constants';
-import { Web3ZkSyncL2 } from './web3zksync-l2';
+import { Web3ZKsyncL2 } from './web3zksync-l2';
 import type * as web3Types from 'web3-types';
 import * as utils from './utils';
 
@@ -124,11 +124,11 @@ export const signPayloadWithMultipleECDSA: PayloadSigner = (
  *
  * @example
  *
- * import { populateTransactionECDSA, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+ * import { populateTransactionECDSA, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
  *
  * const PRIVATE_KEY = "<PRIVATE_KEY>";
  *
- * const provider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+ * const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
  *
  * const populatedTx = populateTransactionECDSA(
  *   {
@@ -143,7 +143,7 @@ export const signPayloadWithMultipleECDSA: PayloadSigner = (
 export const populateTransactionECDSA: TransactionBuilder = async (
 	tx,
 	secret: string | Web3Account,
-	provider?: Web3ZkSyncL2,
+	provider?: Web3ZKsyncL2,
 ) => {
 	if (!provider) {
 		throw new Error('Provider is required but is not provided!');
@@ -180,12 +180,12 @@ export const populateTransactionECDSA: TransactionBuilder = async (
  * @example
  *
  *
- * import { populateTransactionMultisigECDSA, types, Web3ZkSyncL2 } from "web3-plugin-zksync";
+ * import { populateTransactionMultisigECDSA, types, Web3ZKsyncL2 } from "web3-plugin-zksync";
  *
  * const PRIVATE_KEY1 = "<PRIVATE_KEY1>";
  * const PRIVATE_KEY2 = "<PRIVATE_KEY2>";
  *
- * const provider = Web3ZkSyncL2.initWithDefaultProvider(types.Network.Sepolia);
+ * const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
  *
  * const populatedTx = await populateTransactionMultisigECDSA(
  *   {

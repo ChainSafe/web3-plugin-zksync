@@ -9,7 +9,7 @@ import type {
 	TransactionReceipt,
 } from 'web3-types';
 
-import { Web3ZkSyncL2 } from './web3zksync-l2';
+import { Web3ZKsyncL2 } from './web3zksync-l2';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -763,7 +763,7 @@ export interface StorageProof {
  *  @param [provider] The provider is used to fetch data from the network if it is required for signing.
  *  @returns A promise that resolves to the serialized signature in hexadecimal format.
  */
-export type PayloadSigner = (payload: Bytes, secret?: any, provider?: Web3ZkSyncL2) => string;
+export type PayloadSigner = (payload: Bytes, secret?: any, provider?: Web3ZKsyncL2) => string;
 
 export interface WalletBalances {
 	[key: Address]: Numbers;
@@ -779,7 +779,7 @@ export interface WalletBalances {
 export type TransactionBuilder = (
 	transaction: Eip712TxData,
 	secret?: any,
-	provider?: Web3ZkSyncL2,
+	provider?: Web3ZKsyncL2,
 ) => Promise<Eip712TxData>;
 
 /**

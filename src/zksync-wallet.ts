@@ -2,8 +2,8 @@ import type { Web3Account } from 'web3-eth-accounts';
 import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
 import type { Transaction } from 'web3-types';
-import type { Web3ZkSyncL2 } from './web3zksync-l2';
-import type { Web3ZkSyncL1 } from './web3zksync-l1';
+import type { Web3ZKsyncL2 } from './web3zksync-l2';
+import type { Web3ZKsyncL1 } from './web3zksync-l1';
 import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
 import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
@@ -69,9 +69,9 @@ class Adapters extends AdapterL1 {
 /**
  * Capabilities for integrating, creating, and managing ZKsync wallets.
  */
-export class ZKSyncWallet extends Adapters {
-	provider?: Web3ZkSyncL2;
-	providerL1?: Web3ZkSyncL1;
+export class ZKsyncWallet extends Adapters {
+	provider?: Web3ZKsyncL2;
+	providerL1?: Web3ZKsyncL1;
 	protected eip712!: utils.EIP712Signer;
 	public account: Web3Account;
 
@@ -102,7 +102,7 @@ export class ZKSyncWallet extends Adapters {
 	 * const zkWallet = new web3.ZKsync.ZkWallet(PRIVATE_KEY);
 	 *
 	 */
-	constructor(privateKey: string, providerL2?: Web3ZkSyncL2, providerL1?: Web3ZkSyncL1) {
+	constructor(privateKey: string, providerL2?: Web3ZKsyncL2, providerL1?: Web3ZKsyncL1) {
 		super();
 
 		this.account = privateKeyToAccount(privateKey);
@@ -113,7 +113,7 @@ export class ZKSyncWallet extends Adapters {
 			this.connectToL1(providerL1);
 		}
 	}
-	public connect(provider: Web3ZkSyncL2) {
+	public connect(provider: Web3ZKsyncL2) {
 		if (!provider.eth.accounts.wallet.get(this.account.address)) {
 			provider.eth.accounts.wallet.add(
 				provider.eth.accounts.privateKeyToAccount(this.account.privateKey),
@@ -123,7 +123,7 @@ export class ZKSyncWallet extends Adapters {
 		this.provider._eip712Signer = this._eip712Signer.bind(this);
 		return this;
 	}
-	public connectToL1(provider: Web3ZkSyncL1) {
+	public connectToL1(provider: Web3ZKsyncL1) {
 		if (!provider.eth.accounts.wallet.get(this.account.address)) {
 			provider.eth.accounts.wallet.add(
 				provider.eth.accounts.privateKeyToAccount(this.account.privateKey),
@@ -183,9 +183,9 @@ export class ZKSyncWallet extends Adapters {
 	getNonce(blockNumber?: web3Types.BlockNumberOrTag) {
 		return this.provider?.eth.getTransactionCount(this.account.address, blockNumber);
 	}
-	static createRandom(provider?: Web3ZkSyncL2, providerL1?: Web3ZkSyncL1) {
+	static createRandom(provider?: Web3ZKsyncL2, providerL1?: Web3ZKsyncL1) {
 		const acc = createAccount();
-		return new ZKSyncWallet(acc.privateKey, provider, providerL1);
+		return new ZKsyncWallet(acc.privateKey, provider, providerL1);
 	}
 	async signTransaction(transaction: web3Types.Transaction): Promise<string> {
 		const populated = (await this.populateTransaction(transaction)) as Transaction;
