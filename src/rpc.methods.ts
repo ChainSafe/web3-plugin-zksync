@@ -15,6 +15,7 @@ import type {
 	WalletBalances,
 	TransactionRequest,
 	Address,
+	// Token,
 } from './types';
 import {
 	AddressSchema,
@@ -392,4 +393,137 @@ export class RpcMethods {
 			returnFormat,
 		) as Address;
 	}
+
+	// /**
+	//  * Lists confirmed tokens. Confirmed in the method name means any token bridged to ZKsync Era via the official bridge.
+	//  * The tokens are returned in alphabetical order by their symbol. This means the token id is its position in an alphabetically sorted array of tokens.
+	//  *
+	//  * @param startId - token id from which to start.
+	//  * @param max - maximum number of tokens to list.
+	//  * @param returnFormat - The format of the return value.
+	//  */
+	// public async getConfirmedTokens(
+	// 	startId: web3Types.Numbers,
+	// 	max: web3Types.Numbers,
+	// 	returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	// ): Promise<Token[]> {
+	// 	// TODO: https://docs.zksync.io/build/api-reference/zks-rpc#zks_getconfirmedtokens
+	// }
+
+	// /**
+	//  * Retrieves the proof for an L2 to L1 message.
+	//  *
+	//  * @param blockNumber - L2 block number.
+	//  * @param senderAddress - sender's address.
+	//  * @param msgHash - message hash.
+	//  * @param logPosition - Optional. The log position in L2.
+	//  * @param returnFormat - The format of the return value.
+	//  */
+	// public async getL2ToL1MsgProof(
+	// 	blockNumber: web3Types.Numbers,
+	// 	senderAddress: web3Types.HexString,
+	// 	msgHash: web3Types.HexString32Bytes,
+	// 	logPosition?: web3Types.Numbers,
+	// 	returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	// ): Promise<L2ToL1Proof> {
+	// 	// TODO: https://docs.zksync.io/build/api-reference/zks-rpc#zks_getl2tol1msgproof
+	// }
+
+	// /**
+	//  * Retrieves the current L1 gas price.
+	//  *
+	//  * @param returnFormat - The format of the return value.
+	//  */
+	// public async getL1GasPrice(
+	// 	returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	// ): Promise<web3Types.HexString8Bytes> {
+	// 	// TODO: https://docs.zksync.io/build/api-reference/zks-rpc#zks_getl1gasprice
+	// }
+
+	// /**
+	//  * Retrieves the current fee parameters.
+	//  *
+	//  * @param returnFormat - The format of the return value.
+	//  */
+	// public async getFeeParams(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<{
+	// 	V2: {
+	// 		config: {
+	// 			minimal_l2_gas_price: web3Types.Numbers;
+	// 			compute_overhead_part: web3Types.Numbers;
+	// 			pubdata_overhead_part: web3Types.Numbers;
+	// 			batch_overhead_l1_gas: web3Types.Numbers;
+	// 			max_gas_per_batch: web3Types.Numbers;
+	// 			max_pubdata_per_batch: web3Types.Numbers;
+	// 		};
+	// 		l1_gas_price: web3Types.Numbers;
+	// 		l1_pubdata_price: web3Types.Numbers;
+	// 	};
+	// }> {
+	// 	// TODO: https://docs.zksync.io/build/api-reference/zks-rpc#zks_getfeeparams
+	// }
+
+	// /**
+	//  * Gets the protocol version.
+	//  *
+	//  * @param versionId - Optional. Specific version ID.
+	//  * @param returnFormat - The format of the return value.
+	//  */
+	// public async getProtocolVersion(
+	// 	versionId?: web3Types.Numbers,
+	// 	returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	// ): Promise<{
+	// 	version_id: web3Types.Numbers;
+	// 	timestamp: web3Types.Numbers;
+	// 	verification_keys_hashes: {
+	// 		params: {
+	// 			recursion_node_level_vk_hash: web3Types.HexString;
+	// 			recursion_leaf_level_vk_hash: web3Types.HexString;
+	// 			recursion_circuits_set_vks_hash: web3Types.HexString;
+	// 		};
+	// 		recursion_scheduler_level_vk_hash: web3Types.HexString;
+	// 	};
+	// 	base_system_contracts: {
+	// 		bootloader: web3Types.HexString;
+	// 		default_aa: web3Types.HexString;
+	// 	};
+	// 	l2_system_upgrade_tx_hash: web3Types.HexString32Bytes;
+	// }> {
+	// 	// TODO: https://docs.zksync.io/build/api-reference/zks-rpc#zks_getprotocolversion
+	// }
+
+	// /**
+	//  * Executes a transaction and returns its hash, storage logs, and events that would have been generated if the transaction had already been included in the block. The API has a similar behaviour to eth_sendRawTransaction but with some extra data returned from it.
+	//  * With this API Consumer apps can apply "optimistic" events in their applications instantly without having to wait for ZKsync block confirmation time.
+	//  * It’s expected that the optimistic logs of two uncommitted transactions that modify the same state will not have causal relationships between each other.
+	//  *
+	//  * @param data - The signed transaction.
+	//  * @param returnFormat - The format of the return value.
+	//  */
+	// public async sendRawTransactionWithDetailedOutput(
+	// 	data: web3Types.HexString,
+	// 	returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	// ): Promise<{
+	// 	transactionHash: web3Types.HexString;
+	// 	storageLogs: {
+	// 		address: web3Types.HexString;
+	// 		key: web3Types.HexString;
+	// 		writtenValue: web3Types.HexString;
+	// 	}[];
+	// 	events: {
+	// 		address: web3Types.HexString;
+	// 		topics: web3Types.HexString[];
+	// 		data: web3Types.HexString;
+	// 		blockHash: web3Types.HexString;
+	// 		blockNumber: web3Types.HexString;
+	// 		l1BatchNumber: web3Types.HexString;
+	// 		transactionHash: web3Types.HexString;
+	// 		transactionIndex: web3Types.HexString;
+	// 		logIndex: web3Types.HexString;
+	// 		transactionLogIndex: web3Types.HexString;
+	// 		logType: web3Types.HexString;
+	// 		removed: boolean;
+	// 	}[];
+	// }> {
+	// 	// TODO: https://docs.zksync.io/build/api-reference/zks-rpc#zks_sendrawtransactionwithdetailedoutput
+	// }
 }
