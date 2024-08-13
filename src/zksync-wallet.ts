@@ -42,6 +42,18 @@ class Adapters extends AdapterL1 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
+	/**
+	 * Initiates the withdrawal process which withdraws ETH or any ERC20 token
+	 * from the associated account on L2 network to the target account on L1 network.
+	 *
+	 * @param transaction Withdrawal transaction request.
+	 * @param transaction.token The address of the token. Defaults to ETH.
+	 * @param transaction.amount The amount of the token to withdraw.
+	 * @param [transaction.to] The address of the recipient on L1.
+	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
+	 * @param [transaction.paymasterParams] Paymaster parameters.
+	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
+	 */
 	withdraw(transaction: {
 		token: Address;
 		amount: web3Types.Numbers;
@@ -83,12 +95,12 @@ export class ZKsyncWallet extends Adapters {
 	 *
 	 * @example <caption>Create a wallet directly</caption>
 	 *
-	 * import { Web3ZkSyncL1, Web3ZkSyncL2, ZKSyncWallet } from "web3-plugin-zksync";
+	 * import { Web3ZKsyncL1, Web3ZKsyncL2, ZKsyncWallet } from "web3-plugin-zksync";
 	 *
 	 * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
-	 * const l2Provider = new Web3ZkSyncL2("https://sepolia.era.zksync.dev");
-	 * const l1Provider = new Web3ZkSyncL1("https://rpc.sepolia.org");
-	 * const wallet = new ZKSyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
+	 * const l2Provider = new Web3ZKsyncL2("https://sepolia.era.zksync.dev");
+	 * const l1Provider = new Web3ZKsyncL1("https://rpc.sepolia.org");
+	 * const wallet = new ZKsyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
 	 *
 	 * @example <caption>Use the wallet provided by a registered plugin</caption>
 	 *
@@ -208,7 +220,7 @@ export class ZKsyncWallet extends Adapters {
 	 * @example
 	 *
 	 * import { Transaction, utils, Web3 } from "web3";
-	 * import { types, ZkSyncPlugin, ZKSyncWallet } from "web3-plugin-zksync";
+	 * import { types, ZkSyncPlugin, ZKsyncWallet } from "web3-plugin-zksync";
 	 *
 	 * async function main() {
 	 *   const web3: Web3 = new Web3("https://rpc.sepolia.org");
@@ -216,7 +228,7 @@ export class ZKsyncWallet extends Adapters {
 	 *
 	 *   const zksync: ZkSyncPlugin = web3.zkSync;
 	 *   const PRIVATE_KEY: string = "<WALLET_PRIVATE_KEY>";
-	 *   const wallet: ZKSyncWallet = new zksync.ZkWallet(PRIVATE_KEY);
+	 *   const wallet: ZKsyncWallet = new zksync.ZkWallet(PRIVATE_KEY);
 	 *
 	 *   const EIP712_TX_TYPE = 0x71;
 	 *   const TO_ADDRESS = "<TO_ADDRESS>";
