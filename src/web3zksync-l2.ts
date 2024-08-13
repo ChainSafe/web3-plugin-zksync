@@ -4,7 +4,7 @@
 // import type { Address, HexString } from 'web3';
 
 import type { Block } from 'web3';
-import { DEFAULT_RETURN_FORMAT } from 'web3-types';
+import { type BlockNumberOrTag, DEFAULT_RETURN_FORMAT } from 'web3-types';
 import type { Bytes, DataFormat, Numbers, Transaction, TransactionReceipt } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
@@ -320,6 +320,21 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 				return new Web3ZKsyncL2('http://localhost:8011');
 			default:
 				return new Web3ZKsyncL2('http://localhost:3050');
+		}
+	}
+	async getBalance(
+		address: Address,
+		blockTag?: BlockNumberOrTag,
+		tokenAddress?: Address,
+	): Promise<bigint> {
+		if (!tokenAddress || (await this.isBaseToken(tokenAddress))) {
+			return this.eth.getBalance(address, blockTag);
+		} else {
+			try {
+				return this.getTokenBalance(tokenAddress, address);
+			} catch {
+				return 0n;
+			}
 		}
 	}
 }

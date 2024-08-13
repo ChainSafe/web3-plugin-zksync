@@ -5,7 +5,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import { estimateGas, getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
 import * as Web3 from 'web3';
-import type { BlockNumberOrTag, Transaction } from 'web3-types';
+import type { Transaction } from 'web3-types';
 import { toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import type {
@@ -605,20 +605,5 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 	async sendRawTransaction(signedTx: string) {
 		return ethRpcMethods.sendRawTransaction(this.requestManager, signedTx);
-	}
-	async getBalance(
-		address: Address,
-		blockTag?: BlockNumberOrTag,
-		tokenAddress?: Address,
-	): Promise<bigint> {
-		if (!tokenAddress || (await this.isBaseToken(tokenAddress))) {
-			return this.eth.getBalance(address, blockTag);
-		} else {
-			try {
-				return this.getTokenBalance(tokenAddress, address);
-			} catch {
-				return 0n;
-			}
-		}
 	}
 }

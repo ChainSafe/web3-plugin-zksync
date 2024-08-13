@@ -15,7 +15,7 @@ import type {
 import { toUint8Array } from 'web3-eth-accounts';
 import type { Web3Eth } from 'web3-eth';
 import { ALL_EVENTS_ABI, decodeEventABI } from 'web3-eth';
-import { isAddress, keccak256, toBigInt } from 'web3-utils';
+import { format, isAddress, keccak256, toBigInt } from 'web3-utils';
 import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
 import { NameResolver, PriorityOpTree, PriorityQueueType } from './types';
 import type {
@@ -52,6 +52,7 @@ import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import { Web3ZKsyncL1 } from './web3zksync-l1';
 import { Address } from 'web3';
 import { ethRpcMethods } from 'web3-rpc-methods';
+import { ZKTransactionReceiptSchema } from './schemas';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -1009,8 +1010,9 @@ export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<T
 				web3Eth.requestManager,
 				txHash,
 			);
+
 			if (receipt && receipt.blockNumber) {
-				return receipt;
+				return format(ZKTransactionReceiptSchema, receipt);
 			}
 		} catch {}
 		await sleep(500);

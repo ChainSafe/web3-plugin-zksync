@@ -1,5 +1,5 @@
 import { TransactionFactory } from 'web3-eth-accounts';
-import { Web3ZkSyncL2, Web3ZkSyncL1, ZKSyncWallet } from '../../src';
+import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
 import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
 import * as utils from '../../src/utils';
 import { getAccounts, L1Provider, L2Provider } from './fixtures';
@@ -13,11 +13,11 @@ jest.setTimeout(10000);
 describe('wallet', () => {
 	// @ts-ignore
 	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
-	const l1Provider = new Web3ZkSyncL1(L1Provider);
+	const l1Provider = new Web3ZKsyncL1(L1Provider);
 	const accounts = getAccounts();
-	const l2Provider = new Web3ZkSyncL2(L2Provider);
+	const l2Provider = new Web3ZKsyncL2(L2Provider);
 	const PRIVATE_KEY = accounts[0].privateKey;
-	const wallet = new ZKSyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
+	const wallet = new ZKsyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
 	it('should deposit', async () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,
