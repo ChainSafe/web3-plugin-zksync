@@ -1150,29 +1150,11 @@ describe('Wallet', () => {
 				});
 				const receipt = await withdrawTx.wait();
 				expect(receipt.transactionHash).toBeDefined();
-				// works but in sepolia we need to wait few hours to finalize block
-				// const txHash = '0xd638355396984ae5f94660ad5b803890f952e036e846b5ea23213d8335e8aef6';
-				// expect(await wallet.isWithdrawalFinalized(txHash)).toEqual(false);
-				//
-				// const result = await wallet.finalizeWithdrawal(txHash);
-				// // const l2BalanceAfterWithdrawal = await wallet.getBalance();
-				// expect(result).not.toBeNull();
-				// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
-				// 	true,
-				// );
 			});
 
 			it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
 				const amount = 7n;
 				const minimalAllowance = 1n;
-				// const paymasterBalanceBeforeWithdrawal = await provider.eth.getBalance(PAYMASTER);
-				// const paymasterTokenBalanceBeforeWithdrawal = await provider.getTokenBalance(
-				// 	ERC20_CROWN,
-				// 	PAYMASTER,
-				// );
-				// const l2BalanceBeforeWithdrawal = await wallet.getBalance();
-				// const l2ApprovalTokenBalanceBeforeWithdrawal = await wallet.getBalance(ERC20_CROWN);
-
 				const tx = await wallet.withdraw({
 					token: ETH_ADDRESS_IN_CONTRACTS,
 					to: wallet.getAddress(),
@@ -1187,36 +1169,6 @@ describe('Wallet', () => {
 				const receipt = await tx.wait();
 
 				expect(receipt).toBeDefined();
-				// const withdrawTx = await tx.waitFinalize();
-				// expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(
-				// 	false,
-				// );
-				//
-				// const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
-				//
-				// const paymasterBalanceAfterWithdrawal = await provider.eth.getBalance(PAYMASTER);
-				// const paymasterTokenBalanceAfterWithdrawal = await provider.getTokenBalance(
-				// 	APPROVAL_TOKEN,
-				// 	PAYMASTER,
-				// );
-				// const l2BalanceAfterWithdrawal = await wallet.getBalance();
-				// const l2ApprovalTokenBalanceAfterWithdrawal =
-				// 	await wallet.getBalance(APPROVAL_TOKEN);
-				//
-				// expect(
-				// 	paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-				// ).toEqual(true);
-				// expect(
-				// 	paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-				// ).toEqual(minimalAllowance);
-				//
-				// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
-				// expect(
-				// 	l2ApprovalTokenBalanceAfterWithdrawal ===
-				// 		l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-				// ).toEqual(true);
-				//
-				// expect(result).not.toBeNull();
 			});
 		} else {
 			it('should withdraw ETH to the L1 network', async () => {
@@ -1335,31 +1287,12 @@ describe('Wallet', () => {
 			});
 			const receipt = await tx.wait();
 			expect(receipt.transactionHash).toBeDefined();
-			// const withdrawTx = await tx.waitFinalize();
-			// expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
-			//
-			// const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
-			// const l2BalanceAfterWithdrawal = await wallet.getBalance(l2USDC);
-			// const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
-
-			// expect(result).not.toBeNull();
-			// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
-			// expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
 		});
 
 		// do not work because we need to have CROWN token on L1
 		it.skip('should withdraw ERC20_CROWN to the L1 network using paymaster to cover fee', async () => {
 			const amount = 3n;
 			const minimalAllowance = 1n;
-
-			// const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
-			// const paymasterTokenBalanceBeforeWithdrawal = await provider.getTokenBalance(
-			// 	APPROVAL_TOKEN,
-			// 	PAYMASTER,
-			// );
-			// const l2BalanceBeforeWithdrawal = await wallet.getBalance(l2USDC);
-			// const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(USDC_L1);
-			// const l2ApprovalTokenBalanceBeforeWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
 
 			const tx = await wallet.withdraw({
 				token: ERC20_CROWN,
@@ -1374,34 +1307,6 @@ describe('Wallet', () => {
 			});
 			const withdrawTx = await tx.wait();
 			expect(withdrawTx.transactionHash).toBeDefined();
-			//
-			// expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
-			//
-			// const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
-			//
-			// const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
-			// const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
-			// 	APPROVAL_TOKEN,
-			// 	PAYMASTER,
-			// );
-			// const l2BalanceAfterWithdrawal = await wallet.getBalance(l2USDC);
-			// const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(USDC_L1);
-			// const l2ApprovalTokenBalanceAfterWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
-			//
-			// expect(
-			// 	paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-			// ).toEqual(true);
-			// expect(
-			// 	paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-			// ).toEqual(minimalAllowance);
-			// expect(
-			// 	l2ApprovalTokenBalanceAfterWithdrawal ===
-			// 		l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-			// ).toEqual(true);
-			//
-			// expect(result).not.toBeNull();
-			// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
-			// expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
 		});
 	});
 

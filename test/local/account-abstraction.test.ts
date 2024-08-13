@@ -135,7 +135,7 @@ describe('Account Abstraction', () => {
 
 		const multisigAccount = MultisigECDSASmartAccount.create(
 			multisigAddress,
-			[owner1.signingKey, owner2.signingKey],
+			[owner1.account.privateKey, owner2.account.privateKey],
 			l2Provider,
 		);
 

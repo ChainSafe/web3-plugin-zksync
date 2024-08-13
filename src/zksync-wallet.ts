@@ -86,9 +86,6 @@ export class ZKsyncWallet extends Adapters {
 	providerL1?: Web3ZKsyncL1;
 	protected eip712!: utils.EIP712Signer;
 	public account: Web3Account;
-	public get signingKey() {
-		return this.account.privateKey;
-	}
 	/**
 	 *
 	 * @param privateKey The private key of the account.

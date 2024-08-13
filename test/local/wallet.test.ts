@@ -3,9 +3,8 @@ import * as web3Utils from 'web3-utils';
 import { toBigInt } from 'web3-utils';
 import type { Transaction } from 'web3-types';
 import type { Address } from 'web3';
-import { utils, Web3ZKsyncL2, ZKsyncWallet, Web3ZKsyncL1 } from '../../src';
+import { utils, Web3ZKsyncL2, ZKsyncWallet, Web3ZKsyncL1, getPaymasterParams } from '../../src';
 import { IS_ETH_BASED, ADDRESS1, ADDRESS2, deepEqualExcluding } from '../utils';
-import type { Eip712TxData } from '../../src/types';
 import {
 	ETH_ADDRESS,
 	ETH_ADDRESS_IN_CONTRACTS,
@@ -15,12 +14,17 @@ import {
 	EIP712_TX_TYPE,
 } from '../../src/constants';
 import { IERC20ABI } from '../../src/contracts/IERC20';
-import { getPaymasterParams } from '../../src/paymaster-utils';
-import { getAccounts, L1Provider, L2Provider, ERC20_CROWN, PAYMASTER, DAI_L1 } from './fixtures';
+import {
+	getAccounts,
+	L1Provider,
+	L2Provider,
+	ERC20_CROWN,
+	PAYMASTER,
+	DAI_L1,
+	APPROVAL_TOKEN,
+} from './fixtures';
 
-const APPROVAL_TOKEN = ERC20_CROWN;
-
-jest.setTimeout(5 * 60000);
+jest.setTimeout(60000);
 
 describe('Wallet', () => {
 	const provider = new Web3ZKsyncL2(L2Provider);
@@ -29,6 +33,13 @@ describe('Wallet', () => {
 	const PRIVATE_KEY = accounts[0].privateKey;
 	const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, ethProvider);
 	const walletAddress = wallet.getAddress();
+	beforeAll(async () => {
+		const TokenAbi = require('./files/Token.json').abi;
+		const crownContract = new provider.eth.Contract(TokenAbi, ERC20_CROWN);
+		await crownContract.methods
+			.mint(wallet.address, 100000000000000000000n)
+			.send({ from: wallet.getAddress() });
+	});
 	describe('#constructor()', () => {
 		it('`Wallet(privateKey, provider)` should return a `Wallet` with L2 provider', async () => {
 			const wallet = new ZKsyncWallet(PRIVATE_KEY, provider);
@@ -170,26 +181,6 @@ describe('Wallet', () => {
 		});
 	});
 
-	// describe('#ethWallet()', () => {
-	// 	it('should return a L1 `Wallet`', async () => {
-	// 		const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, ethProvider);
-	// 		const ethWallet = wallet.ethWallet();
-	// 		expect(ethWallet.signingKey.privateKey).toEqual(PRIVATE_KEY);
-	// 		expect(ethWallet.provider).toEqual(ethProvider);
-	// 	});
-	//
-	// 	it('should throw  an error when L1 `Provider` is not specified in constructor', async () => {
-	// 		const wallet = new Wallet(PRIVATE_KEY, provider);
-	// 		try {
-	// 			wallet.ethWallet();
-	// 		} catch (e) {
-	// 			expect((e as Error).message).toEqual(
-	// 				'L1 provider is missing! Specify an L1 provider using `Wallet.connectToL1()`.',
-	// 			);
-	// 		}
-	// 	});
-	// });
-
 	describe('#connect()', () => {
 		it('should return a `Wallet` with provided `provider` as L2 provider', async () => {
 			const w = new ZKsyncWallet(PRIVATE_KEY);
@@ -259,7 +250,6 @@ describe('Wallet', () => {
 				maxFeePerGas: 1_200_000_000n,
 				maxPriorityFeePerGas: 1_000_000_000n,
 			};
-			// @ts-ignore
 			const result = await wallet.populateTransaction({
 				to: ADDRESS2,
 				value: web3Utils.toHex(7_000_000),
@@ -285,7 +275,6 @@ describe('Wallet', () => {
 					factoryDeps: [],
 				},
 			};
-			// @ts-ignore
 			const result = await wallet.populateTransaction({
 				to: ADDRESS2,
 				value: web3Utils.toHex(7_000_000),
@@ -295,11 +284,10 @@ describe('Wallet', () => {
 					gasPerPubdata: DEFAULT_GAS_PER_PUBDATA_LIMIT,
 					factoryDeps: [],
 				},
-			} as Eip712TxData);
+			} as Transaction);
 			deepEqualExcluding(tx, result, ['gasLimit']);
 			expect(toBigInt(result.gasLimit) > 0n).toEqual(true);
 		});
-
 		it('should return populated transaction when `maxPriorityFeePerGas` and `customData` are provided', async () => {
 			const tx = {
 				to: ADDRESS2,
@@ -315,7 +303,6 @@ describe('Wallet', () => {
 					factoryDeps: [],
 				},
 			};
-			// @ts-ignore
 			const result = await wallet.populateTransaction({
 				to: ADDRESS2,
 				value: web3Utils.toHex(7_000_000),
@@ -323,11 +310,10 @@ describe('Wallet', () => {
 				customData: {
 					gasPerPubdata: DEFAULT_GAS_PER_PUBDATA_LIMIT,
 				},
-			} as Eip712TxData);
+			} as Transaction);
 			deepEqualExcluding(result, tx, ['gasLimit', 'maxFeePerGas']);
 			expect(toBigInt(result.gasLimit) > 0n).toEqual(true);
 		});
-
 		it('should return populated transaction when `maxFeePerGas` and `customData` are provided', async () => {
 			const tx = {
 				to: ADDRESS2,
@@ -343,7 +329,6 @@ describe('Wallet', () => {
 					factoryDeps: [],
 				},
 			};
-			// @ts-ignore
 			const result = await wallet.populateTransaction({
 				to: ADDRESS2,
 				value: web3Utils.toHex(7_000_000),
@@ -351,11 +336,10 @@ describe('Wallet', () => {
 				customData: {
 					gasPerPubdata: DEFAULT_GAS_PER_PUBDATA_LIMIT,
 				},
-			} as Eip712TxData);
+			} as Transaction);
 			deepEqualExcluding(tx, result, ['gasLimit']);
 			expect(toBigInt(result.gasLimit) > 0n).toEqual(true);
 		});
-
 		it('should return populated EIP1559 transaction when `maxFeePerGas` and `maxPriorityFeePerGas` are provided', async () => {
 			const tx = {
 				to: ADDRESS2,
@@ -367,7 +351,6 @@ describe('Wallet', () => {
 				maxFeePerGas: 3_500_000_000n,
 				maxPriorityFeePerGas: 2_000_000_000n,
 			};
-			// @ts-ignore
 			const result = await wallet.populateTransaction({
 				to: ADDRESS2,
 				value: web3Utils.toHex(7_000_000),
@@ -377,7 +360,6 @@ describe('Wallet', () => {
 			deepEqualExcluding(tx, result, ['gasLimit']);
 			expect(toBigInt(result.gasLimit!) > 0n).toEqual(true);
 		});
-
 		it('should return populated EIP1559 transaction with `maxFeePerGas` and `maxPriorityFeePerGas` same as provided `gasPrice`', async () => {
 			const tx = {
 				to: ADDRESS2,
@@ -389,7 +371,6 @@ describe('Wallet', () => {
 				maxFeePerGas: 3_500_000_000n,
 				maxPriorityFeePerGas: 3_500_000_000n,
 			};
-			// @ts-ignore
 			const result = await wallet.populateTransaction({
 				to: ADDRESS2,
 				value: web3Utils.toHex(7_000_000),
@@ -398,7 +379,6 @@ describe('Wallet', () => {
 			deepEqualExcluding(result, tx, ['gasLimit', 'type', 'gasPrice']);
 			expect(toBigInt(result.gasLimit!) > 0n).toEqual(true);
 		});
-
 		it('should return populated legacy transaction when `type = 0`', async () => {
 			const tx = {
 				to: ADDRESS2,
@@ -409,7 +389,6 @@ describe('Wallet', () => {
 				chainId: 270n,
 				gasPrice: 100_000_000n,
 			};
-			// @ts-ignore
 			const result = await wallet.populateTransaction({
 				type: web3Utils.toHex(0),
 				to: ADDRESS2,
@@ -428,11 +407,10 @@ describe('Wallet', () => {
 				value: web3Utils.toHex(7_000_000),
 				maxFeePerGas: web3Utils.toHex(3_500_000_000n),
 				maxPriorityFeePerGas: web3Utils.toHex(2_000_000_000n),
-				// @ts-ignore
 				customData: {
 					gasPerPubdata: DEFAULT_GAS_PER_PUBDATA_LIMIT,
 				},
-			})) as unknown as Transaction;
+			} as Transaction)) as Transaction;
 			const tx = await wallet.sendTransaction(populatedTx);
 			const result = await tx.wait();
 			expect(result).not.toBeNull();
@@ -901,6 +879,7 @@ describe('Wallet', () => {
 
 	describe('#claimFailedDeposit()', () => {
 		if (IS_ETH_BASED) {
+			// todo: fix this test
 			it('should claim failed deposit', async () => {
 				const response = await wallet.deposit({
 					token: DAI_L1,
@@ -908,25 +887,29 @@ describe('Wallet', () => {
 					amount: 5,
 					approveERC20: true,
 					refundRecipient: wallet.getAddress(),
-					l2GasLimit: 300_000, // make it fail because of low gas
+					l2GasLimit: 300000, // make it fail because of low gas
 				});
 				const receipt = await response.wait();
 				expect(receipt.transactionHash).toBeDefined();
-				// try {
-				// 	await response.waitFinalize();
-				// } catch (error) {
-				// const hash = '0x229f99f63a6fd5e90154546797c56348e8f6260808bf63769ea22e842d09750f';
-				// const blockNumber = (await wallet.provider!.eth.getTransaction(hash)).blockNumber!;
-				// // Now wait for block number to be executed.
-				// let blockDetails: BlockDetails;
-				// do {
-				// 	// still not executed.
-				// 	await utils.sleep(500);
-				// 	blockDetails = await wallet.provider!.getBlockDetails(blockNumber);
-				// } while (!blockDetails || !blockDetails.executeTxHash);
-				// const result = await wallet.claimFailedDeposit(hash);
-				// expect(result?.blockHash).not.toBeNull();
-				// }
+				try {
+					const tx = await response.waitFinalize();
+					console.log('tx', tx);
+				} catch (error) {
+					console.log('error', error);
+					const hash =
+						'0x229f99f63a6fd5e90154546797c56348e8f6260808bf63769ea22e842d09750f';
+					const blockNumber = (await wallet.provider!.eth.getTransaction(hash))
+						.blockNumber!;
+					// Now wait for block number to be executed.
+					let blockDetails;
+					do {
+						// still not executed.
+						await utils.sleep(500);
+						blockDetails = await wallet.provider!.getBlockDetails(blockNumber);
+					} while (!blockDetails || !blockDetails.executeTxHash);
+					const result = await wallet.claimFailedDeposit(hash);
+					expect(result?.blockHash).not.toBeNull();
+				}
 			});
 
 			it('should throw an error when trying to claim successful deposit', async () => {
@@ -1130,30 +1113,30 @@ describe('Wallet', () => {
 		if (IS_ETH_BASED) {
 			it('should withdraw ETH to the L1 network', async () => {
 				const amount = 7n;
-				// const l2BalanceBeforeWithdrawal = await wallet.getBalance();
+				const l2BalanceBeforeWithdrawal = await wallet.getBalance();
 				const withdrawTx = await wallet.withdraw({
 					token: LEGACY_ETH_ADDRESS,
 					to: wallet.getAddress(),
 					amount: amount,
 				});
-				const receipt = await withdrawTx.wait();
+				const receipt = await withdrawTx.waitFinalize();
 				expect(receipt.transactionHash).toBeDefined();
-				// works but in sepolia we need to wait few hours to finalize block
-				// const txHash = '0xd638355396984ae5f94660ad5b803890f952e036e846b5ea23213d8335e8aef6';
-				// expect(await wallet.isWithdrawalFinalized(txHash)).toEqual(false);
-				//
-				// const result = await wallet.finalizeWithdrawal(txHash);
-				// // const l2BalanceAfterWithdrawal = await wallet.getBalance();
-				// expect(result).not.toBeNull();
-				// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
-				// 	true,
-				// );
+				const txHash = receipt.transactionHash;
+				expect(await wallet.isWithdrawalFinalized(txHash)).toEqual(false);
+
+				const result = await wallet.finalizeWithdrawal(txHash);
+				const l2BalanceAfterWithdrawal = await wallet.getBalance();
+				expect(result).not.toBeNull();
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
+					true,
+				);
 			});
 
-			it.skip('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
+			it.only('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
 				const amount = 7n;
 				const minimalAllowance = 1n;
-				const paymasterBalanceBeforeWithdrawal = await provider.eth.getBalance(PAYMASTER);
+
+				const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
 				const paymasterTokenBalanceBeforeWithdrawal = await provider.getTokenBalance(
 					ERC20_CROWN,
 					PAYMASTER,
@@ -1161,12 +1144,6 @@ describe('Wallet', () => {
 				const l2BalanceBeforeWithdrawal = await wallet.getBalance();
 				const l2ApprovalTokenBalanceBeforeWithdrawal = await wallet.getBalance(ERC20_CROWN);
 
-				console.log({
-					paymasterBalanceBeforeWithdrawal,
-					paymasterTokenBalanceBeforeWithdrawal,
-					l2BalanceBeforeWithdrawal,
-					l2ApprovalTokenBalanceBeforeWithdrawal,
-				});
 				const tx = await wallet.withdraw({
 					token: ETH_ADDRESS_IN_CONTRACTS,
 					to: wallet.getAddress(),
@@ -1181,36 +1158,36 @@ describe('Wallet', () => {
 				const receipt = await tx.wait();
 
 				expect(receipt).toBeDefined();
-				// const withdrawTx = await tx.waitFinalize();
-				// expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(
-				// 	false,
-				// );
-				//
-				// const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
-				//
-				// const paymasterBalanceAfterWithdrawal = await provider.eth.getBalance(PAYMASTER);
-				// const paymasterTokenBalanceAfterWithdrawal = await provider.getTokenBalance(
-				// 	APPROVAL_TOKEN,
-				// 	PAYMASTER,
-				// );
-				// const l2BalanceAfterWithdrawal = await wallet.getBalance();
-				// const l2ApprovalTokenBalanceAfterWithdrawal =
-				// 	await wallet.getBalance(APPROVAL_TOKEN);
-				//
-				// expect(
-				// 	paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-				// ).toEqual(true);
-				// expect(
-				// 	paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-				// ).toEqual(minimalAllowance);
-				//
-				// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
-				// expect(
-				// 	l2ApprovalTokenBalanceAfterWithdrawal ===
-				// 		l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-				// ).toEqual(true);
-				//
-				// expect(result).not.toBeNull();
+				const withdrawTx = await tx.waitFinalize();
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(
+					false,
+				);
+
+				const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
+
+				const paymasterBalanceAfterWithdrawal = await provider.eth.getBalance(PAYMASTER);
+				const paymasterTokenBalanceAfterWithdrawal = await provider.getTokenBalance(
+					APPROVAL_TOKEN,
+					PAYMASTER,
+				);
+				const l2BalanceAfterWithdrawal = await wallet.getBalance();
+				const l2ApprovalTokenBalanceAfterWithdrawal =
+					await wallet.getBalance(APPROVAL_TOKEN);
+
+				expect(
+					paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
+				).toEqual(true);
+				expect(
+					paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
+				).toEqual(minimalAllowance);
+
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
+				expect(
+					l2ApprovalTokenBalanceAfterWithdrawal ===
+						l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
+				).toEqual(true);
+
+				expect(result).not.toBeNull();
 			});
 		} else {
 			it('should withdraw ETH to the L1 network', async () => {
@@ -1329,34 +1306,33 @@ describe('Wallet', () => {
 			});
 			const receipt = await tx.wait();
 			expect(receipt.transactionHash).toBeDefined();
-			// const withdrawTx = await tx.waitFinalize();
-			// expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
-			//
-			// const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
-			// const l2BalanceAfterWithdrawal = await wallet.getBalance(l2DAI);
-			// const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
+			const withdrawTx = await tx.waitFinalize();
+			expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
 
-			// expect(result).not.toBeNull();
-			// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
-			// expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
+			const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
+			const l2BalanceAfterWithdrawal = await wallet.getBalance(l2DAI);
+			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
+			expect(result).not.toBeNull();
+			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
+			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
 		});
 
-		// do not work because we need to have CROWN token on L1
-		it.skip('should withdraw ERC20_CROWN to the L1 network using paymaster to cover fee', async () => {
+		it('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
 			const amount = 3n;
+			const l2DAI = await provider.l2TokenAddress(DAI_L1);
 			const minimalAllowance = 1n;
 
-			// const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
-			// const paymasterTokenBalanceBeforeWithdrawal = await provider.getTokenBalance(
-			// 	APPROVAL_TOKEN,
-			// 	PAYMASTER,
-			// );
-			// const l2BalanceBeforeWithdrawal = await wallet.getBalance(l2DAI);
-			// const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
-			// const l2ApprovalTokenBalanceBeforeWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
+			const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
+			const paymasterTokenBalanceBeforeWithdrawal = await provider.getTokenBalance(
+				APPROVAL_TOKEN,
+				PAYMASTER,
+			);
+			const l2BalanceBeforeWithdrawal = await wallet.getBalance(l2DAI);
+			const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
+			const l2ApprovalTokenBalanceBeforeWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
 
 			const tx = await wallet.withdraw({
-				token: ERC20_CROWN,
+				token: l2DAI,
 				to: wallet.getAddress(),
 				amount: amount,
 				paymasterParams: getPaymasterParams(PAYMASTER, {
@@ -1366,36 +1342,36 @@ describe('Wallet', () => {
 					innerInput: new Uint8Array(),
 				}),
 			});
-			const withdrawTx = await tx.wait();
+			const withdrawTx = await tx.waitFinalize();
 			expect(withdrawTx.transactionHash).toBeDefined();
-			//
-			// expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
-			//
-			// const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
-			//
-			// const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
-			// const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
-			// 	APPROVAL_TOKEN,
-			// 	PAYMASTER,
-			// );
-			// const l2BalanceAfterWithdrawal = await wallet.getBalance(l2DAI);
-			// const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
-			// const l2ApprovalTokenBalanceAfterWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
-			//
-			// expect(
-			// 	paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-			// ).toEqual(true);
-			// expect(
-			// 	paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-			// ).toEqual(minimalAllowance);
-			// expect(
-			// 	l2ApprovalTokenBalanceAfterWithdrawal ===
-			// 		l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-			// ).toEqual(true);
-			//
-			// expect(result).not.toBeNull();
-			// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
-			// expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
+
+			expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
+
+			const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
+
+			const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
+			const paymasterTokenBalanceAfterWithdrawal = await provider.getTokenBalance(
+				APPROVAL_TOKEN,
+				PAYMASTER,
+			);
+			const l2BalanceAfterWithdrawal = await wallet.getBalance(l2DAI);
+			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
+			const l2ApprovalTokenBalanceAfterWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
+
+			expect(
+				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
+			).toEqual(true);
+			expect(
+				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
+			).toEqual(minimalAllowance);
+			expect(
+				l2ApprovalTokenBalanceAfterWithdrawal ===
+					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
+			).toEqual(true);
+
+			expect(result).not.toBeNull();
+			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toEqual(amount);
+			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toEqual(amount);
 		});
 	});
 
@@ -1521,24 +1497,25 @@ describe('Wallet', () => {
 			expect(balanceAfterTransfer - balanceBeforeTransfer).toEqual(amount);
 		});
 
-		it.skip('should transfer ETH or base token depending on chain using paymaster to cover fee', async () => {
+		it('should transfer ETH or base token depending on chain using paymaster to cover fee', async () => {
 			const amount = 2n;
 			const minimalAllowance = 1n;
 			const paymasterBalanceBeforeTransfer = await provider.getBalance(PAYMASTER);
 			const paymasterTokenBalanceBeforeTransfer = await provider.getTokenBalance(
-				ERC20_CROWN,
+				APPROVAL_TOKEN,
 				PAYMASTER,
 			);
 
 			const senderBalanceBeforeTransfer = await wallet.getBalance();
-			const senderApprovalTokenBalanceBeforeTransfer = await wallet.getBalance(ERC20_CROWN);
+			const senderApprovalTokenBalanceBeforeTransfer =
+				await wallet.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS2, 'latest');
 			const tx = await wallet.transfer({
 				to: ADDRESS2,
 				amount: amount,
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',
-					token: ERC20_CROWN,
+					token: APPROVAL_TOKEN,
 					minimalAllowance: minimalAllowance,
 					innerInput: new Uint8Array(),
 				}),
@@ -1546,15 +1523,14 @@ describe('Wallet', () => {
 			const result = await tx.wait();
 			const paymasterBalanceAfterTransfer = await provider.getBalance(PAYMASTER);
 			const paymasterTokenBalanceAfterTransfer = await provider.getTokenBalance(
-				ERC20_CROWN,
+				APPROVAL_TOKEN,
 				PAYMASTER,
 			);
 			const senderBalanceAfterTransfer = await wallet.getBalance();
-			const senderApprovalTokenBalanceAfterTransfer = await wallet.getBalance(ERC20_CROWN);
+			const senderApprovalTokenBalanceAfterTransfer = await wallet.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2);
 
 			expect(result.transactionHash).not.toBeNull();
-			// todo: error: eth not transfered with paymaster
 			console.log({
 				senderBalanceBeforeTransfer,
 				senderBalanceAfterTransfer,
@@ -1572,9 +1548,9 @@ describe('Wallet', () => {
 				senderApprovalTokenBalanceAfterTransfer ===
 					senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
 			).toEqual(true);
-
-			// expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
-			// expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toEqual(amount);
+			// @todo: fix this test. eth was not transferred
+			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
+			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toEqual(amount);
 		});
 
 		if (!IS_ETH_BASED) {
@@ -1671,7 +1647,7 @@ describe('Wallet', () => {
 			expect(balanceAfterTransfer - balanceBeforeTransfer).toEqual(amount);
 		});
 
-		it.skip('should transfer DAI using paymaster to cover fee', async () => {
+		it('should transfer DAI using paymaster to cover fee', async () => {
 			const amount = 5n;
 			const minimalAllowance = 1n;
 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
@@ -1738,8 +1714,8 @@ describe('Wallet', () => {
 				receiverBalanceAfterTransfer,
 			});
 			// @todo: error: token not transferred
-			// expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
-			// expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
+			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
+			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
 		});
 
 		if (!IS_ETH_BASED) {
