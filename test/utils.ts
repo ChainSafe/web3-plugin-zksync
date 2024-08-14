@@ -9,7 +9,7 @@ export const PRIVATE_KEY2 = '0xac1e735be8536c6534bb4f17f06f6afc73b2b5ba84ac2cfb1
 export const DAI_L1 = '0x3e622317f8C93f7328350cF0B56d9eD4C620C5d6';
 export const USDC_L1 = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
 export const ERC20_CROWN = '0x927488F48ffbc32112F1fF721759649A89721F8F';
-export const APPROVAL_TOKEN = '0x927488F48ffbc32112F1fF721759649A89721F8F'; // Crown token
+export const APPROVAL_TOKEN = ERC20_CROWN; // Crown token
 export const PAYMASTER = '0x13D0D8550769f59aa241a41897D4859c87f7Dd46'; // Crown token paymaster
 
 export const IS_ETH_BASED = true;

@@ -12,7 +12,6 @@ import * as utils from '../../src/utils';
 
 jest.setTimeout(50000);
 describe('wallet', () => {
-	// @ts-ignore
 	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
 	const l1Provider = new Web3ZKsyncL1(
 		'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
@@ -20,7 +19,6 @@ describe('wallet', () => {
 	const l2Provider = Web3ZKsyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
 	const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || web3Accounts.create().privateKey;
 	const wallet = new ZKsyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
-	console.log('acc-test', String(process.env.PRIVATE_KEY).slice(0, 10));
 	it('should deposit', async () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,

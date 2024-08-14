@@ -55,11 +55,12 @@ describe('ZkSyncPlugin rpc mainnet tests', () => {
 		const blockDetails = await web3.ZKsync.rpc.getBlockDetails(latestBatchDetails.number);
 		expect(blockDetails.number).toBeDefined();
 	});
-	it.skip('transactionReceipt', async () => {
+	it('transactionReceipt', async () => {
 		const res = await ethRpcMethods.getTransactionReceipt(
 			web3.requestManager,
-			'0x8cee929f16b4738a8ae6cf4bd4f43d5be0e5f028e4db45a0bde6203ef242c30e',
+			'0x0cb95fa45e09ace6709276c9531f9a402a5e54a2b5365b673f3d258afac54cd8',
 		);
-		console.log('res', res);
+		expect(res?.transactionHash).toBeDefined();
+		expect(res?.status).toBe('0x1');
 	});
 });
