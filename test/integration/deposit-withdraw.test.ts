@@ -25,12 +25,10 @@ describe('wallet', () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),
-			amount: 10000_000000_000000n,
+			amount: 1n,
 			refundRecipient: wallet.getAddress(),
 		});
 		const receipt = await tx.wait();
-
-		console.log(`Tx: ${receipt.transactionHash}`);
 
 		expect(receipt.status).toBe(1n);
 		expect(receipt.transactionHash).toBeDefined();
@@ -40,11 +38,9 @@ describe('wallet', () => {
 		const tx = await wallet.withdraw({
 			token: ETH_ADDRESS,
 			to: wallet.getAddress(),
-			amount: 10n,
+			amount: 1n,
 		});
 		const receipt = await tx.wait();
-
-		console.log(`Tx: ${receipt.transactionHash}`);
 
 		expect(receipt.status).toBe(1n);
 		expect(receipt.transactionHash).toBeDefined();
