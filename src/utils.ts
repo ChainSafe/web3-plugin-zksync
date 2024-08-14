@@ -1087,7 +1087,7 @@ export const getPriorityOpL2Response = async (
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		waitFinalize: async () => {
-			return await waitTxByHashConfirmationFinalized(context.eth, hash, 1, 'finalized');
+			return await waitTxByHashConfirmationFinalized(context.eth, hash, 1);
 		},
 	};
 };

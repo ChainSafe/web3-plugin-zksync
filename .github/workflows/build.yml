@@ -18,4 +18,4 @@ jobs:
                   cache: yarn
             - run: yarn install
             - run: yarn build
-            - run: export PRIVATE_KEY=${{secrets.PRIVATE_KEY}} && yarn test
+            - run: export PRIVATE_KEY=${{secrets.PRIVATE_KEY}} && yarn test:integration

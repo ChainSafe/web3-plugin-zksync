@@ -1,12 +1,15 @@
-import { IS_ETH_BASED, ADDRESS3, deepEqualExcluding } from '../utils';
-
-import { PAYMASTER, ERC20_CROWN, DAI_L1, getAccounts, L2Provider, L1Provider } from './fixtures';
-
-const APPROVAL_TOKEN = ERC20_CROWN;
-
+import { IS_ETH_BASED, ADDRESS1, deepEqualExcluding } from '../utils';
+import {
+	PAYMASTER,
+	APPROVAL_TOKEN,
+	DAI_L1,
+	getAccounts,
+	L2Provider,
+	L1Provider,
+	prepareAccount,
+} from './fixtures';
 import { EIP712_TX_TYPE, ETH_ADDRESS, ETH_ADDRESS_IN_CONTRACTS } from '../../src/constants';
 import { toBigInt, toWei } from 'web3-utils';
-import { privateKeyToAccount } from 'web3-eth-accounts';
 import {
 	SmartAccount,
 	types,
@@ -19,20 +22,22 @@ import {
 // const aaFactoryAddress = '0x111C3E89Ce80e62EE88318C2804920D4c96f92bb';
 // const multisigAddress = '0x24de09D4C252D1b2413B8192F6A44f5f16D6eb66';
 
-const accounts = getAccounts();
-const PRIVATE_KEY = accounts[0].privateKey;
-const mainAccount = privateKeyToAccount(PRIVATE_KEY);
 jest.setTimeout(50000);
-describe('SmartAccount', () => {
-	const provider = new Web3ZKsyncL2(L2Provider);
-	const l1Provider = new Web3ZKsyncL1(L1Provider);
-	const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, l1Provider);
-	// const ethProvider = new Web3ZKsyncL1(L1Provider);
-	const account = new SmartAccount(
-		{ address: mainAccount.address, secret: mainAccount.privateKey },
-		provider,
-	);
+const accounts = getAccounts();
+const mainAccount = accounts[0];
+const PRIVATE_KEY = mainAccount.privateKey;
+const provider = new Web3ZKsyncL2(L2Provider);
+const l1Provider = new Web3ZKsyncL1(L1Provider);
+const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, l1Provider);
+const account = new SmartAccount(
+	{ address: mainAccount.address, secret: mainAccount.privateKey },
+	provider,
+);
 
+describe('SmartAccount', () => {
+	beforeAll(async () => {
+		await prepareAccount(accounts[0].privateKey);
+	});
 	describe('#constructor()', () => {
 		it('`SmartAccount(address, {address, secret}, provider)` should return a `SmartAccount` with signer and provider', () => {
 			const account = new SmartAccount(
@@ -136,7 +141,7 @@ describe('SmartAccount', () => {
 	describe('#populateTransaction()', () => {
 		it('should return a populated transaction', async () => {
 			const tx = {
-				to: ADDRESS3,
+				to: ADDRESS1,
 				value: 7_000_000_000n,
 				type: toBigInt(EIP712_TX_TYPE),
 				from: mainAccount.address,
@@ -150,7 +155,7 @@ describe('SmartAccount', () => {
 
 			const result = await account.populateTransaction({
 				type: EIP712_TX_TYPE,
-				to: ADDRESS3,
+				to: ADDRESS1,
 				value: 7_000_000_000,
 			});
 			deepEqualExcluding(result, tx, [
@@ -165,7 +170,7 @@ describe('SmartAccount', () => {
 
 		it('should return a populated transaction with default values if are omitted', async () => {
 			const tx = {
-				to: ADDRESS3,
+				to: ADDRESS1,
 				value: 7_000_000n,
 				type: toBigInt(EIP712_TX_TYPE),
 				from: mainAccount.address,
@@ -176,7 +181,7 @@ describe('SmartAccount', () => {
 				customData: { gasPerPubdata: 50_000, factoryDeps: [] },
 			};
 			const result = await account.populateTransaction({
-				to: ADDRESS3,
+				to: ADDRESS1,
 				value: 7_000_000,
 			});
 			deepEqualExcluding(result, tx, [
@@ -193,7 +198,7 @@ describe('SmartAccount', () => {
 	describe('#signTransaction()', () => {
 		it('should return a signed EIP712 transaction', async () => {
 			const result = await account.signTransaction({
-				to: ADDRESS3,
+				to: ADDRESS1,
 				value: toWei(1, 'wei'),
 			});
 			expect(result).not.toBeNull();
@@ -230,22 +235,22 @@ describe('SmartAccount', () => {
 	describe('#transfer()', () => {
 		it('should transfer ETH', async () => {
 			const amount = 1_000_000_000n;
-			const balanceBeforeTransfer = await provider.getBalance(ADDRESS3);
+			const balanceBeforeTransfer = await provider.getBalance(ADDRESS1);
 
 			const tx = await account.transfer({
 				token: ETH_ADDRESS,
-				to: ADDRESS3,
+				to: ADDRESS1,
 				amount: amount,
 			});
 			expect(tx.hash).not.toBeNull();
 			const receipt = await tx.wait();
 			expect(receipt.transactionHash).not.toBeNull();
-			const balanceAfterTransfer = await provider.getBalance(ADDRESS3);
+			const balanceAfterTransfer = await provider.getBalance(ADDRESS1);
 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 		});
 
 		it('should transfer ETH using paymaster to cover fee', async () => {
-			const amount = 7_000_000_000n;
+			const amount = 7n;
 			const minimalAllowance = 1n;
 
 			const paymasterBalanceBeforeTransfer = await provider.getBalance(PAYMASTER);
@@ -257,11 +262,11 @@ describe('SmartAccount', () => {
 			const senderBalanceBeforeTransfer = await account.getBalance();
 			const senderApprovalTokenBalanceBeforeTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS3);
+			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS1);
 
 			const tx = await account.transfer({
 				token: ETH_ADDRESS,
-				to: ADDRESS3,
+				to: ADDRESS1,
 				amount: amount,
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',
@@ -281,7 +286,7 @@ describe('SmartAccount', () => {
 			const senderBalanceAfterTransfer = await account.getBalance();
 			const senderApprovalTokenBalanceAfterTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS3);
+			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS1);
 
 			expect(
 				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
@@ -303,14 +308,14 @@ describe('SmartAccount', () => {
 		it('should transfer DAI', async () => {
 			const amount = 5n;
 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
-			const balanceBeforeTransfer = await provider.getBalance(ADDRESS3, 'latest', l2DAI);
+			const balanceBeforeTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
 			const tx = await account.transfer({
 				token: l2DAI,
-				to: ADDRESS3,
+				to: ADDRESS1,
 				amount: amount,
 			});
 			const result = await tx.wait();
-			const balanceAfterTransfer = await provider.getBalance(ADDRESS3, 'latest', l2DAI);
+			const balanceAfterTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
 			expect(result).not.toBeNull();
 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 		});
@@ -329,14 +334,14 @@ describe('SmartAccount', () => {
 			const senderApprovalTokenBalanceBeforeTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceBeforeTransfer = await provider.getBalance(
-				ADDRESS3,
+				ADDRESS1,
 				'latest',
 				l2DAI,
 			);
 
 			const tx = await account.transfer({
 				token: l2DAI,
-				to: ADDRESS3,
+				to: ADDRESS1,
 				amount: amount,
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',
@@ -357,7 +362,7 @@ describe('SmartAccount', () => {
 			const senderApprovalTokenBalanceAfterTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceAfterTransfer = await provider.getBalance(
-				ADDRESS3,
+				ADDRESS1,
 				'latest',
 				l2DAI,
 			);
@@ -369,9 +374,7 @@ describe('SmartAccount', () => {
 				minimalAllowance,
 			);
 
-			expect(
-				senderBalanceBeforeTransfer - senderBalanceAfterTransfer - minimalAllowance,
-			).toBe(amount);
+			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toBe(amount);
 
 			expect(result).not.toBeNull();
 			expect(
@@ -381,7 +384,6 @@ describe('SmartAccount', () => {
 			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
 		});
 	});
-
 	describe('#withdraw()', () => {
 		it('should withdraw ETH to the L1 network', async () => {
 			const amount = 7_000_000_000n;
@@ -402,7 +404,7 @@ describe('SmartAccount', () => {
 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toBeTruthy();
 		});
 
-		it.only('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
+		it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
 			const amount = 7n;
 			const minimalAllowance = 1n;
 
@@ -412,10 +414,10 @@ describe('SmartAccount', () => {
 				'latest',
 				APPROVAL_TOKEN,
 			);
+
 			const l2BalanceBeforeWithdrawal = await account.getBalance();
 			const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
-
-			const withdrawTx = await account.withdraw({
+			const tx = await account.withdraw({
 				token: ETH_ADDRESS_IN_CONTRACTS,
 				to: account.getAddress(),
 				amount: amount,
@@ -426,14 +428,12 @@ describe('SmartAccount', () => {
 					innerInput: new Uint8Array(),
 				}),
 			});
-			const tx = await withdrawTx.wait();
-			expect(tx.transactionHash).not.toBeNull();
-			const withdrawFinalizeTx = await withdrawTx.waitFinalize();
-			expect(
-				await wallet.isWithdrawalFinalized(withdrawFinalizeTx.transactionHash),
-			).toBeFalsy();
+			const receipt = await tx.wait();
+			expect(receipt.transactionHash).not.toBeNull();
+			const withdrawTx = await tx.waitFinalize();
+			expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toBeFalsy();
 
-			const result = await wallet.finalizeWithdrawal(withdrawFinalizeTx.transactionHash);
+			const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
 
 			const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
 			const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
@@ -460,44 +460,44 @@ describe('SmartAccount', () => {
 			expect(result).not.toBeNull();
 		});
 
-		it.skip('should withdraw ERC20_CROWN to the L1 network', async () => {
+		it('should withdraw DAI to the L1 network', async () => {
 			const amount = 5n;
-			// const l2BalanceBeforeWithdrawal = await account.getBalance(L2USDC);
-			// const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(USDC_L1);
+			const l2DAI = await provider.l2TokenAddress(DAI_L1);
+			const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
+			const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
 
 			const withdrawTx = await account.withdraw({
-				token: ERC20_CROWN,
+				token: l2DAI,
 				to: account.getAddress(),
 				amount: amount,
 			});
-			const tx = await withdrawTx.wait();
+			const tx = await withdrawTx.waitFinalize();
 			expect(tx.transactionHash).not.toBeNull();
-			// expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
-			//
-			// const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
-			// const l2BalanceAfterWithdrawal = await account.getBalance(L2USDC);
-			// const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
-			//
-			// expect(result).not.toBeNull();
-			// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
-			// expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
+			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
+
+			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
+			const l2BalanceAfterWithdrawal = await account.getBalance(l2DAI);
+			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
+
+			expect(result).not.toBeNull();
+			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
+			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
 		});
 
-		// do not work because we need to have CROWN token on L1
-		it.skip('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
+		it('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
 			const amount = 5n;
 			const minimalAllowance = 1n;
 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
 
-			// const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
-			// const paymasterTokenBalanceBeforeWithdrawal = await provider.getBalance(
-			// 	PAYMASTER,
-			// 	'latest',
-			// 	APPROVAL_TOKEN,
-			// );
-			// const l2BalanceBeforeWithdrawal = await account.getBalance(l2USDC);
-			// const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(USDC_L1);
-			// const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
+			const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
+			const paymasterTokenBalanceBeforeWithdrawal = await provider.getBalance(
+				PAYMASTER,
+				'latest',
+				APPROVAL_TOKEN,
+			);
+			const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
+			const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
+			const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
 
 			const withdrawTx = await account.withdraw({
 				token: l2DAI,
@@ -512,404 +512,404 @@ describe('SmartAccount', () => {
 			});
 			const tx = await withdrawTx.wait();
 			expect(tx.transactionHash).not.toBeNull();
-			// await withdrawTx.waitFinalize();
-			// expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
-			//
-			// const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
-			//
-			// const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
-			// const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
-			// 	PAYMASTER,
-			// 	'latest',
-			// 	APPROVAL_TOKEN,
-			// );
-			// const l2BalanceAfterWithdrawal = await account.getBalance(l2USDC);
-			// const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(USDC_L1);
-			// const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
-			//
-			// expect(
-			// 	paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-			// ).toBeTruthy();
-			// expect(
-			// 	paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-			// ).toBe(minimalAllowance);
-			// expect(
-			// 	l2ApprovalTokenBalanceAfterWithdrawal ===
-			// 		l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-			// ).toBeTruthy();
-			//
-			// expect(result).not.toBeNull();
-			// expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
-			// expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
+
+			await withdrawTx.waitFinalize();
+			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
+
+			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
+
+			const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
+			const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
+				PAYMASTER,
+				'latest',
+				APPROVAL_TOKEN,
+			);
+			const l2BalanceAfterWithdrawal = await account.getBalance(l2DAI);
+			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
+			const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
+
+			expect(
+				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
+			).toBeTruthy();
+			expect(
+				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
+			).toBe(minimalAllowance);
+			expect(
+				l2ApprovalTokenBalanceAfterWithdrawal ===
+					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
+			).toBeTruthy();
+
+			expect(result).not.toBeNull();
+			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
+			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
 		});
 	});
+	// describe('MultisigECDSASmartAccount', () => {
+	// 	const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
+	// 	const ethProvider = new Web3ZKsyncL1(
+	// 		'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
+	// 	);
+	// 	const wallet = new ZKsyncWallet(_mainAccount.privateKey, provider, ethProvider);
+	// 	let account: SmartAccount;
+	//
+	// 	beforeAll(async function () {
+	// 		const deployer = ECDSASmartAccount.create(
+	// 			_mainAccount.address,
+	// 			_mainAccount.privateKey,
+	// 			provider,
+	// 		);
+	//
+	// 		const multisigAccountAbi = MultisigAccount.abi;
+	// 		const multisigAccountBytecode: string = MultisigAccount.bytecode;
+	// 		const factory = new provider.eth.Contract(multisigAccountAbi);
+	// 		const deploed = await factory
+	// 			.deploy({
+	// 				data: multisigAccountBytecode,
+	// 			})
+	// 			.send({
+	// 				from: deployer.address,
+	// 			});
+	// 		deploed.methods.createAccount();
+	// 		const owner1 = new ZKsyncWallet(_mainAccount.privateKey);
+	// 		const owner2 = new ZKsyncWallet(PRIVATE_KEY2);
+	// 		const multisigContract = await factory.deploy(owner1.address, owner2.address);
+	// 		const multisigAddress = await multisigContract.methods.getAddress();
+	//
+	// 		// send ETH to multisig account
+	// 		await (
+	// 			await deployer.sendTransaction({
+	// 				to: multisigAddress,
+	// 				value: toWei(1, 'ether'),
+	// 			})
+	// 		).wait();
+	//
+	// 		// send paymaster approval token to multisig account
+	// 		const sendApprovalTokenTx = await deployer.transfer({
+	// 			to: multisigAddress,
+	// 			token: APPROVAL_TOKEN,
+	// 			amount: 5,
+	// 		});
+	// 		await sendApprovalTokenTx.wait();
+	//
+	// 		// send DAI token to multisig account
+	// 		const sendTokenTx = await deployer.transfer({
+	// 			to: multisigAddress,
+	// 			token: await provider.l2TokenAddress(DAI_L1),
+	// 			amount: 20,
+	// 		});
+	// 		await sendTokenTx.wait();
+	//
+	// 		account = MultisigECDSASmartAccount.create(
+	// 			multisigAddress,
+	// 			[_mainAccount.privateKey, PRIVATE_KEY2],
+	// 			provider,
+	// 		);
+	// 	});
+	//
+	// 	describe('#transfer()', () => {
+	// 		it('should transfer ETH', async () => {
+	// 			const amount = 7_000_000_000n;
+	// 			const balanceBeforeTransfer = await provider.getBalance(ADDRESS1);
+	// 			const tx = await account.transfer({
+	// 				token: ETH_ADDRESS,
+	// 				to: ADDRESS1,
+	// 				amount: amount,
+	// 			});
+	// 			const result = await tx.wait();
+	// 			const balanceAfterTransfer = await provider.getBalance(ADDRESS1);
+	// 			expect(result).not.toBeNull();
+	// 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
+	// 		});
+	//
+	// 		it('should transfer ETH using paymaster to cover fee', async () => {
+	// 			const amount = 7_000_000_000n;
+	// 			const minimalAllowance = 1n;
+	//
+	// 			const paymasterBalanceBeforeTransfer = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceBeforeTransfer = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const senderBalanceBeforeTransfer = await account.getBalance();
+	// 			const senderApprovalTokenBalanceBeforeTransfer =
+	// 				await account.getBalance(APPROVAL_TOKEN);
+	// 			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS1);
+	//
+	// 			const tx = await account.transfer({
+	// 				token: ETH_ADDRESS,
+	// 				to: ADDRESS1,
+	// 				amount: amount,
+	// 				paymasterParams: getPaymasterParams(PAYMASTER, {
+	// 					type: 'ApprovalBased',
+	// 					token: APPROVAL_TOKEN,
+	// 					minimalAllowance: minimalAllowance,
+	// 					innerInput: new Uint8Array(),
+	// 				}),
+	// 			});
+	// 			const result = await tx.wait();
+	//
+	// 			const paymasterBalanceAfterTransfer = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceAfterTransfer = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const senderBalanceAfterTransfer = await account.getBalance();
+	// 			const senderApprovalTokenBalanceAfterTransfer =
+	// 				await account.getBalance(APPROVAL_TOKEN);
+	// 			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS1);
+	//
+	// 			expect(
+	// 				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
+	// 			).toBeTruthy();
+	// 			expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
+	// 				minimalAllowance,
+	// 			);
+	//
+	// 			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toBe(amount);
+	// 			expect(
+	// 				senderApprovalTokenBalanceAfterTransfer ===
+	// 					senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
+	// 			).toBeTruthy();
+	//
+	// 			expect(result).not.toBeNull();
+	// 			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
+	// 		});
+	//
+	// 		it('should transfer DAI', async () => {
+	// 			const amount = 5n;
+	// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
+	// 			const balanceBeforeTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
+	// 			const tx = await account.transfer({
+	// 				token: l2DAI,
+	// 				to: ADDRESS1,
+	// 				amount: amount,
+	// 			});
+	// 			const result = await tx.wait();
+	// 			const balanceAfterTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
+	// 			expect(result).not.toBeNull();
+	// 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
+	// 		});
+	//
+	// 		it('should transfer DAI using paymaster to cover fee', async () => {
+	// 			const amount = 5n;
+	// 			const minimalAllowance = 1n;
+	// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
+	//
+	// 			const paymasterBalanceBeforeTransfer = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceBeforeTransfer = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const senderBalanceBeforeTransfer = await account.getBalance(l2DAI);
+	// 			const senderApprovalTokenBalanceBeforeTransfer =
+	// 				await account.getBalance(APPROVAL_TOKEN);
+	// 			const receiverBalanceBeforeTransfer = await provider.getBalance(
+	// 				ADDRESS1,
+	// 				'latest',
+	// 				l2DAI,
+	// 			);
+	//
+	// 			const tx = await account.transfer({
+	// 				token: l2DAI,
+	// 				to: ADDRESS1,
+	// 				amount: amount,
+	// 				paymasterParams: getPaymasterParams(PAYMASTER, {
+	// 					type: 'ApprovalBased',
+	// 					token: APPROVAL_TOKEN,
+	// 					minimalAllowance: minimalAllowance,
+	// 					innerInput: new Uint8Array(),
+	// 				}),
+	// 			});
+	// 			const result = await tx.wait();
+	//
+	// 			const paymasterBalanceAfterTransfer = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceAfterTransfer = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const senderBalanceAfterTransfer = await account.getBalance(l2DAI);
+	// 			const senderApprovalTokenBalanceAfterTransfer =
+	// 				await account.getBalance(APPROVAL_TOKEN);
+	// 			const receiverBalanceAfterTransfer = await provider.getBalance(
+	// 				ADDRESS1,
+	// 				'latest',
+	// 				l2DAI,
+	// 			);
+	//
+	// 			expect(
+	// 				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
+	// 			).toBeTruthy();
+	// 			expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
+	// 				minimalAllowance,
+	// 			);
+	//
+	// 			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toBe(amount);
+	// 			expect(
+	// 				senderApprovalTokenBalanceAfterTransfer ===
+	// 					senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
+	// 			).toBeTruthy();
+	//
+	// 			expect(result).not.toBeNull();
+	// 			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
+	// 		});
+	// 	});
+	//
+	// 	describe('#withdraw()', () => {
+	// 		it('should withdraw ETH to the L1 network', async () => {
+	// 			const amount = 7_000_000_000n;
+	// 			const l2BalanceBeforeWithdrawal = await account.getBalance();
+	// 			const withdrawTx = await account.withdraw({
+	// 				token: ETH_ADDRESS,
+	// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
+	// 				amount: amount,
+	// 			});
+	// 			await withdrawTx.waitFinalize();
+	// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
+	//
+	// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
+	// 			const l2BalanceAfterWithdrawal = await account.getBalance();
+	// 			expect(result).not.toBeNull();
+	// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toBeTruthy();
+	// 		});
+	//
+	// 		it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
+	// 			const amount = 7_000_000_000n;
+	// 			const minimalAllowance = 1n;
+	//
+	// 			const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceBeforeWithdrawal = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const l2BalanceBeforeWithdrawal = await account.getBalance();
+	// 			const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
+	//
+	// 			const withdrawTx = await account.withdraw({
+	// 				token: ETH_ADDRESS,
+	// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
+	// 				amount: amount,
+	// 				paymasterParams: getPaymasterParams(PAYMASTER, {
+	// 					type: 'ApprovalBased',
+	// 					token: APPROVAL_TOKEN,
+	// 					minimalAllowance: minimalAllowance,
+	// 					innerInput: new Uint8Array(),
+	// 				}),
+	// 			});
+	// 			await withdrawTx.waitFinalize();
+	// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
+	//
+	// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
+	//
+	// 			const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const l2BalanceAfterWithdrawal = await account.getBalance();
+	// 			const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
+	//
+	// 			expect(
+	// 				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0,
+	// 			).toBeTruthy();
+	// 			expect(
+	// 				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
+	// 			).toBe(minimalAllowance);
+	//
+	// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
+	// 			expect(
+	// 				l2ApprovalTokenBalanceAfterWithdrawal ===
+	// 					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
+	// 			).toBeTruthy();
+	//
+	// 			expect(result).not.toBeNull();
+	// 		});
+	//
+	// 		it('should withdraw DAI to the L1 network', async () => {
+	// 			const amount = 5n;
+	// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
+	// 			const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
+	// 			const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
+	//
+	// 			const withdrawTx = await account.withdraw({
+	// 				token: l2DAI,
+	// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
+	// 				amount: amount,
+	// 			});
+	// 			await withdrawTx.waitFinalize();
+	// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
+	//
+	// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
+	//
+	// 			const l2BalanceAfterWithdrawal = await account.getBalance(l2DAI);
+	// 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
+	//
+	// 			expect(result).not.toBeNull();
+	// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
+	// 			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
+	// 		});
+	//
+	// 		it('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
+	// 			const amount = 5n;
+	// 			const minimalAllowance = 1n;
+	// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
+	//
+	// 			const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceBeforeWithdrawal = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
+	// 			const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
+	// 			const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
+	//
+	// 			const withdrawTx = await account.withdraw({
+	// 				token: l2DAI,
+	// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
+	// 				amount: amount,
+	// 				paymasterParams: getPaymasterParams(PAYMASTER, {
+	// 					type: 'ApprovalBased',
+	// 					token: APPROVAL_TOKEN,
+	// 					minimalAllowance: minimalAllowance,
+	// 					innerInput: new Uint8Array(),
+	// 				}),
+	// 			});
+	// 			await withdrawTx.waitFinalize();
+	// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
+	//
+	// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
+	//
+	// 			const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
+	// 			const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
+	// 				PAYMASTER,
+	// 				'latest',
+	// 				APPROVAL_TOKEN,
+	// 			);
+	// 			const l2BalanceAfterWithdrawal = await account.getBalance(l2DAI);
+	// 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
+	// 			const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
+	//
+	// 			expect(
+	// 				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
+	// 			).toBeTruthy();
+	// 			expect(
+	// 				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
+	// 			).toBe(minimalAllowance);
+	// 			expect(
+	// 				l2ApprovalTokenBalanceAfterWithdrawal ===
+	// 					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
+	// 			).toBeTruthy();
+	//
+	// 			expect(result).not.toBeNull();
+	// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
+	// 			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
+	// 		});
+	// 	});
+	// });
 });
-
-// describe('MultisigECDSASmartAccount', () => {
-// 	const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
-// 	const ethProvider = new Web3ZKsyncL1(
-// 		'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
-// 	);
-// 	const wallet = new ZKsyncWallet(mainAccount.privateKey, provider, ethProvider);
-// 	let account: SmartAccount;
-//
-// 	beforeAll(async function () {
-// 		const deployer = ECDSASmartAccount.create(
-// 			mainAccount.address,
-// 			mainAccount.privateKey,
-// 			provider,
-// 		);
-//
-// 		const multisigAccountAbi = MultisigAccount.abi;
-// 		const multisigAccountBytecode: string = MultisigAccount.bytecode;
-// 		const factory = new provider.eth.Contract(multisigAccountAbi);
-// 		const deploed = await factory
-// 			.deploy({
-// 				data: multisigAccountBytecode,
-// 			})
-// 			.send({
-// 				from: deployer.address,
-// 			});
-// 		deploed.methods.createAccount();
-// 		const owner1 = new ZKsyncWallet(mainAccount.privateKey);
-// 		const owner2 = new ZKsyncWallet(PRIVATE_KEY2);
-// 		const multisigContract = await factory.deploy(owner1.address, owner2.address);
-// 		const multisigAddress = await multisigContract.methods.getAddress();
-//
-// 		// send ETH to multisig account
-// 		await (
-// 			await deployer.sendTransaction({
-// 				to: multisigAddress,
-// 				value: toWei(1, 'ether'),
-// 			})
-// 		).wait();
-//
-// 		// send paymaster approval token to multisig account
-// 		const sendApprovalTokenTx = await deployer.transfer({
-// 			to: multisigAddress,
-// 			token: APPROVAL_TOKEN,
-// 			amount: 5,
-// 		});
-// 		await sendApprovalTokenTx.wait();
-//
-// 		// send DAI token to multisig account
-// 		const sendTokenTx = await deployer.transfer({
-// 			to: multisigAddress,
-// 			token: await provider.l2TokenAddress(DAI_L1),
-// 			amount: 20,
-// 		});
-// 		await sendTokenTx.wait();
-//
-// 		account = MultisigECDSASmartAccount.create(
-// 			multisigAddress,
-// 			[mainAccount.privateKey, PRIVATE_KEY2],
-// 			provider,
-// 		);
-// 	});
-//
-// 	describe('#transfer()', () => {
-// 		it('should transfer ETH', async () => {
-// 			const amount = 7_000_000_000n;
-// 			const balanceBeforeTransfer = await provider.getBalance(ADDRESS3);
-// 			const tx = await account.transfer({
-// 				token: ETH_ADDRESS,
-// 				to: ADDRESS3,
-// 				amount: amount,
-// 			});
-// 			const result = await tx.wait();
-// 			const balanceAfterTransfer = await provider.getBalance(ADDRESS3);
-// 			expect(result).not.toBeNull();
-// 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
-// 		});
-//
-// 		it('should transfer ETH using paymaster to cover fee', async () => {
-// 			const amount = 7_000_000_000n;
-// 			const minimalAllowance = 1n;
-//
-// 			const paymasterBalanceBeforeTransfer = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceBeforeTransfer = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const senderBalanceBeforeTransfer = await account.getBalance();
-// 			const senderApprovalTokenBalanceBeforeTransfer =
-// 				await account.getBalance(APPROVAL_TOKEN);
-// 			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS3);
-//
-// 			const tx = await account.transfer({
-// 				token: ETH_ADDRESS,
-// 				to: ADDRESS3,
-// 				amount: amount,
-// 				paymasterParams: getPaymasterParams(PAYMASTER, {
-// 					type: 'ApprovalBased',
-// 					token: APPROVAL_TOKEN,
-// 					minimalAllowance: minimalAllowance,
-// 					innerInput: new Uint8Array(),
-// 				}),
-// 			});
-// 			const result = await tx.wait();
-//
-// 			const paymasterBalanceAfterTransfer = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceAfterTransfer = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const senderBalanceAfterTransfer = await account.getBalance();
-// 			const senderApprovalTokenBalanceAfterTransfer =
-// 				await account.getBalance(APPROVAL_TOKEN);
-// 			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS3);
-//
-// 			expect(
-// 				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-// 			).toBeTruthy();
-// 			expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
-// 				minimalAllowance,
-// 			);
-//
-// 			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toBe(amount);
-// 			expect(
-// 				senderApprovalTokenBalanceAfterTransfer ===
-// 					senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
-// 			).toBeTruthy();
-//
-// 			expect(result).not.toBeNull();
-// 			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
-// 		});
-//
-// 		it('should transfer DAI', async () => {
-// 			const amount = 5n;
-// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
-// 			const balanceBeforeTransfer = await provider.getBalance(ADDRESS3, 'latest', l2DAI);
-// 			const tx = await account.transfer({
-// 				token: l2DAI,
-// 				to: ADDRESS3,
-// 				amount: amount,
-// 			});
-// 			const result = await tx.wait();
-// 			const balanceAfterTransfer = await provider.getBalance(ADDRESS3, 'latest', l2DAI);
-// 			expect(result).not.toBeNull();
-// 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
-// 		});
-//
-// 		it('should transfer DAI using paymaster to cover fee', async () => {
-// 			const amount = 5n;
-// 			const minimalAllowance = 1n;
-// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
-//
-// 			const paymasterBalanceBeforeTransfer = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceBeforeTransfer = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const senderBalanceBeforeTransfer = await account.getBalance(l2DAI);
-// 			const senderApprovalTokenBalanceBeforeTransfer =
-// 				await account.getBalance(APPROVAL_TOKEN);
-// 			const receiverBalanceBeforeTransfer = await provider.getBalance(
-// 				ADDRESS3,
-// 				'latest',
-// 				l2DAI,
-// 			);
-//
-// 			const tx = await account.transfer({
-// 				token: l2DAI,
-// 				to: ADDRESS3,
-// 				amount: amount,
-// 				paymasterParams: getPaymasterParams(PAYMASTER, {
-// 					type: 'ApprovalBased',
-// 					token: APPROVAL_TOKEN,
-// 					minimalAllowance: minimalAllowance,
-// 					innerInput: new Uint8Array(),
-// 				}),
-// 			});
-// 			const result = await tx.wait();
-//
-// 			const paymasterBalanceAfterTransfer = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceAfterTransfer = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const senderBalanceAfterTransfer = await account.getBalance(l2DAI);
-// 			const senderApprovalTokenBalanceAfterTransfer =
-// 				await account.getBalance(APPROVAL_TOKEN);
-// 			const receiverBalanceAfterTransfer = await provider.getBalance(
-// 				ADDRESS3,
-// 				'latest',
-// 				l2DAI,
-// 			);
-//
-// 			expect(
-// 				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-// 			).toBeTruthy();
-// 			expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
-// 				minimalAllowance,
-// 			);
-//
-// 			expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toBe(amount);
-// 			expect(
-// 				senderApprovalTokenBalanceAfterTransfer ===
-// 					senderApprovalTokenBalanceBeforeTransfer - minimalAllowance,
-// 			).toBeTruthy();
-//
-// 			expect(result).not.toBeNull();
-// 			expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
-// 		});
-// 	});
-//
-// 	describe('#withdraw()', () => {
-// 		it('should withdraw ETH to the L1 network', async () => {
-// 			const amount = 7_000_000_000n;
-// 			const l2BalanceBeforeWithdrawal = await account.getBalance();
-// 			const withdrawTx = await account.withdraw({
-// 				token: ETH_ADDRESS,
-// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
-// 				amount: amount,
-// 			});
-// 			await withdrawTx.waitFinalize();
-// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
-//
-// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
-// 			const l2BalanceAfterWithdrawal = await account.getBalance();
-// 			expect(result).not.toBeNull();
-// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toBeTruthy();
-// 		});
-//
-// 		it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
-// 			const amount = 7_000_000_000n;
-// 			const minimalAllowance = 1n;
-//
-// 			const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceBeforeWithdrawal = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const l2BalanceBeforeWithdrawal = await account.getBalance();
-// 			const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
-//
-// 			const withdrawTx = await account.withdraw({
-// 				token: ETH_ADDRESS,
-// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
-// 				amount: amount,
-// 				paymasterParams: getPaymasterParams(PAYMASTER, {
-// 					type: 'ApprovalBased',
-// 					token: APPROVAL_TOKEN,
-// 					minimalAllowance: minimalAllowance,
-// 					innerInput: new Uint8Array(),
-// 				}),
-// 			});
-// 			await withdrawTx.waitFinalize();
-// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
-//
-// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
-//
-// 			const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const l2BalanceAfterWithdrawal = await account.getBalance();
-// 			const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
-//
-// 			expect(
-// 				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0,
-// 			).toBeTruthy();
-// 			expect(
-// 				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-// 			).toBe(minimalAllowance);
-//
-// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
-// 			expect(
-// 				l2ApprovalTokenBalanceAfterWithdrawal ===
-// 					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-// 			).toBeTruthy();
-//
-// 			expect(result).not.toBeNull();
-// 		});
-//
-// 		it('should withdraw DAI to the L1 network', async () => {
-// 			const amount = 5n;
-// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
-// 			const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
-// 			const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
-//
-// 			const withdrawTx = await account.withdraw({
-// 				token: l2DAI,
-// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
-// 				amount: amount,
-// 			});
-// 			await withdrawTx.waitFinalize();
-// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
-//
-// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
-//
-// 			const l2BalanceAfterWithdrawal = await account.getBalance(l2DAI);
-// 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
-//
-// 			expect(result).not.toBeNull();
-// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
-// 			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
-// 		});
-//
-// 		it('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
-// 			const amount = 5n;
-// 			const minimalAllowance = 1n;
-// 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
-//
-// 			const paymasterBalanceBeforeWithdrawal = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceBeforeWithdrawal = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
-// 			const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
-// 			const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
-//
-// 			const withdrawTx = await account.withdraw({
-// 				token: l2DAI,
-// 				to: await wallet.getAddress(), // send to L1 EOA since AA does not exit on L1
-// 				amount: amount,
-// 				paymasterParams: getPaymasterParams(PAYMASTER, {
-// 					type: 'ApprovalBased',
-// 					token: APPROVAL_TOKEN,
-// 					minimalAllowance: minimalAllowance,
-// 					innerInput: new Uint8Array(),
-// 				}),
-// 			});
-// 			await withdrawTx.waitFinalize();
-// 			expect(await wallet.isWithdrawalFinalized(withdrawTx.hash)).toBeFalsy();
-//
-// 			const result = await wallet.finalizeWithdrawal(withdrawTx.hash);
-//
-// 			const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
-// 			const paymasterTokenBalanceAfterWithdrawal = await provider.getBalance(
-// 				PAYMASTER,
-// 				'latest',
-// 				APPROVAL_TOKEN,
-// 			);
-// 			const l2BalanceAfterWithdrawal = await account.getBalance(l2DAI);
-// 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
-// 			const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
-//
-// 			expect(
-// 				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-// 			).toBeTruthy();
-// 			expect(
-// 				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-// 			).toBe(minimalAllowance);
-// 			expect(
-// 				l2ApprovalTokenBalanceAfterWithdrawal ===
-// 					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
-// 			).toBeTruthy();
-//
-// 			expect(result).not.toBeNull();
-// 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
-// 			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
-// 		});
-// 	});
-// });
