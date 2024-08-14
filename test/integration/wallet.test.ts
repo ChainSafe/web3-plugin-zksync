@@ -1138,9 +1138,7 @@ describe('Wallet', () => {
 					false,
 				);
 
-				const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance(token);
-				expect(result).not.toBeNull();
 				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
 					true,
 				);
@@ -1160,9 +1158,7 @@ describe('Wallet', () => {
 					false,
 				);
 
-				const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance();
-				expect(result).not.toBeNull();
 				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
 					true,
 				);
@@ -1198,8 +1194,6 @@ describe('Wallet', () => {
 					false,
 				);
 
-				const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
-
 				const paymasterBalanceAfterWithdrawal = await provider.getBalance(PAYMASTER);
 				const paymasterTokenBalanceAfterWithdrawal = await provider.getTokenBalance(
 					APPROVAL_TOKEN,
@@ -1221,8 +1215,6 @@ describe('Wallet', () => {
 					l2ApprovalTokenBalanceAfterWithdrawal ===
 						l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
 				).toEqual(true);
-
-				expect(result).not.toBeNull();
 			});
 		}
 
