@@ -383,7 +383,7 @@ describe('SmartAccount', () => {
 		});
 
 		it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
-			const amount = 7_000_000_000n;
+			const amount = 7_000n;
 			const minimalAllowance = 1n;
 
 			const withdrawTx = await account.withdraw({

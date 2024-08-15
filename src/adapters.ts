@@ -1446,9 +1446,8 @@ export class AdapterL1 implements TxSender {
 		const l2Bridge = new Web3.Contract(IL2BridgeABI, l1BridgeAddress);
 		l2Bridge.setProvider(this._contextL2().provider);
 
-		const calldata = l2Bridge.methods
-			.finalizeDeposit()
-			.decodeData(web3Utils.toHex(String(tx.data)));
+		const m = l2Bridge.methods.finalizeDeposit(tx.from, tx.from, tx.from, 0n, '0x');
+		const calldata = m.decodeData(tx.data as HexString);
 
 		const proof = await this._contextL2().getL2ToL1LogProof(
 			web3Utils.toHex(depositHash),
@@ -1471,7 +1470,10 @@ export class AdapterL1 implements TxSender {
 					proof.proof,
 				)
 				// @ts-ignore
-				.send(overrides ?? {})
+				.send({
+					from: this.getAddress(),
+					...(overrides ?? {}),
+				})
 		);
 	}
 
