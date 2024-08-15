@@ -165,10 +165,6 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 				from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
 			});
 
-		const deployAbi = this.contractToBeDeployed.options.jsonInterface.filter(
-			item => item.type === 'constructor',
-		);
-
 		this.checkOverrides(overrides);
 		let overridesCopy: Overrides = overrides ?? {
 			customData: { factoryDeps: [], salt: ZERO_HASH },
