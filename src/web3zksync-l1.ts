@@ -1,6 +1,6 @@
+import type { BlockNumberOrTag } from 'web3-types';
 import { Web3ZkSync } from './web3zksync';
 import type { Address } from './types';
-import type { BlockNumberOrTag } from '../../web3.js/packages/web3-types';
 import { isETH } from './utils';
 
 /**

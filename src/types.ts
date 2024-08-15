@@ -12,7 +12,7 @@ import type {
 	TransactionReceiptBase,
 } from 'web3-types';
 
-import { Web3ZKsyncL2 } from './web3zksync-l2';
+import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import type { IERC20ABI } from './contracts/IERC20';
 import type { IL2BridgeABI } from './contracts/IL2Bridge';
 import type { IZkSyncABI } from './contracts/IZkSyncStateTransition';

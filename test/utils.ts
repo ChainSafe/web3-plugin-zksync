@@ -18,6 +18,11 @@ const stringify = (value: any) =>
 	JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? v.toString() : v) as unknown);
 const convert = (value: any) => JSON.parse(stringify(value));
 
+export const L2_CHAIN_URL = IS_ETH_BASED
+	? 'http://127.0.0.1:3050' // probably need to use the port 15100 after some investigation (change and run the tests to see the error)
+	: 'http://127.0.0.1:15200';
+export const L1_CHAIN_URL = 'http://127.0.0.1:15045';
+
 export function deepEqualExcluding(
 	obj1: Record<string, any>,
 	expected: Record<string, any>,

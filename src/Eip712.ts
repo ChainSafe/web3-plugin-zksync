@@ -410,6 +410,10 @@ export class EIP712Transaction extends BaseTransaction<EIP712Transaction> {
 		return `${msg} (${this.errorStr()})`;
 	}
 
+	public static fromTxData(txData: Eip712TxData, _ = {}) {
+		return new EIP712Transaction(txData);
+	}
+
 	errorStr(): string {
 		return '';
 	}
