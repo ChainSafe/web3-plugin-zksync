@@ -31,6 +31,9 @@ interface Overrides {
 	customData?: CustomData;
 }
 
+// @ts-ignore-next-line
+TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
+
 /**
  * A `ContractFactory` is used to deploy a `Contract` to the blockchain.
  */
@@ -274,9 +277,6 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 	> {
 		const tx = await this.getDeployTransaction(args, overrides);
 
-		// TODO: double check where to put this line
-		// @ts-ignore-next-line
-		TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
 		const receipt = await (await this.zkWallet?.sendTransaction(tx)).wait();
 
 		const deployedAddresses = getDeployedContracts(receipt).map(info => info.deployedAddress);
