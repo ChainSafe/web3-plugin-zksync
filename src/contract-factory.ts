@@ -87,10 +87,7 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 
 		this.deploymentType = deploymentType || 'create';
 
-		this.contractToBeDeployed = new Contract(this.abi, undefined, {
-			provider: this.provider,
-			wallet: this.zkWallet as any, //TODO: do we need to pass this.zkWallet.provider or this.zkWallet.account or non!?
-		});
+		this.contractToBeDeployed = new zkWallet.provider!.eth.Contract(this.abi);
 	}
 
 	private encodeCalldata(
@@ -287,8 +284,6 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		}
 	> {
 		const tx = await this.getDeployTransaction(args, overrides);
-		//@ts-ignore
-		// tx.gasLimit = await estimateGas(this.zkWallet.provider, tx);
 
 		const receipt = await (await this.zkWallet?.sendTransaction(tx)).wait();
 

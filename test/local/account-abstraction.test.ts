@@ -1,17 +1,19 @@
 import { Web3ZKsyncL2, ZKsyncWallet } from '../../src';
 import { ECDSASmartAccount, MultisigECDSASmartAccount, constants } from '../../src';
 import { toWei } from 'web3-utils';
-
 import Storage from './files/Storage.json';
 import Token from './files/Token.json';
 import Paymaster from './files/Paymaster.json';
 import MultisigAccount from './files/TwoUserMultisig.json';
 import { getAccounts, L2Provider, PAYMASTER, APPROVAL_TOKEN } from './fixtures';
-import { getPaymasterParams } from '../../src';
+import { getPaymasterParams, ContractFactory } from '../../src';
 import { Address } from 'web3';
-import { DEFAULT_GAS_PER_PUBDATA_LIMIT } from '../../lib/constants';
+import { Eip712TxData } from '../../src/types';
+import { Transaction } from 'web3-types';
 const { ETH_ADDRESS } = constants;
 const accounts = getAccounts();
+
+jest.setTimeout(30000);
 describe('Account Abstraction', () => {
 	const l2Provider = new Web3ZKsyncL2(L2Provider);
 	const PRIVATE_KEY1 = accounts[0].privateKey;
@@ -19,30 +21,31 @@ describe('Account Abstraction', () => {
 	const wallet = new ZKsyncWallet(PRIVATE_KEY1, l2Provider);
 	const acc = l2Provider.eth.accounts.privateKeyToAccount(PRIVATE_KEY1);
 	l2Provider.eth.accounts.wallet.add(acc);
-	it.skip('use the ERC20 token for paying transaction fee', async () => {
+	it('use the ERC20 token for paying transaction fee', async () => {
 		const InitMintAmount = 10n;
 		const mintAmount = 3n;
 		const minimalAllowance = 1n;
 
 		const abi = Token.abi;
 		const bytecode: string = Token.bytecode;
-		const contr = new l2Provider.eth.Contract(abi);
-		const tokenContract = await contr
-			.deploy({ data: bytecode, arguments: ['Ducat', 'Ducat', 18] })
-			.send({ from: ADDRESS1 });
+		const factory = new ContractFactory(abi, bytecode, wallet);
+		const tokenContract = await factory.deploy(['Ducat', 'Ducat', 18]);
 		const tokenAddress = tokenContract.options.address as Address;
 
 		// mint tokens to wallet, so it could pay fee with tokens
 		await tokenContract.methods
 			.mint(wallet.getAddress(), InitMintAmount)
-			.send({ from: ADDRESS1 });
+			.send({ from: wallet.getAddress() });
 
 		const paymasterAbi = Paymaster.abi;
 		const paymasterBytecode = Paymaster.bytecode;
-		const accountFactory = new l2Provider.eth.Contract(paymasterAbi);
-		const paymasterContract = await accountFactory
-			.deploy({ data: paymasterBytecode, arguments: [tokenAddress] })
-			.send({ from: ADDRESS1 });
+		const accountFactory = new ContractFactory(
+			paymasterAbi,
+			paymasterBytecode,
+			wallet,
+			'createAccount',
+		);
+		const paymasterContract = await accountFactory.deploy([tokenAddress]);
 		const paymasterAddress = paymasterContract.options.address as Address;
 
 		// transfer ETH to paymaster so it could pay fee
@@ -63,20 +66,22 @@ describe('Account Abstraction', () => {
 		const walletTokenBalanceBeforeTx = await wallet.getBalance(tokenAddress);
 
 		// perform tx using paymaster
-		await tokenContract.methods
-			.mint(await wallet.getAddress(), mintAmount, {
-				customData: {
-					gasPerPubdata: DEFAULT_GAS_PER_PUBDATA_LIMIT,
-					paymasterParams: getPaymasterParams(paymasterAddress, {
-						type: 'ApprovalBased',
-						token: tokenAddress,
-						minimalAllowance: minimalAllowance,
-						innerInput: new Uint8Array(),
-					}),
-				},
-			})
-			.send({ from: ADDRESS1 });
+		const tx = tokenContract.methods
+			.mint(await wallet.getAddress(), mintAmount)
+			.populateTransaction({ from: wallet.getAddress() }) as Eip712TxData;
+		tx.customData = {
+			gasPerPubdata: constants.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+			paymasterParams: getPaymasterParams(paymasterAddress, {
+				type: 'ApprovalBased',
+				token: tokenAddress,
+				minimalAllowance: minimalAllowance,
+				innerInput: new Uint8Array(),
+			}),
+		};
 
+		const mintTx = await wallet.sendTransaction(tx as Transaction);
+		const receipt = await mintTx.wait();
+		console.log('receipt', receipt);
 		const paymasterBalanceAfterTx = await l2Provider.getBalance(paymasterAddress);
 		const paymasterTokenBalanceAfterTx = await l2Provider.getBalance(
 			paymasterAddress,
@@ -90,7 +95,7 @@ describe('Account Abstraction', () => {
 		expect(walletTokenBalanceBeforeTx === InitMintAmount).toBeTruthy();
 
 		expect(paymasterBalanceBeforeTx - paymasterBalanceAfterTx >= 0n).toBeTruthy();
-		expect(paymasterTokenBalanceAfterTx === minimalAllowance).toBeTruthy();
+		expect(paymasterTokenBalanceAfterTx).toBe(minimalAllowance);
 
 		expect(walletBalanceBeforeTx - walletBalanceAfterTx >= 0n).toBeTruthy();
 		expect(
@@ -99,22 +104,19 @@ describe('Account Abstraction', () => {
 		).toBeTruthy();
 	});
 
-	it.skip('use multisig account', async () => {
+	it('use multisig account', async () => {
 		const storageValue = 500n;
 
 		const account = ECDSASmartAccount.create(ADDRESS1, PRIVATE_KEY1, l2Provider);
 
 		const multisigAccountAbi = MultisigAccount.abi;
 		const multisigAccountBytecode: string = MultisigAccount.bytecode;
-		const factoryMultisigContract = new l2Provider.eth.Contract(multisigAccountAbi);
+
+		const factory = new ContractFactory(multisigAccountAbi, multisigAccountBytecode, wallet);
 		const owner1 = ZKsyncWallet.createRandom();
 		const owner2 = ZKsyncWallet.createRandom();
-		const multisigContract = await factoryMultisigContract
-			.deploy({
-				data: multisigAccountBytecode,
-				arguments: [owner1.address, owner2.address],
-			})
-			.send({ from: ADDRESS1 });
+		const multisigContract = await factory.deploy([owner1.address, owner2.address]);
+
 		const multisigAddress = multisigContract.options.address as Address;
 		// send ETH to multisig account
 
@@ -126,7 +128,7 @@ describe('Account Abstraction', () => {
 		).wait();
 
 		// send paymaster approval token to multisig account
-		const sendApprovalTokenTx = await new ZKsyncWallet(PRIVATE_KEY1, l2Provider).transfer({
+		const sendApprovalTokenTx = await wallet.transfer({
 			to: multisigAddress,
 			token: APPROVAL_TOKEN,
 			amount: 5,
@@ -161,7 +163,7 @@ describe('Account Abstraction', () => {
 		expect(await storage.methods.get().call()).toBe(storageValue);
 	});
 
-	it.skip('use a contract with smart account as a runner to send transactions that utilize a paymaster', async () => {
+	it.only('use a contract with smart account as a runner to send transactions that utilize a paymaster', async () => {
 		const minimalAllowance = 1n;
 		const storageValue = 700n;
 

@@ -514,9 +514,12 @@ export class Web3ZkSync extends Web3.Web3 {
 			transaction: txForBuilder,
 			web3Context: this,
 		});
-		// @ts-ignore
-		populated.customData = transaction.customData;
-		populated.type = transaction.type;
+		if ((transaction as Eip712TxData).customData) {
+			(populated as Eip712TxData).customData = (transaction as Eip712TxData).customData;
+			populated.type = EIP712_TX_TYPE;
+		} else {
+			populated.type = transaction.type;
+		}
 
 		const formatted = web3Utils.format(EIP712TransactionSchema, populated);
 

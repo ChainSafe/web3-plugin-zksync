@@ -21,7 +21,7 @@ export const EIP712TransactionSchema = {
 						paymaster: {
 							format: 'address',
 						},
-						paymasterData: {
+						paymasterInput: {
 							format: 'bytes',
 						},
 					},
