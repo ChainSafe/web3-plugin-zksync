@@ -256,13 +256,7 @@ export class ZKsyncWallet extends Adapters {
 	}
 
 	async sendTransaction(transaction: web3Types.Transaction) {
-		// const signed = await this.signTransaction(transaction);
-		// console.log('signed', signed);
-		// return getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
-
-		return getPriorityOpResponse(
-			this._contextL2(),
-			this._contextL2().eth.sendTransaction(transaction) as any,
-		);
+		const signed = await this.signTransaction(transaction);
+		return getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
 	}
 }

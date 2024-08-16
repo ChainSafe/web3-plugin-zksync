@@ -103,7 +103,9 @@ describe('ContractFactory', () => {
 				await provider.l2TokenAddress(DAI_L1),
 			]);
 
-			const code = await provider.eth.getCode((await paymasterContract.options.address) as string);
+			const code = await provider.eth.getCode(
+				(await paymasterContract.options.address) as string,
+			);
 			expect(code).not.toBeNull();
 		});
 
