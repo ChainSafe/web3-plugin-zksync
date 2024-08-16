@@ -8,14 +8,14 @@ import type {
 	AbiEventFragment,
 	BlockNumberOrTag,
 	Bytes,
+	EthExecutionAPI,
 	LogsInput,
 	TransactionHash,
 	TransactionReceipt,
 } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
 import type { Web3Eth } from 'web3-eth';
-import { ALL_EVENTS_ABI, decodeEventABI } from 'web3-eth';
-import { format, isAddress, keccak256, toBigInt } from 'web3-utils';
+import { ALL_EVENTS_ABI, decodeEventABI, waitForTransactionReceipt } from 'web3-eth';
 import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
 import { NameResolver, PriorityOpTree, PriorityQueueType } from './types';
 import type {
@@ -44,15 +44,16 @@ import {
 	EIP1271_MAGIC_VALUE,
 	L1_FEE_ESTIMATION_COEF_NUMERATOR,
 	L1_FEE_ESTIMATION_COEF_DENOMINATOR,
-	// EIP712_TX_TYPE,
-	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
 import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import { Web3ZKsyncL1 } from './web3zksync-l1';
-import { Address } from 'web3';
+import { Address, DEFAULT_RETURN_FORMAT, HexString } from 'web3';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { ZKTransactionReceiptSchema } from './schemas';
+import { Web3Context } from 'web3-core';
+import { isNullish } from 'web3-validator';
+import { ReceiptError } from './errors';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -1003,20 +1004,49 @@ export function isAddressEq(a: web3.Address, b: web3.Address): boolean {
 	return a.toLowerCase() === b.toLowerCase();
 }
 
-export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
-	while (true) {
-		try {
-			const receipt = await ethRpcMethods.getTransactionReceipt(
-				web3Eth.requestManager,
-				txHash,
-			);
-
-			if (receipt && receipt.blockNumber) {
-				return format(ZKTransactionReceiptSchema, receipt);
-			}
-		} catch {}
-		await sleep(500);
+const checkReceipt = (
+	hash: string,
+	receipt: undefined | null | TransactionReceipt,
+): TransactionReceipt => {
+	if (!receipt) {
+		throw new ReceiptError(`Transaction with hash ${hash} not found`, {
+			hash,
+		});
 	}
+	if (Number(receipt.status) === 0) {
+		throw new ReceiptError(`Transaction ${hash} failed with status 0`, {
+			hash,
+			receipt,
+		});
+	}
+	return receipt;
+};
+
+const customGetTransactionReceipt = async (
+	web3Context: Web3Context<EthExecutionAPI>,
+	transactionHash: Bytes,
+	returnFormat: typeof DEFAULT_RETURN_FORMAT = DEFAULT_RETURN_FORMAT,
+): Promise<any> => {
+	const response = await ethRpcMethods.getTransactionReceipt(
+		web3Context.requestManager,
+		transactionHash as HexString,
+	);
+	return isNullish(response)
+		? response
+		: web3Utils.format(
+				ZKTransactionReceiptSchema,
+				response as unknown as TransactionReceipt,
+				returnFormat ?? web3Context.defaultReturnFormat,
+			);
+};
+export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
+	const receipt = await waitForTransactionReceipt(
+		web3Eth,
+		txHash,
+		DEFAULT_RETURN_FORMAT,
+		customGetTransactionReceipt,
+	);
+	return checkReceipt(txHash, receipt);
 }
 export async function waitTxByHashConfirmation(
 	web3Eth: Web3Eth,
@@ -1026,7 +1056,10 @@ export async function waitTxByHashConfirmation(
 	const receipt = await waitTxReceipt(web3Eth, txHash);
 	while (true) {
 		const blockNumber = await web3Eth.getBlockNumber();
-		if (toBigInt(blockNumber) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+		if (
+			web3Utils.toBigInt(blockNumber) - web3Utils.toBigInt(receipt.blockNumber) + 1n >=
+			waitConfirmations
+		) {
 			return receipt;
 		}
 		await sleep(500);
@@ -1060,18 +1093,18 @@ export const getPriorityOpL1Response = async (
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		waitFinalize: async () => {
-			const receipt = await waitTxReceipt(context.eth, hash);
-			const l2TxHash = await (contextL2 as Web3ZKsyncL2).getL2TransactionFromPriorityOp(
-				receipt,
+			const l1Receipt = await waitTxReceipt(context.eth, hash);
+			const l2Hash = await (contextL2 as Web3ZKsyncL2).getL2TransactionFromPriorityOp(
+				l1Receipt,
 			);
 
 			if (!contextL2) {
 				return {
-					transactionHash: l2TxHash,
+					transactionHash: l2Hash,
 				} as TransactionReceipt;
 			}
 
-			return await waitTxByHashConfirmationFinalized(contextL2.eth, l2TxHash, 1);
+			return await waitTxByHashConfirmationFinalized(contextL2.eth, l2Hash, 1, 'finalized');
 		},
 	};
 };
@@ -1101,7 +1134,10 @@ export async function waitTxByHashConfirmationFinalized(
 	while (true) {
 		const receipt = await waitTxReceipt(web3Eth, txHash);
 		const block = await web3Eth.getBlock(blogTag ?? 'finalized');
-		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+		if (
+			web3Utils.toBigInt(block.number) - web3Utils.toBigInt(receipt.blockNumber) + 1n >=
+			waitConfirmations
+		) {
 			return receipt;
 		}
 		await sleep(500);
@@ -1114,7 +1150,7 @@ export async function waitTxByHashConfirmationFinalized(
  * @param value
  */
 export function id(value: string): string {
-	return keccak256(toUtf8Bytes(value));
+	return web3Utils.keccak256(toUtf8Bytes(value));
 }
 
 export function dataSlice(data: Bytes, start?: number, end?: number): string {
@@ -1165,7 +1201,7 @@ export function toUtf8Bytes(str: string): Uint8Array {
 	return new Uint8Array(result);
 }
 export function getAddress(address: string): string {
-	if (!isAddress(address)) {
+	if (!web3Utils.isAddress(address)) {
 		throw new Error(`Invalid address ${address}`);
 	}
 	return address;

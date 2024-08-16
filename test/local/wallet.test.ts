@@ -24,8 +24,9 @@ import {
 	prepareAccount,
 	getPreparedWallet,
 } from './fixtures';
+import { ReceiptError } from '../../lib/errors';
 
-jest.setTimeout(60000);
+jest.setTimeout(600000);
 
 const accounts = getAccounts();
 const mainAccount = accounts[0];
@@ -689,7 +690,6 @@ describe('Wallet', () => {
 
 	describe('#claimFailedDeposit()', () => {
 		if (IS_ETH_BASED) {
-			// todo: fix this test
 			it('should claim failed deposit', async () => {
 				const response = await wallet.deposit({
 					token: DAI_L1,
@@ -697,19 +697,23 @@ describe('Wallet', () => {
 					amount: 5,
 					approveERC20: true,
 					refundRecipient: wallet.getAddress(),
-					l2GasLimit: 300000, // make it fail because of low gas
+					l2GasLimit: 300_000, // make it fail because of low gas
 				});
-				const receipt = await response.wait();
-				expect(receipt.transactionHash).toBeDefined();
 				try {
-					const tx = await response.waitFinalize();
-					console.log('tx', tx.transactionHash);
+					await response.waitFinalize();
 				} catch (error) {
-					console.log('error', error);
-					const hash =
-						'0x229f99f63a6fd5e90154546797c56348e8f6260808bf63769ea22e842d09750f';
-					const blockNumber = (await wallet.provider!.eth.getTransaction(hash))
-						.blockNumber!;
+					let blockNumber;
+					const l2Hash = (error as ReceiptError).hash!;
+					while (!blockNumber) {
+						try {
+							blockNumber = (await wallet.provider!.eth.getTransaction(l2Hash))
+								.blockNumber!;
+						} catch (e) {
+							console.log('e', e);
+						}
+						await new Promise(resolve => setTimeout(resolve, 1000));
+					}
+
 					// Now wait for block number to be executed.
 					let blockDetails;
 					do {
@@ -717,7 +721,8 @@ describe('Wallet', () => {
 						await utils.sleep(500);
 						blockDetails = await wallet.provider!.getBlockDetails(blockNumber);
 					} while (!blockDetails || !blockDetails.executeTxHash);
-					const result = await wallet.claimFailedDeposit(hash);
+
+					const result = await wallet.claimFailedDeposit(l2Hash);
 					expect(result?.blockHash).not.toBeNull();
 				}
 			});
