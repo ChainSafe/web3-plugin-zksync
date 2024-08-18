@@ -52,12 +52,10 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 	readonly contractToBeDeployed: Contract<Abi>;
 
 	/**
-	 * Create a new `ContractFactory` with `abi` and `bytecode`, optionally connected to `runner`.
-	 * The `bytecode` may be the bytecode property within the standard Solidity JSON output.
+	 * Create a new `ContractFactory` for a contract with the provided ABI and bytecode.
 	 *
 	 * @param abi The ABI (Application Binary Interface) of the contract.
 	 * @param bytecode The bytecode of the contract.
-	 * @param [runner] The runner capable of interacting with a `Contract`on the network.
 	 * @param [deploymentType] The deployment type, defaults to 'create'.
 	 */
 	constructor(
@@ -240,17 +238,15 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 
 	/**
 	 * Deploys a new contract or account instance on the L2 blockchain.
-	 * There is no need to wait for deployment with `waitForDeployment` method
-	 * because **deploy** already waits for deployment to finish.
 	 *
-	 * @param args - Constructor arguments for the contract followed by optional
-	 * {@link ethers.Overrides|overrides}. When deploying with Create2 method slat must be present in overrides.
+	 * @param args - Constructor arguments for the contract
+	 * @param overrides - Used for providing salt to create2 and create2Account deployment types and for providing custom factoryDeps
 	 *
-	 * @example Deploy with constructor arguments only using `create` method
+	 * @example <caption>Deploy only with constructor arguments</caption>
 	 *
 	 * const deployedContract = await contractFactory.deploy(arg1, arg2, ...);
 	 *
-	 * @example Deploy with constructor arguments, and factory dependencies using `create method
+	 * @example <caption>Deploy with constructor arguments and custom factoryDeps</caption>
 	 *
 	 * const deployedContractWithSaltAndDeps = await contractFactory.deploy(arg1, arg2, ..., {
 	 *   customData: {
@@ -258,7 +254,7 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 	 *   }
 	 * });
 	 *
-	 * @example Deploy with constructor arguments and custom salt using `create2` method
+	 * @example <caption>Deploy with constructor arguments and salt for create2 or create2Account deployment types</caption>
 	 *
 	 * const deployedContractWithSalt = await contractFactory.deploy(arg1, arg2, ..., {
 	 *   customData: {
@@ -266,7 +262,7 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 	 *   }
 	 * });
 	 *
-	 * @example Deploy with constructor arguments, custom salt, and factory dependencies using `create2` method
+	 * @example <caption>Deploy with constructor arguments, salt for create2 or create2Account deployment types, and custom factoryDeps</caption>
 	 *
 	 * const deployedContractWithSaltAndDeps = await contractFactory.deploy(arg1, arg2, ..., {
 	 *   customData: {
