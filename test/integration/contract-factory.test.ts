@@ -84,8 +84,6 @@ describe('ContractFactory', () => {
 				},
 			})) as Contract<typeof abi>;
 
-			// TODO: needs double check!
-			await contract.deploy().send();
 			const code = await provider.eth.getCode(contract.options.address as string);
 			expect(code).not.toBeNull();
 		});
@@ -147,8 +145,6 @@ describe('ContractFactory', () => {
 				},
 			})) as Contract<typeof abi>;
 
-			// TODO: needs double check!
-			await contract.deploy().send();
 			const code = await provider.eth.getCode(contract.options.address as string);
 			expect(code).not.toBeNull();
 		});
