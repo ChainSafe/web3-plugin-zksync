@@ -4,6 +4,7 @@ export { Web3ZKsyncL2 } from './web3zksync-l2';
 export { ZKsyncWallet } from './zksync-wallet';
 export { RpcMethods } from './rpc.methods';
 export { TypedDataEncoder } from './TypedDataEncoder';
+export { ContractFactory } from './contract-factory';
 export * from './Eip712';
 export * from './paymaster-utils';
 export * from './smart-account';

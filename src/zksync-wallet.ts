@@ -125,13 +125,21 @@ export class ZKsyncWallet extends Adapters {
 		}
 	}
 	public connect(provider: Web3ZKsyncL2) {
-		if (!provider.eth.accounts.wallet.get(this.account.address)) {
+		if (!provider.eth.accounts.wallet.get(this.account.address) && this.account.privateKey) {
 			provider.eth.accounts.wallet.add(
 				provider.eth.accounts.privateKeyToAccount(this.account.privateKey),
 			);
 		}
 		this.provider = provider;
+		// TODO: needs to check when used with ports 15100 and 15200 for the error that would happen for every rpc call (like: get chain id):
+		// 	 FetchError {
+		//     message: 'request to http://127.0.0.1:15100/ failed, reason: connect ECONNREFUSED 127.0.0.1:15100',
+		//     type: 'system',
+		//     errno: 'ECONNREFUSED',
+		//     code: 'ECONNREFUSED'
+		//   }
 		this.provider._eip712Signer = this._eip712Signer.bind(this);
+
 		return this;
 	}
 	public connectToL1(provider: Web3ZKsyncL1) {

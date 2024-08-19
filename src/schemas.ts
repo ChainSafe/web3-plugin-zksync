@@ -1,11 +1,47 @@
-import { transactionReceiptSchema } from 'web3-eth';
+import { transactionReceiptSchema, transactionSchema } from 'web3-eth';
 
 export const AddressSchema = { format: 'address' };
 export const IntSchema = { format: 'int' };
 export const UintSchema = { format: 'uint' };
 export const BytesSchema = { format: 'bytes' };
 export const BytesArraySchema = { type: 'array', items: { format: 'bytes' } };
-
+export const EIP712TransactionSchema = {
+	...transactionSchema,
+	properties: {
+		...transactionSchema.properties,
+		customData: {
+			type: 'object',
+			properties: {
+				customSignature: {
+					format: 'bytes',
+				},
+				paymasterParams: {
+					type: 'object',
+					properties: {
+						paymaster: {
+							format: 'address',
+						},
+						paymasterInput: {
+							format: 'bytes',
+						},
+					},
+				},
+				salt: {
+					format: 'bytes',
+				},
+				gasPerPubdata: {
+					format: 'uint',
+				},
+				factoryDeps: {
+					type: 'array',
+					items: {
+						format: 'bytes',
+					},
+				},
+			},
+		},
+	},
+};
 export const BlockDetailsSchema = {
 	type: 'object',
 	properties: {

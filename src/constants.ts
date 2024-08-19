@@ -1,6 +1,7 @@
 import type * as web3Types from 'web3-types';
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+export const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /**
  * The address of the L1 `ETH` token.

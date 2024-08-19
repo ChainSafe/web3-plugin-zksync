@@ -3,7 +3,7 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
-import { estimateGas, getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
+import { estimateGas, getGasPrice, transactionBuilder } from 'web3-eth';
 import * as Web3 from 'web3';
 import type { Transaction } from 'web3-types';
 import { toHex } from 'web3-utils';
@@ -31,11 +31,13 @@ import {
 	L2_BASE_TOKEN_ADDRESS,
 	LEGACY_ETH_ADDRESS,
 	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
+	ZERO_ADDRESS,
 } from './constants';
 import { EIP712, type EIP712Signer, isAddressEq, isETH } from './utils';
 import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
+import { EIP712TransactionSchema } from './schemas';
 
 /**
  * The base class for interacting with ZKsync Era.
@@ -504,12 +506,23 @@ export class Web3ZkSync extends Web3.Web3 {
 		transaction.nonce =
 			transaction.nonce ?? (await this.eth.getTransactionCount(transaction.from!, 'pending'));
 
+		const txForBuilder: Transaction = { ...transaction };
+
+		if (txForBuilder.type && toHex(txForBuilder.type) === toHex(EIP712_TX_TYPE)) {
+			delete txForBuilder.type;
+		}
 		const populated = await transactionBuilder({
-			transaction,
+			transaction: txForBuilder,
 			web3Context: this,
 		});
+		if ((transaction as Eip712TxData).customData) {
+			(populated as Eip712TxData).customData = (transaction as Eip712TxData).customData;
+			populated.type = EIP712_TX_TYPE;
+		} else {
+			populated.type = transaction.type;
+		}
 
-		const formatted = web3Utils.format(transactionSchema, populated);
+		const formatted = web3Utils.format(EIP712TransactionSchema, populated);
 
 		delete formatted.input;
 		delete formatted.chain;
@@ -525,8 +538,14 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		formatted.gasLimit =
 			formatted.gasLimit ??
-			(await estimateGas(this, formatted as Transaction, 'latest', DEFAULT_RETURN_FORMAT));
-
+			(await estimateGas(
+				this,
+				// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
+				// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
+				{ ...formatted, to: formatted.to ?? ZERO_ADDRESS } as Transaction,
+				'latest',
+				DEFAULT_RETURN_FORMAT,
+			));
 		if (formatted.type === 0n) {
 			formatted.gasPrice =
 				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
@@ -567,12 +586,9 @@ export class Web3ZkSync extends Web3.Web3 {
 		) {
 			return this.populateTransactionAndGasPrice(transaction);
 		}
-		if (transaction.type && toHex(transaction.type) === toHex(EIP712_TX_TYPE)) {
-			delete transaction.type;
-		}
+
 		const populated = (await this.populateTransactionAndGasPrice(transaction)) as Eip712TxData;
-		populated.type = BigInt(EIP712_TX_TYPE);
-		populated.value ??= 0;
+		populated.value ??= 0n;
 		populated.data ??= '0x';
 
 		populated.customData = this.fillCustomData(
