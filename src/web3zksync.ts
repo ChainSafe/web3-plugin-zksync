@@ -31,6 +31,7 @@ import {
 	L2_BASE_TOKEN_ADDRESS,
 	LEGACY_ETH_ADDRESS,
 	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
+	ZERO_ADDRESS,
 } from './constants';
 import { EIP712, type EIP712Signer, isAddressEq, isETH } from './utils';
 import { RpcMethods } from './rpc.methods';
@@ -537,7 +538,14 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		formatted.gasLimit =
 			formatted.gasLimit ??
-			(await estimateGas(this, formatted as Transaction, 'latest', DEFAULT_RETURN_FORMAT));
+			(await estimateGas(
+				this,
+				// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
+				// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
+				{ ...formatted, to: formatted.to ?? ZERO_ADDRESS } as Transaction,
+				'latest',
+				DEFAULT_RETURN_FORMAT,
+			));
 		if (formatted.type === 0n) {
 			formatted.gasPrice =
 				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));

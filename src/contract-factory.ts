@@ -166,15 +166,14 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		let constructorArgs: any[];
 
 		// The overrides will be popped out in this call:
-		const txRequest: web3Types.TransactionCall & { customData?: any } =
-			this.contractToBeDeployed
-				.deploy({
-					data: this.bytecode,
-					arguments: args as any, // TODO: check this line
-				})
-				.populateTransaction({
-					from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
-				});
+		const txRequest: web3Types.TransactionCall & { customData?: any } = this.contractToBeDeployed
+			.deploy({
+				data: this.bytecode,
+				arguments: args,
+			})
+			.populateTransaction({
+				from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
+			});
 
 		this.checkOverrides(overrides);
 		let overridesCopy: Overrides = overrides ?? {
@@ -221,11 +220,13 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		tx.customData ??= {};
 		tx.customData.factoryDeps ??= overridesCopy?.customData?.factoryDeps;
 		tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
-
 		// The number of factory deps is relatively low, so it is efficient enough.
 		if (!tx.customData || !tx.customData.factoryDeps.includes(this.bytecode)) {
 			tx.customData.factoryDeps.push(this.bytecode);
 		}
+
+		// to fill the gas estimation:
+		this.zkWallet.populateTransaction(txRequest);
 
 		const txNoUndefined = Object.entries(tx)
 			.filter(([, value]) => value !== undefined)
