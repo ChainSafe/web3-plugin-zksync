@@ -89,14 +89,11 @@ export class EIP712 {
 			factoryDeps:
 				transaction.customData?.factoryDeps?.map((dep: Bytes) => hashBytecode(dep)) || [],
 			paymasterInput: transaction.customData?.paymasterParams?.paymasterInput || '0x',
-			customData:
-				transaction.customData && Object.keys(transaction.customData).length > 0
-					? transaction.customData
-					: undefined,
 		};
 	}
 
 	static txTypedData(transaction: Eip712TxData): Eip712TypedData {
+		const signInput = EIP712.getSignInput(transaction);
 		return {
 			types: EIP712_TYPES,
 			primaryType: 'Transaction',
@@ -105,7 +102,7 @@ export class EIP712 {
 				version: '2',
 				chainId: Number(transaction.chainId),
 			},
-			message: EIP712.getSignInput(transaction),
+			message: signInput,
 		};
 	}
 	/**
@@ -312,11 +309,7 @@ export class EIP712 {
 	}
 
 	static sign(hash: string, privateKey: string) {
-		signMessageWithPrivateKey(hash, privateKey);
-		// return new EIP712Transaction({}).ecsign(
-		// 	toUint8Array(web3Utils.keccak256(hash)),
-		// 	toUint8Array(privateKey),
-		// );
+		return signMessageWithPrivateKey(web3Utils.keccak256(hash), privateKey);
 	}
 }
 

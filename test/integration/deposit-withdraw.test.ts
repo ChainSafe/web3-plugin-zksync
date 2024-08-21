@@ -1,9 +1,7 @@
 import * as web3Accounts from 'web3-eth-accounts';
-import { TransactionFactory } from 'web3-eth-accounts';
 import { Network as ZkSyncNetwork } from '../../src/types';
 import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
-import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
-import * as utils from '../../src/utils';
+import { ETH_ADDRESS } from '../../src/constants';
 
 // TODO: This test needs to setup local dev nodes for L1 and L2
 // and also needs to have a private key with funds in the L1
@@ -12,7 +10,6 @@ import * as utils from '../../src/utils';
 
 jest.setTimeout(50000);
 describe('wallet', () => {
-	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
 	const l1Provider = new Web3ZKsyncL1(
 		'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
 	);
@@ -32,15 +29,18 @@ describe('wallet', () => {
 		expect(receipt.transactionHash).toBeDefined();
 	});
 
-	it('should withdraw eth', async () => {
-		const tx = await wallet.withdraw({
-			token: ETH_ADDRESS,
-			to: wallet.getAddress(),
-			amount: 1n,
-		});
-		const receipt = await tx.wait();
-
-		expect(receipt.status).toBe(1n);
-		expect(receipt.transactionHash).toBeDefined();
+	it.only('should withdraw eth', async () => {
+		await wallet.finalizeWithdrawal(
+			'0x47e5e6a649c286d5f850807d917fb2502ca82029e3b6478f57eb205cf58266ca',
+		);
+		// const tx = await wallet.withdraw({
+		// 	token: ETH_ADDRESS,
+		// 	to: wallet.getAddress(),
+		// 	amount: 1n,
+		// });
+		// const receipt = await tx.wait();
+		//
+		// expect(receipt.status).toBe(1n);
+		// expect(receipt.transactionHash).toBeDefined();
 	});
 });

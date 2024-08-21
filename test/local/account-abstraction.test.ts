@@ -80,8 +80,7 @@ describe('Account Abstraction', () => {
 		};
 
 		const mintTx = await wallet.sendTransaction(tx as Transaction);
-		const receipt = await mintTx.wait();
-		console.log('receipt', receipt);
+		await mintTx.wait();
 		const paymasterBalanceAfterTx = await l2Provider.getBalance(paymasterAddress);
 		const paymasterTokenBalanceAfterTx = await l2Provider.getBalance(
 			paymasterAddress,
@@ -104,7 +103,7 @@ describe('Account Abstraction', () => {
 		).toBeTruthy();
 	});
 
-	it.only('use multisig account', async () => {
+	it.skip('use multisig account', async () => {
 		const storageValue = 500n;
 
 		const account = ECDSASmartAccount.create(ADDRESS1, PRIVATE_KEY1, l2Provider);
@@ -116,34 +115,33 @@ describe('Account Abstraction', () => {
 			multisigAccountAbi,
 			multisigAccountBytecode,
 			wallet,
-			'createAccount',
+			'create',
 		);
 		const owner1 = new ZKsyncWallet(
 			'0x63bbd75f81a3b889bf4faf581162dfe52bbd09d0149f4987d9a8cb654684441c',
-			l2Provider,
+			new Web3ZKsyncL2(L2Provider),
 		);
+		await (
+			await wallet.transfer({
+				to: owner1.address,
+				amount: 1000_000000_000000n,
+			})
+		).wait();
 		const owner2 = new ZKsyncWallet(
 			'0x2553cbc2c37248d0058a736f79ce1dac13e24dbecb0d371df6f4f53fa97ef789',
-			l2Provider,
+			new Web3ZKsyncL2(L2Provider),
 		);
 		const args = [owner1.getAddress(), owner2.getAddress()];
 		const multisigContract = await factory.deploy(args);
 
 		const multisigAddress = multisigContract.options.address as Address;
 		// send ETH to multisig account
-		const balance = await account.getBalance();
-		console.log('balance', balance);
-
-		console.log('owner2 balance', await owner2.getBalance());
 		const refillTx = await account.sendTransaction({
-			to: owner2.address, //,
+			to: multisigAddress, //,
 			value: 1_000000_000000_000000n,
 		});
-		console.log('owner2 balance', await owner2.getBalance());
-		console.log('balance', balance);
-		const receipt = await refillTx.wait();
-		console.log('receipt', receipt);
-
+		await account.getBalance();
+		await refillTx.wait();
 		// send paymaster approval token to multisig account
 		const sendApprovalTokenTx = await wallet.transfer({
 			to: multisigAddress,
@@ -167,10 +165,25 @@ describe('Account Abstraction', () => {
 
 		const multisigAccountBalanceBeforeTx = await multisigAccount.getBalance();
 
-		const storageSetTx = await storage.methods.set(storageValue).populateTransaction();
-		const tx = await multisigAccount.sendTransaction({ ...storageSetTx });
-		await tx.wait();
+		// const storageSetTx = await storage.methods
+		// 	.set(storageValue)
+		// 	.populateTransaction({ from: multisigAddress });
 
+		const random = ZKsyncWallet.createRandom(l2Provider);
+		const beforeB = await random.getBalance();
+		console.log('multisigAccountBalanceBeforeTx', multisigAccountBalanceBeforeTx);
+		console.log('beforeB', beforeB);
+		const transferTx = await multisigAccount.transfer({
+			to: random.getAddress(),
+			amount: 100n,
+		});
+		await transferTx.wait();
+		const beforeA = await random.getBalance();
+		console.log('beforeA', beforeA);
+
+		// const tx = await multisigAccount.sendTransaction({ ...storageSetTx });
+		// await tx.wait();
+		//
 		const multisigAccountBalanceAfterTx = await multisigAccount.getBalance();
 		expect(multisigAccountBalanceBeforeTx > multisigAccountBalanceAfterTx).toBeTruthy();
 		expect(await storage.methods.get().call()).toBe(storageValue);

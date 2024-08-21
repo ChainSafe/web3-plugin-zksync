@@ -47,7 +47,8 @@ export class SmartAccount extends AdapterL2 {
 
 	/** Custom method for populating transaction requests. */
 	protected transactionBuilder: TransactionBuilder;
-	private _account: Web3EthAccounts.Web3Account;
+	private _account: Web3EthAccounts.Web3Account | Web3EthAccounts.Web3Account[];
+	private _address: Address;
 	private _provider?: Web3ZKsyncL2;
 
 	/**
@@ -74,7 +75,10 @@ export class SmartAccount extends AdapterL2 {
 		super();
 		this._provider = provider;
 
-		this._account = Web3EthAccounts.privateKeyToAccount(signer.secret);
+		this._account = Array.isArray(signer.secret)
+			? signer.secret.map(secret => Web3EthAccounts.privateKeyToAccount(secret))
+			: Web3EthAccounts.privateKeyToAccount(signer.secret);
+		this._address = signer.address;
 		this.payloadSigner = signer.payloadSigner || signPayloadWithECDSA;
 		this.transactionBuilder = signer.transactionBuilder || populateTransactionECDSA;
 	}
@@ -85,13 +89,15 @@ export class SmartAccount extends AdapterL2 {
 		return this._contextL2();
 	}
 	get secret() {
-		return this._account.privateKey;
+		return Array.isArray(this._account)
+			? this._account.map(a => a.privateKey)
+			: this._account.privateKey;
 	}
 	get address() {
-		return this._account.address;
+		return this._address;
 	}
 	getAddress() {
-		return this._account.address;
+		return this.address;
 	}
 	getNonce(blockNumber: web3Types.BlockNumberOrTag = 'latest') {
 		return this.provider.eth.getTransactionCount(this.getAddress(), blockNumber);
@@ -232,7 +238,14 @@ export class SmartAccount extends AdapterL2 {
 	override async populateTransaction(
 		tx: Eip712TxData | web3Types.Transaction,
 	): Promise<web3Types.Transaction | Eip712TxData> {
-		return this.transactionBuilder(tx as Eip712TxData, this.secret, this.provider);
+		return this.transactionBuilder(
+			{
+				...(tx as Eip712TxData),
+				from: tx.from ?? this.getAddress(),
+			},
+			this.secret,
+			this.provider,
+		);
 	}
 
 	/**
@@ -327,7 +340,10 @@ export class SmartAccount extends AdapterL2 {
 	 * const signedMessage = await account.signMessage('Hello World!');
 	 */
 	signMessage(message: string | Uint8Array): string {
-		const signature = signMessageWithPrivateKey(hashMessage(message), this.secret);
+		const signature = signMessageWithPrivateKey(
+			hashMessage(message),
+			Array.isArray(this.secret) ? this.secret[0] : this.secret,
+		);
 		return signature.signature;
 	}
 

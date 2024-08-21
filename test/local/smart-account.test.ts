@@ -1,4 +1,4 @@
-import { IS_ETH_BASED, ADDRESS1, deepEqualExcluding, PRIVATE_KEY2 } from '../utils';
+import { IS_ETH_BASED, deepEqualExcluding, PRIVATE_KEY2, ADDRESS2 } from '../utils';
 import {
 	PAYMASTER,
 	APPROVAL_TOKEN,
@@ -143,9 +143,9 @@ describe('SmartAccount', () => {
 	describe('#populateTransaction()', () => {
 		it('should return a populated transaction', async () => {
 			const tx = {
-				to: ADDRESS1,
+				to: ADDRESS2,
 				value: 7_000_000_000n,
-				type: toBigInt(EIP712_TX_TYPE),
+				type: EIP712_TX_TYPE,
 				from: mainAccount.address,
 				nonce: await account.getNonce('pending'),
 				gasLimit: 156_726n,
@@ -157,8 +157,8 @@ describe('SmartAccount', () => {
 
 			const result = await account.populateTransaction({
 				type: EIP712_TX_TYPE,
-				to: ADDRESS1,
-				value: 7_000_000_000,
+				to: ADDRESS2,
+				value: 7_000_000_000n,
 			});
 			deepEqualExcluding(result, tx, [
 				'nonce',
@@ -172,9 +172,9 @@ describe('SmartAccount', () => {
 
 		it('should return a populated transaction with default values if are omitted', async () => {
 			const tx = {
-				to: ADDRESS1,
+				to: ADDRESS2,
 				value: 7_000_000n,
-				type: toBigInt(EIP712_TX_TYPE),
+				type: EIP712_TX_TYPE,
 				from: mainAccount.address,
 				nonce: await account.getNonce('pending'),
 				chainId: 270n,
@@ -183,8 +183,8 @@ describe('SmartAccount', () => {
 				customData: { gasPerPubdata: 50_000, factoryDeps: [] },
 			};
 			const result = await account.populateTransaction({
-				to: ADDRESS1,
-				value: 7_000_000,
+				to: ADDRESS2,
+				value: 7_000_000n,
 			});
 			deepEqualExcluding(result, tx, [
 				'nonce',
@@ -200,7 +200,7 @@ describe('SmartAccount', () => {
 	describe('#signTransaction()', () => {
 		it('should return a signed EIP712 transaction', async () => {
 			const result = await account.signTransaction({
-				to: ADDRESS1,
+				to: ADDRESS2,
 				value: toWei(1, 'wei'),
 			});
 			expect(result).not.toBeNull();
@@ -237,19 +237,18 @@ describe('SmartAccount', () => {
 	describe('#transfer()', () => {
 		it('should transfer ETH', async () => {
 			const amount = 1_000_000_000n;
-			const balanceBeforeTransfer = await provider.getBalance(ADDRESS1);
+			const balanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 
 			const tx = await account.transfer({
 				token: ETH_ADDRESS,
-				to: ADDRESS1,
+				to: ADDRESS2,
 				amount: amount,
 			});
 			expect(tx.hash).not.toBeNull();
+
 			const receipt = await tx.wait();
 			expect(receipt.transactionHash).not.toBeNull();
-			const balanceAfterTransfer = await provider.getBalance(ADDRESS1);
-			console.log('balanceBeforeTransfer', balanceAfterTransfer);
-			console.log('balanceAfterTransfer', balanceAfterTransfer);
+			const balanceAfterTransfer = await provider.getBalance(ADDRESS2);
 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 		});
 
@@ -266,11 +265,11 @@ describe('SmartAccount', () => {
 			const senderBalanceBeforeTransfer = await account.getBalance();
 			const senderApprovalTokenBalanceBeforeTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS1);
+			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 
 			const tx = await account.transfer({
 				token: ETH_ADDRESS,
-				to: ADDRESS1,
+				to: ADDRESS2,
 				amount: amount,
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',
@@ -290,7 +289,7 @@ describe('SmartAccount', () => {
 			const senderBalanceAfterTransfer = await account.getBalance();
 			const senderApprovalTokenBalanceAfterTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS1);
+			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2);
 
 			expect(
 				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
@@ -312,14 +311,14 @@ describe('SmartAccount', () => {
 		it('should transfer DAI', async () => {
 			const amount = 5n;
 			const l2DAI = await provider.l2TokenAddress(DAI_L1);
-			const balanceBeforeTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
+			const balanceBeforeTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 			const tx = await account.transfer({
 				token: l2DAI,
-				to: ADDRESS1,
+				to: ADDRESS2,
 				amount: amount,
 			});
 			const result = await tx.wait();
-			const balanceAfterTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
+			const balanceAfterTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 			expect(result).not.toBeNull();
 			expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 		});
@@ -338,14 +337,14 @@ describe('SmartAccount', () => {
 			const senderApprovalTokenBalanceBeforeTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceBeforeTransfer = await provider.getBalance(
-				ADDRESS1,
+				ADDRESS2,
 				'latest',
 				l2DAI,
 			);
 
 			const tx = await account.transfer({
 				token: l2DAI,
-				to: ADDRESS1,
+				to: ADDRESS2,
 				amount: amount,
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',
@@ -366,7 +365,7 @@ describe('SmartAccount', () => {
 			const senderApprovalTokenBalanceAfterTransfer =
 				await account.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceAfterTransfer = await provider.getBalance(
-				ADDRESS1,
+				ADDRESS2,
 				'latest',
 				l2DAI,
 			);
@@ -607,14 +606,14 @@ describe('SmartAccount', () => {
 		describe('#transfer()', () => {
 			it.skip('should transfer ETH', async () => {
 				const amount = 7_000_000_000n;
-				const balanceBeforeTransfer = await provider.getBalance(ADDRESS1);
+				const balanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 				const tx = await account.transfer({
 					token: ETH_ADDRESS,
-					to: ADDRESS1,
+					to: ADDRESS2,
 					amount: amount,
 				});
 				const result = await tx.wait();
-				const balanceAfterTransfer = await provider.getBalance(ADDRESS1);
+				const balanceAfterTransfer = await provider.getBalance(ADDRESS2);
 				expect(result).not.toBeNull();
 				expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 			});
@@ -632,11 +631,11 @@ describe('SmartAccount', () => {
 				const senderBalanceBeforeTransfer = await account.getBalance();
 				const senderApprovalTokenBalanceBeforeTransfer =
 					await account.getBalance(APPROVAL_TOKEN);
-				const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS1);
+				const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 
 				const tx = await account.transfer({
 					token: ETH_ADDRESS,
-					to: ADDRESS1,
+					to: ADDRESS2,
 					amount: amount,
 					paymasterParams: getPaymasterParams(PAYMASTER, {
 						type: 'ApprovalBased',
@@ -656,7 +655,7 @@ describe('SmartAccount', () => {
 				const senderBalanceAfterTransfer = await account.getBalance();
 				const senderApprovalTokenBalanceAfterTransfer =
 					await account.getBalance(APPROVAL_TOKEN);
-				const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS1);
+				const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2);
 
 				expect(
 					paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
@@ -678,14 +677,14 @@ describe('SmartAccount', () => {
 			it.skip('should transfer DAI', async () => {
 				const amount = 5n;
 				const l2DAI = await provider.l2TokenAddress(DAI_L1);
-				const balanceBeforeTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
+				const balanceBeforeTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 				const tx = await account.transfer({
 					token: l2DAI,
-					to: ADDRESS1,
+					to: ADDRESS2,
 					amount: amount,
 				});
 				const result = await tx.wait();
-				const balanceAfterTransfer = await provider.getBalance(ADDRESS1, 'latest', l2DAI);
+				const balanceAfterTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 				expect(result).not.toBeNull();
 				expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 			});
@@ -705,14 +704,14 @@ describe('SmartAccount', () => {
 				const senderApprovalTokenBalanceBeforeTransfer =
 					await account.getBalance(APPROVAL_TOKEN);
 				const receiverBalanceBeforeTransfer = await provider.getBalance(
-					ADDRESS1,
+					ADDRESS2,
 					'latest',
 					l2DAI,
 				);
 
 				const tx = await account.transfer({
 					token: l2DAI,
-					to: ADDRESS1,
+					to: ADDRESS2,
 					amount: amount,
 					paymasterParams: getPaymasterParams(PAYMASTER, {
 						type: 'ApprovalBased',
@@ -733,7 +732,7 @@ describe('SmartAccount', () => {
 				const senderApprovalTokenBalanceAfterTransfer =
 					await account.getBalance(APPROVAL_TOKEN);
 				const receiverBalanceAfterTransfer = await provider.getBalance(
-					ADDRESS1,
+					ADDRESS2,
 					'latest',
 					l2DAI,
 				);

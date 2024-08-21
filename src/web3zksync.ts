@@ -539,14 +539,11 @@ export class Web3ZkSync extends Web3.Web3 {
 			{ ...transaction, to: transaction.to ?? ZERO_ADDRESS } as Transaction,
 			ETH_DATA_FORMAT,
 		);
-		delete tx.chainId;
-		delete tx.value;
 
 		const dataToSend = this.prepareTransaction({
 			...tx,
 			customData: (transaction as Eip712TxData).customData,
 		} as Eip712TxData);
-
 		const gas = await this.requestManager.send({
 			method: 'eth_estimateGas',
 			params: [dataToSend],
@@ -598,6 +595,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		if (formatted.type === 2n && formatted.gasPrice) {
 			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
 			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+			delete formatted.gasPrice;
 			return formatted;
 		}
 		if (formatted.maxPriorityFeePerGas && formatted.maxFeePerGas) {
@@ -606,17 +604,23 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
-			formatted.maxFeePerGas =
-				formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
-			formatted.maxPriorityFeePerGas =
-				formatted.maxPriorityFeePerGas ??
-				(web3Utils.toBigInt(formatted.maxFeePerGas) >
-				web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
-					? formatted.maxFeePerGas
-					: gasFees.maxPriorityFeePerGas);
+			if (formatted.type !== BigInt(EIP712_TX_TYPE)) {
+				formatted.maxFeePerGas =
+					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxPriorityFeePerGas =
+					formatted.maxPriorityFeePerGas ??
+					(web3Utils.toBigInt(formatted.maxFeePerGas) >
+					web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
+						? formatted.maxFeePerGas
+						: gasFees.maxPriorityFeePerGas);
+			}
 		} else {
 			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
 			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+		}
+
+		if (gasFees.gasPrice && (!formatted.maxFeePerGas || !formatted.maxPriorityFeePerGas)) {
+			formatted.gasPrice = gasFees.gasPrice;
 		}
 
 		return formatted;

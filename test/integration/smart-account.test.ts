@@ -1,4 +1,4 @@
-import { SmartAccount, types, Web3ZKsyncL2 } from '../../src';
+import { SmartAccount, types, Web3ZKsyncL2, getPaymasterParams } from '../../src';
 import {
 	IS_ETH_BASED,
 	PRIVATE_KEY1,
@@ -8,10 +8,8 @@ import {
 	deepEqualExcluding,
 	USDC_L1,
 } from '../utils';
-
 import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
 import { toBigInt, toWei } from 'web3-utils';
-import { getPaymasterParams } from '../../src/paymaster-utils';
 import { privateKeyToAccount } from 'web3-eth-accounts';
 const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || PRIVATE_KEY1;
 const mainAccount = privateKeyToAccount(PRIVATE_KEY);
@@ -219,7 +217,7 @@ describe('SmartAccount', () => {
 
 	describe('#transfer()', () => {
 		it('should transfer ETH', async () => {
-			const amount = 1_000_000_000n;
+			const amount = 1_000n;
 			const balanceBeforeTransfer = await provider.getBalance(ADDRESS3);
 
 			const tx = await account.transfer({
@@ -235,7 +233,7 @@ describe('SmartAccount', () => {
 		});
 
 		it('should transfer ETH using paymaster to cover fee', async () => {
-			const amount = 7_000_000_000n;
+			const amount = 7_000n;
 			const minimalAllowance = 1n;
 
 			const paymasterBalanceBeforeTransfer = await provider.getBalance(PAYMASTER);
@@ -371,7 +369,7 @@ describe('SmartAccount', () => {
 
 	describe('#withdraw()', () => {
 		it('should withdraw ETH to the L1 network', async () => {
-			const amount = 7_000_000_000n;
+			const amount = 7n;
 			// const l2BalanceBeforeWithdrawal = await account.getBalance();
 			const withdrawTx = await account.withdraw({
 				token: ETH_ADDRESS,
@@ -383,7 +381,7 @@ describe('SmartAccount', () => {
 		});
 
 		it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
-			const amount = 7_000n;
+			const amount = 7n;
 			const minimalAllowance = 1n;
 
 			const withdrawTx = await account.withdraw({
