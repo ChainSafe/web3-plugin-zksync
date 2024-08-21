@@ -8,7 +8,7 @@ import type { PriorityL1OpResponse } from '../../src/types';
 jest.mock('web3-rpc-methods');
 
 describe('Web3ZkSyncL2 as a Provider', () => {
-	it.skip('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
+	it('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
 		const web3ZkSyncL2 = new Web3ZKsyncL2('https://mainnet.era.zksync.io');
 		const acc = web3ZkSyncL2.eth.accounts.privateKeyToAccount(
 			'0x1f953dc9b6437fb94fcafa5dabe3faa0c34315b954dd66f41bf53273339c6d26',
@@ -48,7 +48,9 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 
 		const priorityOpResponse = await getPriorityOpResponse(new Web3ZKsyncL1(), txPromise);
 		// 'The waitL1Commit function should be properly initialized'
-		expect(typeof (priorityOpResponse as PriorityL1OpResponse).waitL1Commit).toEqual('function');
+		expect(typeof (priorityOpResponse as PriorityL1OpResponse).waitL1Commit).toEqual(
+			'function',
+		);
 		// 'The wait function should be properly initialized'
 		expect(typeof priorityOpResponse.wait).toBe('function');
 		// 'The waitFinalize function should be properly initialized'

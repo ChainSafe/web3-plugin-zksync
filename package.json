@@ -13,8 +13,9 @@
 		"lint:fix": "eslint '{src,test}/**/*.ts' --fix",
 		"build": "tsc --project tsconfig.build.json",
 		"test": "jest --config=./test/jest.config.js",
+		"test:unit": "jest --config=./test/jest.config.js test/unit",
 		"test:local": "jest --config=./test/jest.config.js --runInBand --maxConcurrency=1 test/local",
-		"test:integration": "jest --config=./test/jest.config.js test/integration"
+		"test:integration": "jest --config=./test/jest.config.js --runInBand --maxConcurrency=1 test/integration"
 	},
 	"contributors": [
 		"ChainSafe <info@chainsafe.io>"

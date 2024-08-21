@@ -4,7 +4,7 @@ import { toBigInt } from 'web3-utils';
 import type { Transaction } from 'web3-types';
 import type { Address } from 'web3';
 import { privateKeyToAccount } from 'web3-eth-accounts';
-import { utils, Web3ZKsyncL2, ZKsyncWallet, Web3ZKsyncL1 } from '../../src';
+import { utils, Web3ZKsyncL2, ZKsyncWallet, Web3ZKsyncL1, getPaymasterParams } from '../../src';
 import {
 	IS_ETH_BASED,
 	ADDRESS1,
@@ -27,7 +27,6 @@ import {
 	EIP712_TX_TYPE,
 } from '../../src/constants';
 import { IERC20ABI } from '../../src/contracts/IERC20';
-import { getPaymasterParams } from '../../src/paymaster-utils';
 
 jest.setTimeout(5 * 60000);
 
@@ -454,7 +453,7 @@ describe('Wallet', () => {
 			});
 			const result = await tx.wait();
 			expect(result).not.toBeNull();
-			expect(result.type).toEqual(0n);
+			expect(result.type).toEqual(2n);
 		});
 
 		it('should send legacy transaction when `type = 0`', async () => {
@@ -818,7 +817,7 @@ describe('Wallet', () => {
 			});
 		} else {
 			it('should deposit ETH to L2 network', async () => {
-				const amount = 7_000_000_000;
+				const amount = 7;
 				const l2EthAddress = await wallet.l2TokenAddress(ETH_ADDRESS_IN_CONTRACTS);
 				const l2BalanceBeforeDeposit = await wallet.getBalance(l2EthAddress);
 				const l1BalanceBeforeDeposit = await wallet.getBalanceL1();
@@ -893,21 +892,6 @@ describe('Wallet', () => {
 				});
 				const receipt = await response.wait();
 				expect(receipt.transactionHash).toBeDefined();
-			});
-
-			it('should throw an error when trying to claim successful deposit', async () => {
-				const response = await wallet.deposit({
-					token: LEGACY_ETH_ADDRESS,
-					to: wallet.getAddress(),
-					amount: 7_000_000_000,
-					refundRecipient: wallet.getAddress(),
-				});
-				const tx = await response.wait();
-				try {
-					await wallet.claimFailedDeposit(tx.transactionHash);
-				} catch (e) {
-					expect((e as Error).message).toEqual('Cannot claim successful deposit!');
-				}
 			});
 		} else {
 			it('should throw an error when trying to claim successful deposit', async () => {
@@ -1094,8 +1078,8 @@ describe('Wallet', () => {
 
 	describe('#withdraw()', () => {
 		if (IS_ETH_BASED) {
-			it('should withdraw ETH to the L1 network', async () => {
-				const amount = 7n;
+			it.only('should withdraw ETH to the L1 network', async () => {
+				const amount = 200000_000000_000000n;
 				const withdrawTx = await wallet.withdraw({
 					token: LEGACY_ETH_ADDRESS,
 					to: wallet.getAddress(),

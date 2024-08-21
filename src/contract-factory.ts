@@ -1,6 +1,5 @@
 import type { ContractAbi } from 'web3';
 import { Web3Context, eth } from 'web3';
-import { TransactionFactory } from 'web3-eth-accounts';
 import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import { Contract } from 'web3-eth-contract';
@@ -15,8 +14,6 @@ import {
 import type { DeploymentType } from './types';
 import { AccountAbstractionVersion } from './types';
 import type { ZKsyncWallet } from './zksync-wallet';
-import * as constants from './constants';
-import { EIP712Transaction } from './Eip712';
 
 interface CustomData {
 	factoryDeps?: (string | { object: string })[];
@@ -26,9 +23,6 @@ interface CustomData {
 interface Overrides {
 	customData?: CustomData;
 }
-
-// @ts-ignore-next-line
-TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
 
 /**
  * A `ContractFactory` is used to deploy a `Contract` to the blockchain.
@@ -166,14 +160,15 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		let constructorArgs: any[];
 
 		// The overrides will be popped out in this call:
-		const txRequest: web3Types.TransactionCall & { customData?: any } = this.contractToBeDeployed
-			.deploy({
-				data: this.bytecode,
-				arguments: args,
-			})
-			.populateTransaction({
-				from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
-			});
+		const txRequest: web3Types.TransactionCall & { customData?: any } =
+			this.contractToBeDeployed
+				.deploy({
+					data: this.bytecode,
+					arguments: args,
+				})
+				.populateTransaction({
+					from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
+				});
 
 		this.checkOverrides(overrides);
 		let overridesCopy: Overrides = overrides ?? {
@@ -209,7 +204,9 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		);
 
 		// salt is no longer used and should not be present in customData of EIP712 transaction
-		if (txRequest.customData && txRequest.customData.salt) delete txRequest.customData.salt;
+		if (txRequest.customData && txRequest.customData.salt) {
+			delete txRequest.customData.salt;
+		}
 		const tx = {
 			...txRequest,
 			to: CONTRACT_DEPLOYER_ADDRESS,
@@ -224,9 +221,6 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		if (!tx.customData || !tx.customData.factoryDeps.includes(this.bytecode)) {
 			tx.customData.factoryDeps.push(this.bytecode);
 		}
-
-		// to fill the gas estimation:
-		this.zkWallet.populateTransaction(txRequest);
 
 		const txNoUndefined = Object.entries(tx)
 			.filter(([, value]) => value !== undefined)

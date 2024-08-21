@@ -3,7 +3,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
 import type { types } from '../../src';
 import { utils } from '../../src';
-import { ADDRESS1, ADDRESS3 } from '../utils';
+import { ADDRESS1 } from '../utils';
 import * as constants from '../../src/constants';
 import { getL2HashFromPriorityOp } from '../../src/utils';
 
@@ -164,7 +164,7 @@ describe('utils', () => {
 				{
 					chainId: 270,
 					from: ADDRESS1,
-					to: ADDRESS3,
+					to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 					value: 1_000_000,
 				},
 				'0x73a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aaf87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a',
@@ -227,7 +227,7 @@ describe('utils', () => {
 				maxPriorityFeePerGas: 0n,
 				maxFeePerGas: 0n,
 				gasLimit: 0n,
-				to: ADDRESS3,
+				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 1_000_000n,
 				data: '0x',
 				chainId: 270n,
@@ -254,7 +254,7 @@ describe('utils', () => {
 				maxPriorityFeePerGas: 0n,
 				maxFeePerGas: 0n,
 				gasLimit: 0n,
-				to: ADDRESS3,
+				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 0n,
 				data: '0x',
 				chainId: 270n,

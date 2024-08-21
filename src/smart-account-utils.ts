@@ -1,10 +1,11 @@
 import { toBytes, concat } from './utils';
 import { TransactionBuilder, PayloadSigner, Eip712TxData } from './types';
 import { privateKeyToAccount, signMessageWithPrivateKey, Web3Account } from 'web3-eth-accounts';
-import { EIP712_TX_TYPE } from './constants';
+// import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
 import { Web3ZKsyncL2 } from './web3zksync-l2';
 import type * as web3Types from 'web3-types';
 import * as utils from './utils';
+import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
 
 /**
  * Signs the `payload` using an ECDSA private key.
@@ -164,6 +165,27 @@ export const populateTransactionECDSA: TransactionBuilder = async (
 	};
 	tx.from = account.address;
 	tx.type = EIP712_TX_TYPE;
+
+	tx.customData = tx.customData ?? {};
+	tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
+	tx.customData.factoryDeps ??= [];
+
+	if (tx.from) {
+		const code = await provider.eth.getCode(tx.from);
+		const isContractAccount = code !== '0x';
+		if (isContractAccount) {
+			const web3Account = (
+				typeof secret === 'string' ? privateKeyToAccount(secret) : secret
+			) as Web3Account;
+			// Gas estimation does not work when initiator is contract account (works only with EOA).
+			// In order to estimation gas, the transaction's from value is replaced with signer's address.
+			tx.gasLimit ??= await provider.estimateGas({
+				...tx,
+				from: web3Account.address,
+			} as web3Types.Transaction);
+		}
+	}
+
 	return provider.populateTransaction(tx as web3Types.Transaction) as Promise<Eip712TxData>;
 };
 

@@ -17,4 +17,7 @@ export class ReceiptError extends Error {
 	get receipt() {
 		return this.info?.receipt;
 	}
+	public toJSON() {
+		return { data: this.receipt, request: this.hash, message: this.message };
+	}
 }

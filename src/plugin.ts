@@ -4,7 +4,6 @@ import type { Address } from 'web3-types';
 import { Contract } from 'web3-eth-contract';
 import { Web3PluginBase } from 'web3-core';
 
-import { TransactionFactory } from 'web3-eth-accounts';
 import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
 import * as constants from './constants';
@@ -16,7 +15,6 @@ import { IL1MessengerABI } from './contracts/IL1Messenger';
 import { IERC1271ABI } from './contracts/IERC1271';
 import { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
-import { EIP712Transaction } from './Eip712';
 import { ZKsyncWallet } from './zksync-wallet';
 import { Web3ZKsyncL2 } from './web3zksync-l2';
 import { Web3ZKsyncL1 } from './web3zksync-l1';
@@ -108,7 +106,7 @@ export class ZKsyncPlugin extends Web3PluginBase {
 			this.L2 = new Web3ZKsyncL2(providerOrContextL2);
 		}
 		// @ts-ignore-next-line
-		TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
+		// TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
 
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};

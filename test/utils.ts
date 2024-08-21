@@ -16,7 +16,12 @@ export const IS_ETH_BASED = true;
 
 const stringify = (value: any) =>
 	JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? v.toString() : v) as unknown);
-const convert = (value: any) => JSON.parse(stringify(value));
+const convert = (value: any) => {
+	if (typeof value === 'bigint') {
+		return value.toString();
+	}
+	return typeof value === 'object' ? JSON.parse(stringify(value)) : value;
+};
 
 export const L2_CHAIN_URL = IS_ETH_BASED
 	? 'http://127.0.0.1:3050' // probably need to use the port 15100 after some investigation (change and run the tests to see the error)

@@ -1059,7 +1059,7 @@ describe('Wallet', () => {
 			});
 			const result = await tx.wait();
 			expect(result).not.toBeNull();
-			expect(result.type).toEqual(0n);
+			expect(result.type).toEqual(2n);
 		});
 
 		it('should send legacy transaction when `type = 0`', async () => {
