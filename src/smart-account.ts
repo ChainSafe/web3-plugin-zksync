@@ -158,7 +158,7 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * const balance = await account.getBalance();
 	 */
-	async getBalance(token?: Address, blockTag: BlockTag = 'committed'): Promise<bigint> {
+	async getBalance(token?: Address, blockTag: BlockTag = 'latest'): Promise<bigint> {
 		checkProvider(this, 'getBalance');
 		return super.getBalance(token, blockTag);
 	}
