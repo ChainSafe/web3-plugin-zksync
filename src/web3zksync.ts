@@ -6,7 +6,7 @@ import { DEFAULT_RETURN_FORMAT } from 'web3';
 import { getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
 import * as Web3 from 'web3';
 import { ETH_DATA_FORMAT, Transaction } from 'web3-types';
-import { format, toHex } from 'web3-utils';
+import { format, toBigInt, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import type {
 	BatchDetails,
@@ -531,7 +531,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		return tx;
 	}
 
-	async estimateGas(transaction: Transaction) {
+	async estimateGas(transaction: TransactionRequest) {
 		// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
 		// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
 		const tx = format(
@@ -552,27 +552,32 @@ export class Web3ZkSync extends Web3.Web3 {
 		return web3Utils.toBigInt(gas);
 	}
 
-	private async populateTransactionAndGasPrice(transaction: Transaction): Promise<Transaction> {
+	private async populateTransactionAndGasPrice(
+		transaction: TransactionRequest,
+	): Promise<TransactionRequest> {
 		transaction.nonce =
 			transaction.nonce ?? (await this.eth.getTransactionCount(transaction.from!, 'pending'));
 
-		const txForBuilder: Transaction = { ...transaction };
+		const txForBuilder = { ...transaction };
 
 		if (txForBuilder.type && toHex(txForBuilder.type) === toHex(EIP712_TX_TYPE)) {
 			delete txForBuilder.type;
 		}
-		const populated = await transactionBuilder({
-			transaction: txForBuilder,
+		const populated = await transactionBuilder<TransactionRequest>({
+			transaction: txForBuilder as Transaction,
 			web3Context: this,
 		});
 		if ((transaction as Eip712TxData).customData) {
 			(populated as Eip712TxData).customData = (transaction as Eip712TxData).customData;
-			populated.type = EIP712_TX_TYPE;
+			populated.type = toHex(EIP712_TX_TYPE);
 		} else {
-			populated.type = transaction.type === undefined ? 2n : transaction.type;
+			populated.type = toHex(transaction.type === undefined ? 2n : transaction.type);
 		}
 
-		const formatted = web3Utils.format(EIP712TransactionSchema, populated);
+		const formatted = web3Utils.format(
+			EIP712TransactionSchema,
+			populated,
+		) as TransactionRequest;
 
 		delete formatted.input;
 		delete formatted.chain;
@@ -587,12 +592,12 @@ export class Web3ZkSync extends Web3.Web3 {
 			delete formatted.accessList;
 		}
 		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
-		if (formatted.type === 0n) {
+		if (toBigInt(formatted.type) === 0n) {
 			formatted.gasPrice =
 				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
 		}
-		if (formatted.type === 2n && formatted.gasPrice) {
+		if (toBigInt(formatted.type) === 2n && formatted.gasPrice) {
 			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
 			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
 			delete formatted.gasPrice;
@@ -604,7 +609,7 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
-			if (formatted.type !== BigInt(EIP712_TX_TYPE)) {
+			if (toBigInt(formatted.type) !== BigInt(EIP712_TX_TYPE)) {
 				formatted.maxFeePerGas =
 					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 				formatted.maxPriorityFeePerGas =
@@ -626,7 +631,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		return formatted;
 	}
 
-	async populateTransaction(transaction: Transaction) {
+	async populateTransaction(transaction: TransactionRequest) {
 		if (
 			(!transaction.type ||
 				(transaction.type && toHex(transaction.type) !== toHex(EIP712_TX_TYPE))) &&
@@ -635,27 +640,22 @@ export class Web3ZkSync extends Web3.Web3 {
 			return this.populateTransactionAndGasPrice(transaction);
 		}
 
-		const populated = (await this.populateTransactionAndGasPrice(transaction)) as Eip712TxData;
+		const populated = await this.populateTransactionAndGasPrice(transaction);
 		populated.value ??= 0n;
 		populated.data ??= '0x';
 
-		populated.customData = this.fillCustomData(
-			(transaction as Eip712TxData).customData as Eip712Meta,
-		);
+		populated.customData = this.fillCustomData(transaction.customData as Eip712Meta);
 		return populated;
 	}
 
-	async signTransaction(tx: Transaction): Promise<string> {
+	async signTransaction(tx: TransactionRequest): Promise<string> {
 		if (tx.type && toHex(tx.type) === toHex(EIP712_TX_TYPE)) {
 			const signer = await this._eip712Signer();
 			tx.chainId = signer.getDomain().chainId;
-			// @ts-ignore
 			tx.customData = {
-				// @ts-ignore
 				...(tx.customData || {}),
 				customSignature: await signer.sign(tx as Eip712TxData),
 			};
-			// @ts-ignore
 			return EIP712.serialize(tx);
 		}
 		const account = this.eth.accounts.wallet.get(tx.from!);
@@ -664,7 +664,7 @@ export class Web3ZkSync extends Web3.Web3 {
 			throw new Error('Account not found');
 		}
 
-		const res = await this.eth.accounts.signTransaction(tx, account?.privateKey);
+		const res = await this.eth.accounts.signTransaction(tx as Transaction, account?.privateKey);
 		return res.rawTransaction;
 	}
 	async sendRawTransaction(signedTx: string) {

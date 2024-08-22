@@ -5,12 +5,12 @@
 
 import type { Block } from 'web3';
 import { type BlockNumberOrTag, DEFAULT_RETURN_FORMAT, ETH_DATA_FORMAT } from 'web3-types';
-import type { Bytes, DataFormat, Numbers, Transaction, TransactionReceipt } from 'web3-types';
+import type { Bytes, DataFormat, Numbers, TransactionReceipt } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
 import { getL2HashFromPriorityOp, isAddressEq, isETH, sleep } from './utils';
-import { Network as ZkSyncNetwork, TransactionStatus } from './types';
+import { Network as ZkSyncNetwork, TransactionRequest, TransactionStatus } from './types';
 import type { Address, TransactionOverrides, PaymasterParams, ZKTransactionReceipt } from './types';
 import { Web3ZkSync } from './web3zksync';
 import { ZKTransactionReceiptSchema } from './schemas';
@@ -269,7 +269,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					value: tx.amount,
 					customData: {
 						paymasterParams: tx.paymasterParams,
-					} as Transaction,
+					},
 				};
 			}
 
@@ -277,7 +277,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 				...tx.overrides,
 				to: tx.to,
 				value: tx.amount,
-			} as Transaction;
+			} as TransactionRequest;
 		} else {
 			const token = new this.eth.Contract(IERC20ABI, tx.token);
 			const populatedTx = token.methods
@@ -293,7 +293,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					},
 				};
 			}
-			return populatedTx as Transaction;
+			return populatedTx as TransactionRequest;
 		}
 	}
 

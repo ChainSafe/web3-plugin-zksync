@@ -11,7 +11,7 @@ import {
 	EIP712_TX_TYPE,
 	ZERO_HASH,
 } from './constants';
-import type { DeploymentType } from './types';
+import type { DeploymentType, TransactionRequest } from './types';
 import { AccountAbstractionVersion } from './types';
 import type { ZKsyncWallet } from './zksync-wallet';
 
@@ -156,7 +156,7 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 	async getDeployTransaction(
 		args: web3Types.ContractConstructorArgs<Abi> = [] as web3Types.ContractConstructorArgs<Abi>,
 		overrides?: Overrides,
-	): Promise<Omit<web3Types.Transaction, 'to'>> {
+	): Promise<TransactionRequest> {
 		let constructorArgs: any[];
 
 		// The overrides will be popped out in this call:

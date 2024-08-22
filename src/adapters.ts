@@ -53,6 +53,7 @@ import {
 	WalletBalances,
 	Eip712TxData,
 	ZKTransactionReceiptLog,
+	TransactionRequest,
 } from './types';
 import { ZeroAddress, ZeroHash } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
@@ -1516,13 +1517,13 @@ export class AdapterL1 implements TxSender {
 		refundRecipient?: Address;
 		overrides?: TransactionOverrides;
 	}): Promise<PriorityOpResponse> {
-		const tx = await this.getRequestExecuteTx(transaction);
+		const tx = (await this.getRequestExecuteTx(transaction)) as TransactionRequest;
 		return this.signAndSend(tx);
 	}
-	async signAndSend(tx: Transaction, _context?: Web3ZKsyncL1 | Web3ZKsyncL2) {
+	async signAndSend(tx: TransactionRequest, _context?: Web3ZKsyncL1 | Web3ZKsyncL2) {
 		const context = _context || this._contextL1();
 		const populated = await context.populateTransaction(tx);
-		const signed = await context.signTransaction(populated as Transaction);
+		const signed = await context.signTransaction(populated);
 
 		return getPriorityOpResponse(
 			context,
@@ -1530,7 +1531,7 @@ export class AdapterL1 implements TxSender {
 			this._contextL2(),
 		);
 	}
-	async signTransaction(tx: Transaction): Promise<string> {
+	async signTransaction(tx: TransactionRequest): Promise<string> {
 		return this._contextL1().signTransaction(tx);
 	}
 	async sendRawTransaction(signedTx: string): Promise<TransactionHash> {
@@ -1737,7 +1738,7 @@ export class AdapterL1 implements TxSender {
 		return method.populateTransaction(overrides as PayableTxOptions);
 	}
 
-	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {
+	async populateTransaction(tx: TransactionRequest): Promise<TransactionRequest> {
 		tx.from = this.getAddress();
 
 		if (
@@ -1747,8 +1748,8 @@ export class AdapterL1 implements TxSender {
 			return this._contextL1().populateTransaction(tx);
 		}
 
-		const populated = (await this._contextL1().populateTransaction(tx)) as Eip712TxData;
-		populated.type = EIP712_TX_TYPE;
+		const populated = await this._contextL1().populateTransaction(tx);
+		populated.type = toHex(EIP712_TX_TYPE);
 		populated.value ??= 0;
 		populated.data ??= '0x';
 
@@ -1849,8 +1850,8 @@ export class AdapterL2 implements TxSender {
 			...transaction,
 			from: this.getAddress(),
 		});
-		const populated = await this.populateTransaction(tx as Transaction);
-		const signed = await this.signTransaction(populated as Transaction);
+		const populated = await this.populateTransaction(tx as TransactionRequest);
+		const signed = await this.signTransaction(populated as TransactionRequest);
 		return getPriorityOpResponse(
 			this._contextL2(),
 			this.sendRawTransaction(signed),
@@ -1858,7 +1859,7 @@ export class AdapterL2 implements TxSender {
 		);
 	}
 
-	async signTransaction(tx: Transaction): Promise<string> {
+	async signTransaction(tx: TransactionRequest): Promise<string> {
 		return this._contextL2().signTransaction(tx);
 	}
 	async sendRawTransaction(signedTx: string): Promise<TransactionHash> {
@@ -1882,7 +1883,7 @@ export class AdapterL2 implements TxSender {
 		token?: Address;
 		paymasterParams?: PaymasterParams;
 		overrides?: TransactionOverrides;
-	}): Promise<Transaction> {
+	}): Promise<TransactionRequest> {
 		return this._contextL2().getTransferTx({
 			from: this.getAddress(),
 			...transaction,
@@ -1893,17 +1894,14 @@ export class AdapterL2 implements TxSender {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
-	async populateTransaction(tx: Transaction): Promise<Transaction | Eip712TxData> {
+	async populateTransaction(tx: TransactionRequest): Promise<TransactionRequest> {
 		tx.from = this.getAddress();
-		if (
-			(!tx.type || (tx.type && toHex(tx.type) !== toHex(EIP712_TX_TYPE))) &&
-			!(tx as Eip712TxData).customData
-		) {
+		if ((!tx.type || (tx.type && toHex(tx.type) !== toHex(EIP712_TX_TYPE))) && !tx.customData) {
 			return this._contextL2().populateTransaction(tx);
 		}
 
-		const populated = (await this._contextL2().populateTransaction(tx)) as Eip712TxData;
-		populated.type = EIP712_TX_TYPE;
+		const populated = await this._contextL2().populateTransaction(tx);
+		populated.type = toHex(EIP712_TX_TYPE);
 		populated.value ??= 0;
 		populated.data ??= '0x';
 

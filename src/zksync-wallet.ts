@@ -1,12 +1,11 @@
 import type { Web3Account } from 'web3-eth-accounts';
 import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
-import type { Transaction } from 'web3-types';
 import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import type { Web3ZKsyncL1 } from './web3zksync-l1';
 import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
-import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
+import { Address, PaymasterParams, TransactionOverrides, TransactionRequest } from './types';
 import type { EIP712Signer } from './utils';
 import { getPriorityOpResponse, isAddressEq } from './utils';
 
@@ -26,9 +25,7 @@ class Adapters extends AdapterL1 {
 		return this.adapterL2.getAllBalances();
 	}
 
-	async populateTransaction(
-		tx: web3Types.Transaction,
-	): Promise<web3Types.Transaction | Eip712TxData> {
+	async populateTransaction(tx: TransactionRequest): Promise<TransactionRequest> {
 		return this.adapterL2.populateTransaction(tx);
 	}
 
@@ -71,10 +68,7 @@ class Adapters extends AdapterL1 {
 		paymasterParams?: PaymasterParams;
 		overrides?: TransactionOverrides;
 	}) {
-		return this.signAndSend(
-			(await this.adapterL2.transferTx(transaction)) as Transaction,
-			this._contextL2(),
-		);
+		return this.signAndSend(await this.adapterL2.transferTx(transaction), this._contextL2());
 	}
 }
 
@@ -206,8 +200,8 @@ export class ZKsyncWallet extends Adapters {
 		const acc = createAccount();
 		return new ZKsyncWallet(acc.privateKey, provider, providerL1);
 	}
-	async signTransaction(transaction: web3Types.Transaction): Promise<string> {
-		const populated = (await this.populateTransaction(transaction)) as Transaction;
+	async signTransaction(transaction: TransactionRequest): Promise<string> {
+		const populated = await this.populateTransaction(transaction);
 		if (!isAddressEq(populated.from!, this.getAddress())) {
 			throw new Error('Transaction from mismatch');
 		}
@@ -246,7 +240,7 @@ export class ZKsyncWallet extends Adapters {
 	 *   });
 	 * }
 	 */
-	async populateTransaction(tx: web3Types.Transaction) {
+	async populateTransaction(tx: TransactionRequest) {
 		tx.from = tx.from ?? this.getAddress();
 		return this._contextL2().populateTransaction(tx);
 	}
@@ -255,7 +249,7 @@ export class ZKsyncWallet extends Adapters {
 		return this._contextL2().getBridgehubContractAddress();
 	}
 
-	async sendTransaction(transaction: web3Types.Transaction) {
+	async sendTransaction(transaction: TransactionRequest) {
 		const signed = await this.signTransaction(transaction);
 		return getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
 	}

@@ -1,7 +1,6 @@
 import {
 	Address,
 	BlockTag,
-	Eip712TxData,
 	Numbers,
 	PayloadSigner,
 	PaymasterParams,
@@ -9,6 +8,7 @@ import {
 	SmartAccountSigner,
 	TransactionBuilder,
 	type TransactionOverrides,
+	TransactionRequest,
 	TypedDataDomain,
 	TypedDataField,
 	type WalletBalances,
@@ -235,12 +235,10 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: 7_000_000_000,
 	 * });
 	 */
-	override async populateTransaction(
-		tx: Eip712TxData | web3Types.Transaction,
-	): Promise<web3Types.Transaction | Eip712TxData> {
+	override async populateTransaction(tx: TransactionRequest): Promise<TransactionRequest> {
 		return this.transactionBuilder(
 			{
-				...(tx as Eip712TxData),
+				...tx,
 				from: tx.from ?? this.getAddress(),
 			},
 			this.secret,
@@ -274,8 +272,8 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: 7_000_000_000,
 	 * });
 	 */
-	async signTransaction(tx: web3Types.Transaction | Eip712TxData): Promise<string> {
-		const populatedTx = (await this.populateTransaction(tx)) as Eip712TxData;
+	async signTransaction(tx: TransactionRequest): Promise<string> {
+		const populatedTx = await this.populateTransaction(tx);
 		const populatedTxHash = EIP712Signer.getSignedDigest(populatedTx);
 
 		populatedTx.customData = {
@@ -309,7 +307,7 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: 7_000_000_000,
 	 * });
 	 */
-	async sendTransaction(tx: web3Types.Transaction) {
+	async sendTransaction(tx: TransactionRequest) {
 		checkProvider(this, 'broadcastTransaction');
 		const signedTx = await this.signTransaction(tx);
 		return getPriorityOpResponse(
@@ -545,7 +543,7 @@ export class SmartAccount extends AdapterL2 {
 		overrides?: TransactionOverrides;
 	}): Promise<PriorityOpResponse> {
 		const transferTx = await super.transferTx(transaction);
-		return this.sendTransaction(transferTx as web3Types.Transaction);
+		return this.sendTransaction(transferTx);
 	}
 }
 

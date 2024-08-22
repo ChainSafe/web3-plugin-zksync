@@ -1,14 +1,11 @@
 import { toBytes, concat } from './utils';
-import { TransactionBuilder, PayloadSigner } from './types';
+import { TransactionBuilder, PayloadSigner, TransactionRequest } from './types';
 import { privateKeyToAccount, signMessageWithPrivateKey, Web3Account } from 'web3-eth-accounts';
-// import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
 import { Web3ZKsyncL2 } from './web3zksync-l2';
-import type * as web3Types from 'web3-types';
 import * as utils from './utils';
-import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
-import { Transaction } from 'web3-types';
+import { DEFAULT_GAS_PER_PUBDATA_LIMIT } from './constants';
 import { Address } from 'web3';
-import { format } from 'web3-utils';
+import { format, toHex } from 'web3-utils';
 
 /**
  * Signs the `payload` using an ECDSA private key.
@@ -166,7 +163,7 @@ export const populateTransactionECDSA: TransactionBuilder = async (
 		}
 		return provider.eip712;
 	};
-	tx.type = EIP712_TX_TYPE;
+	tx.type = toHex({ format: 'uint' });
 	tx.chainId = format({ format: 'uint' }, tx.chainId ?? (await provider.eth.getChainId()));
 	tx.value = format({ format: 'uint' }, tx.value ? tx.value : 0n);
 	tx.data ??= '0x';
@@ -179,7 +176,6 @@ export const populateTransactionECDSA: TransactionBuilder = async (
 	tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
 	tx.customData.factoryDeps ??= [];
 	tx.from = tx.from ?? account.address;
-	tx.type = format({ format: 'uint' }, EIP712_TX_TYPE);
 
 	tx.customData = tx.customData ?? {};
 	tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
@@ -197,10 +193,10 @@ export const populateTransactionECDSA: TransactionBuilder = async (
 			tx.gasLimit ??= await provider.estimateGas({
 				...tx,
 				from: web3Account.address,
-			} as web3Types.Transaction);
+			});
 		}
 	}
-	tx.gasLimit ??= await provider.estimateGas(tx as Transaction);
+	tx.gasLimit ??= await provider.estimateGas(tx as TransactionRequest);
 
 	return tx;
 };
