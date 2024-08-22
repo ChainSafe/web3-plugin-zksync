@@ -417,7 +417,11 @@ export class Web3ZkSync extends Web3.Web3 {
 				from: transaction.caller,
 				data: transaction.calldata,
 				to: transaction.contractAddress,
-				value: transaction.l2Value ? web3Utils.toHex(transaction.l2Value) : undefined,
+				value: transaction.l2Value
+					? typeof transaction.l2Value !== 'string'
+						? web3Utils.toHex(transaction.l2Value)
+						: transaction.l2Value
+					: undefined,
 				customData,
 			},
 			returnFormat,
@@ -547,8 +551,7 @@ export class Web3ZkSync extends Web3.Web3 {
 				DEFAULT_RETURN_FORMAT,
 			));
 		if (formatted.type === 0n) {
-			formatted.gasPrice =
-				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
+			formatted.gasPrice = formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
 		}
 		if (formatted.type === 2n && formatted.gasPrice) {
@@ -562,8 +565,7 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
-			formatted.maxFeePerGas =
-				formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+			formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 			formatted.maxPriorityFeePerGas =
 				formatted.maxPriorityFeePerGas ??
 				(web3Utils.toBigInt(formatted.maxFeePerGas) >

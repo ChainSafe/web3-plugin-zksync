@@ -543,7 +543,11 @@ export class AdapterL1 implements TxSender {
 		}
 
 		const baseGasLimit = await tx.estimateGas({
-			value: overrides.value ? web3Utils.toHex(overrides.value) : undefined,
+			value: overrides.value
+				? typeof overrides.value !== 'string'
+					? web3Utils.toHex(overrides.value)
+					: overrides.value
+				: undefined,
 		});
 		const gasLimit = scaleGasLimit(baseGasLimit);
 
