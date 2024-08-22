@@ -190,7 +190,7 @@ export const RawBlockTransactionSchema = {
 				value: { format: 'uint' },
 			},
 		},
-		received_timestamp_ms: { format: 'string' },
+		received_timestamp_ms: { format: 'number' },
 		raw_bytes: { format: 'string' },
 	},
 };
