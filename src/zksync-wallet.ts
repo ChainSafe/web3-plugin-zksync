@@ -19,7 +19,7 @@ class Adapters extends AdapterL1 {
 		this.adapterL2._contextL2 = this._contextL2.bind(this);
 		this.adapterL2._eip712Signer = this._eip712Signer;
 	}
-	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'committed') {
+	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'latest') {
 		return this.adapterL2.getBalance(token, blockTag);
 	}
 	getAllBalances() {
@@ -172,7 +172,7 @@ export class ZKsyncWallet extends Adapters {
 	getBalanceL1(token?: Address, blockTag?: web3Types.BlockNumberOrTag) {
 		return super.getBalanceL1(token, blockTag);
 	}
-	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'committed') {
+	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'latest') {
 		return super.getBalance(token, blockTag);
 	}
 	getAddress(): any {

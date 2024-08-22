@@ -1779,7 +1779,7 @@ export class AdapterL2 implements TxSender {
 	 */
 	async getBalance(
 		token?: Address,
-		blockTag: web3Types.BlockNumberOrTag = 'committed',
+		blockTag: web3Types.BlockNumberOrTag = 'latest',
 	): Promise<bigint> {
 		return await this._contextL2().getBalance(this.getAddress(), blockTag, token);
 	}
