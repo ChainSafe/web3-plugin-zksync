@@ -18,10 +18,20 @@ import { INonceHolderABI } from './contracts/INonceHolder';
 import { ZKsyncWallet } from './zksync-wallet';
 import { Web3ZKsyncL2 } from './web3zksync-l2';
 import { Web3ZKsyncL1 } from './web3zksync-l1';
-import type { ContractsAddresses, ZKSyncContractsCollection } from './types';
+import { ContractsAddresses, SmartAccountSigner, ZKSyncContractsCollection } from './types';
+import { ECDSASmartAccount, MultisigECDSASmartAccount, SmartAccount } from './smart-account';
 
-interface ZKSyncWalletConstructor {
+interface ZKsyncWalletConstructor {
 	new (privateKey: string): ZKsyncWallet;
+}
+interface ZKsyncAccountConstructor {
+	new (signer: SmartAccountSigner): SmartAccount;
+}
+interface ZKsyncECDSASmartAccountConstructor {
+	create(address: string, secret: string): SmartAccount;
+}
+interface ZKsyncMultisigECDSASmartAccountConstructor {
+	create(address: string, secret: string[]): SmartAccount;
 }
 
 export class ZKsyncPlugin extends Web3PluginBase {
@@ -81,8 +91,10 @@ export class ZKsyncPlugin extends Web3PluginBase {
 	 * const zkWallet = new web3.ZKsync.ZkWallet(PRIVATE_KEY);
 	 */
 	// the wallet type in this class is different from the parent class. So, they should have different names.
-	ZkWallet: ZKSyncWalletConstructor;
-
+	Wallet: ZKsyncWalletConstructor;
+	SmartAccount: ZKsyncAccountConstructor;
+	ECDSASmartAccount: ZKsyncECDSASmartAccountConstructor;
+	MultisigECDSASmartAccount: ZKsyncMultisigECDSASmartAccountConstructor;
 	/**
 	 * Create a new ZKsync plugin for the provided L2 network
 	 * @param providerOrContextL2 - The provider or context for the L2 network
@@ -105,8 +117,6 @@ export class ZKsyncPlugin extends Web3PluginBase {
 		} else {
 			this.L2 = new Web3ZKsyncL2(providerOrContextL2);
 		}
-		// @ts-ignore-next-line
-		// TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
 
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
@@ -114,13 +124,31 @@ export class ZKsyncPlugin extends Web3PluginBase {
 		this.contractsAddresses = this.initContractsAddresses();
 
 		const self = this;
-		class ZKSyncWalletWithFullContext extends ZKsyncWallet {
+		class ZKsyncWalletWithFullContext extends ZKsyncWallet {
 			constructor(privateKey: string) {
 				super(privateKey, self.L2, self.L1);
 			}
 		}
+		class ZKsyncAccountWithFullContext extends SmartAccount {
+			constructor(signer: SmartAccountSigner) {
+				super(signer, self.L2);
+			}
+		}
+		class ZKsyncECDSASmartAccountWithFullContext {
+			static create(address: string, secret: string): SmartAccount {
+				return ECDSASmartAccount.create(address, secret, self.L2);
+			}
+		}
+		class ZKsyncMultisigECDSASmartAccountWithFullContext extends MultisigECDSASmartAccount {
+			static create(address: string, secret: string[]): SmartAccount {
+				return MultisigECDSASmartAccount.create(address, secret, self.L2);
+			}
+		}
 
-		this.ZkWallet = ZKSyncWalletWithFullContext;
+		this.Wallet = ZKsyncWalletWithFullContext;
+		this.SmartAccount = ZKsyncAccountWithFullContext;
+		this.ECDSASmartAccount = ZKsyncECDSASmartAccountWithFullContext;
+		this.MultisigECDSASmartAccount = ZKsyncMultisigECDSASmartAccountWithFullContext;
 		this.initWallet();
 	}
 
@@ -218,7 +246,7 @@ export class ZKsyncPlugin extends Web3PluginBase {
 			}
 		}
 
-		this.ZkWallet = ZKSyncWalletWithFullContext;
+		this.Wallet = ZKSyncWalletWithFullContext;
 	}
 
 	/**
