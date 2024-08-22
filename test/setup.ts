@@ -1,6 +1,7 @@
 import { ZKsyncWallet, ContractFactory, Web3ZKsyncL2, Web3ZKsyncL1 } from '../src';
 
 import Token from './files/Token.json';
+import TokenL1 from './files/TokenL1.json';
 import Paymaster from './files/Paymaster.json';
 import { L1_CHAIN_URL, L2_CHAIN_URL } from './utils';
 import { ETH_ADDRESS_IN_CONTRACTS } from '../src/constants';
@@ -76,12 +77,12 @@ It mints based token, provided alternative tokens (different from base token) an
 */
 async function mintTokensOnL1(l1Token: string) {
 	if (l1Token !== ETH_ADDRESS_IN_CONTRACTS) {
-		const token = new Contract([], l1Token, ethProvider);
+		const token = new Contract(TokenL1.abi, l1Token, ethProvider);
 		const mintTx = await token.methods.mint(
 			await wallet.getAddress(),
 			web3Utils.toWei('20000', 'ether'),
 		);
-		await mintTx.send();
+		await mintTx.send({ from: await wallet.getAddress() });
 	}
 }
 
