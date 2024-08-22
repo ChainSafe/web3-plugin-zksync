@@ -403,7 +403,11 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 				from: transaction.caller,
 				data: transaction.calldata,
 				to: transaction.contractAddress,
-				value: transaction.l2Value ? web3Utils.toHex(transaction.l2Value) : undefined,
+				value: transaction.l2Value
+					? typeof transaction.l2Value !== 'string'
+						? web3Utils.toHex(transaction.l2Value)
+						: transaction.l2Value
+					: undefined,
 				customData,
 			},
 			returnFormat,
