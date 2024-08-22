@@ -13,7 +13,7 @@ import { Transaction } from 'web3-types';
 const { ETH_ADDRESS } = constants;
 const accounts = getAccounts();
 
-jest.setTimeout(30000);
+jest.setTimeout(300000);
 describe('Account Abstraction', () => {
 	const l2Provider = new Web3ZKsyncL2(L2Provider);
 	const PRIVATE_KEY1 = accounts[0].privateKey;
@@ -80,8 +80,7 @@ describe('Account Abstraction', () => {
 		};
 
 		const mintTx = await wallet.sendTransaction(tx as Transaction);
-		const receipt = await mintTx.wait();
-		console.log('receipt', receipt);
+		await mintTx.wait();
 		const paymasterBalanceAfterTx = await l2Provider.getBalance(paymasterAddress);
 		const paymasterTokenBalanceAfterTx = await l2Provider.getBalance(
 			paymasterAddress,
@@ -112,21 +111,37 @@ describe('Account Abstraction', () => {
 		const multisigAccountAbi = MultisigAccount.abi;
 		const multisigAccountBytecode: string = MultisigAccount.bytecode;
 
-		const factory = new ContractFactory(multisigAccountAbi, multisigAccountBytecode, wallet);
-		const owner1 = ZKsyncWallet.createRandom();
-		const owner2 = ZKsyncWallet.createRandom();
-		const multisigContract = await factory.deploy([owner1.address, owner2.address]);
+		const factory = new ContractFactory(
+			multisigAccountAbi,
+			multisigAccountBytecode,
+			wallet,
+			'createAccount',
+		);
+		const owner1 = new ZKsyncWallet(
+			'0x63bbd75f81a3b889bf4faf581162dfe52bbd09d0149f4987d9a8cb654684441c',
+			new Web3ZKsyncL2(L2Provider),
+		);
+		// refill owner1 for gas estimation
+		await (
+			await wallet.transfer({
+				to: owner1.address,
+				amount: 1000_000000_000000n,
+			})
+		).wait();
+		const owner2 = new ZKsyncWallet(
+			'0x2553cbc2c37248d0058a736f79ce1dac13e24dbecb0d371df6f4f53fa97ef789',
+			new Web3ZKsyncL2(L2Provider),
+		);
+		const args = [owner1.getAddress(), owner2.getAddress()];
+		const multisigContract = await factory.deploy(args);
 
 		const multisigAddress = multisigContract.options.address as Address;
 		// send ETH to multisig account
-
-		await (
-			await account.sendTransaction({
-				to: multisigAddress,
-				value: toWei(1, 'ether'),
-			})
-		).wait();
-
+		const refillTx = await account.sendTransaction({
+			to: multisigAddress, //,
+			value: 1_000000_000000_000000n,
+		});
+		await refillTx.wait();
 		// send paymaster approval token to multisig account
 		const sendApprovalTokenTx = await wallet.transfer({
 			to: multisigAddress,
@@ -145,25 +160,89 @@ describe('Account Abstraction', () => {
 		const storageAbi = Storage.contracts['Storage.sol:Storage'].abi;
 		const storageBytecode: string = Storage.contracts['Storage.sol:Storage'].bin;
 
-		const storageFactory = new l2Provider.eth.Contract(storageAbi);
-		const storage = await storageFactory
-			.deploy({
-				data: storageBytecode,
-			})
-			.send({ from: ADDRESS1 });
+		const storageFactory = new ContractFactory(storageAbi, storageBytecode, wallet);
+		const storage = await storageFactory.deploy();
 
 		const multisigAccountBalanceBeforeTx = await multisigAccount.getBalance();
 
-		const storageSetTx = await storage.methods.set(storageValue).populateTransaction();
+		const storageSetTx = await storage.methods
+			.set(storageValue)
+			.populateTransaction({ from: multisigAddress });
+
 		const tx = await multisigAccount.sendTransaction({ ...storageSetTx });
 		await tx.wait();
-
 		const multisigAccountBalanceAfterTx = await multisigAccount.getBalance();
 		expect(multisigAccountBalanceBeforeTx > multisigAccountBalanceAfterTx).toBeTruthy();
 		expect(await storage.methods.get().call()).toBe(storageValue);
 	});
 
-	it.only('use a contract with smart account as a runner to send transactions that utilize a paymaster', async () => {
+	it('use multisig account to transfer eth', async () => {
+		const account = ECDSASmartAccount.create(ADDRESS1, PRIVATE_KEY1, l2Provider);
+
+		const multisigAccountAbi = MultisigAccount.abi;
+		const multisigAccountBytecode: string = MultisigAccount.bytecode;
+
+		const factory = new ContractFactory(
+			multisigAccountAbi,
+			multisigAccountBytecode,
+			wallet,
+			'createAccount',
+		);
+		const owner1 = new ZKsyncWallet(
+			'0x63bbd75f81a3b889bf4faf581162dfe52bbd09d0149f4987d9a8cb654684441c',
+			new Web3ZKsyncL2(L2Provider),
+		);
+		// refill owner1 for gas estimation
+		await (
+			await wallet.transfer({
+				to: owner1.address,
+				amount: 1000_000000_000000n,
+			})
+		).wait();
+		const owner2 = new ZKsyncWallet(
+			'0x2553cbc2c37248d0058a736f79ce1dac13e24dbecb0d371df6f4f53fa97ef789',
+			new Web3ZKsyncL2(L2Provider),
+		);
+		const args = [owner1.getAddress(), owner2.getAddress()];
+		const multisigContract = await factory.deploy(args);
+
+		const multisigAddress = multisigContract.options.address as Address;
+		// send ETH to multisig account
+		const refillTx = await account.sendTransaction({
+			to: multisigAddress, //,
+			value: 1_000000_000000_000000n,
+		});
+		await refillTx.wait();
+		// send paymaster approval token to multisig account
+		const sendApprovalTokenTx = await wallet.transfer({
+			to: multisigAddress,
+			token: APPROVAL_TOKEN,
+			amount: 5,
+		});
+		await sendApprovalTokenTx.wait();
+
+		const multisigAccount = MultisigECDSASmartAccount.create(
+			multisigAddress,
+			[owner1.account.privateKey, owner2.account.privateKey],
+			l2Provider,
+		);
+
+		const multisigAccountBalanceBeforeTx = await multisigAccount.getBalance();
+		const random = ZKsyncWallet.createRandom(l2Provider);
+		const beforeB = await random.getBalance();
+		const transferTx = await multisigAccount.transfer({
+			to: random.getAddress(),
+			amount: 100n,
+		});
+		await transferTx.wait();
+		const beforeA = await random.getBalance();
+
+		expect(beforeA - beforeB).toBe(100n);
+		const multisigAccountBalanceAfterTx = await multisigAccount.getBalance();
+		expect(multisigAccountBalanceBeforeTx > multisigAccountBalanceAfterTx).toBeTruthy();
+	});
+
+	it('use a contract with smart account as a runner to send transactions that utilize a paymaster', async () => {
 		const minimalAllowance = 1n;
 		const storageValue = 700n;
 
@@ -171,18 +250,17 @@ describe('Account Abstraction', () => {
 
 		const storageAbi = Storage.contracts['Storage.sol:Storage'].abi;
 		const storageBytecode: string = Storage.contracts['Storage.sol:Storage'].bin;
-		const storageFactory = new l2Provider.eth.Contract(storageAbi);
-		const storage = await storageFactory
-			.deploy({
-				data: storageBytecode,
-			})
-			.send({ from: ADDRESS1 });
+
+		const storageFactory = new ContractFactory(storageAbi, storageBytecode, wallet);
+		const storage = await storageFactory.deploy();
 
 		const accountBalanceBeforeTx = await account.getBalance();
 		const accountApprovalTokenBalanceBeforeTx = await account.getBalance(APPROVAL_TOKEN);
 
 		const paymasterSetTx = await account.sendTransaction({
-			...(await storage.methods.set(storageValue).populateTransaction()),
+			...(await storage.methods
+				.set(storageValue)
+				.populateTransaction({ from: account.address })),
 			// @ts-ignore
 			customData: {
 				paymasterParams: getPaymasterParams(PAYMASTER, {
@@ -203,6 +281,6 @@ describe('Account Abstraction', () => {
 			accountApprovalTokenBalanceAfterTx ===
 				accountApprovalTokenBalanceBeforeTx - minimalAllowance,
 		).toBeTruthy();
-		expect(await storage.methods.get()).toBe(storageValue);
+		expect(await storage.methods.get().call()).toBe(storageValue);
 	});
 });

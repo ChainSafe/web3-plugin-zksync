@@ -5,8 +5,8 @@ import {
 	populateTransactionMultisigECDSA,
 	signPayloadWithECDSA,
 	signPayloadWithMultipleECDSA,
-} from '../../src/smart-account-utils';
-import { ADDRESS1, PRIVATE_KEY1, ADDRESS2, ADDRESS3, deepEqualExcluding } from '../utils';
+} from '../../src';
+import { ADDRESS1, PRIVATE_KEY1, ADDRESS2, deepEqualExcluding } from '../utils';
 import { Eip712TxData } from '../../src/types';
 import { TypedDataEncoder } from '../../src/TypedDataEncoder';
 
@@ -15,7 +15,7 @@ describe('signPayloadWithECDSA()', () => {
 		const tx: Eip712TxData = {
 			chainId: 270,
 			from: ADDRESS1,
-			to: ADDRESS3,
+			to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 			value: 7_000_000_000,
 		};
 
@@ -136,8 +136,9 @@ describe('populateTransaction()', () => {
 
 		const result = await populateTransactionECDSA(
 			{
+				from: '0x36615Cf349d7F6344891B1e7CA7C72883F5dc049',
 				chainId: 270,
-				to: ADDRESS3,
+				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 7_000_000_000,
 			},
 			PRIVATE_KEY1,

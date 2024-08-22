@@ -1,10 +1,14 @@
 import { toBytes, concat } from './utils';
-import { TransactionBuilder, PayloadSigner, Eip712TxData } from './types';
+import { TransactionBuilder, PayloadSigner } from './types';
 import { privateKeyToAccount, signMessageWithPrivateKey, Web3Account } from 'web3-eth-accounts';
-import { EIP712_TX_TYPE } from './constants';
+// import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
 import { Web3ZKsyncL2 } from './web3zksync-l2';
 import type * as web3Types from 'web3-types';
 import * as utils from './utils';
+import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
+import { Transaction } from 'web3-types';
+import { Address } from 'web3';
+import { format } from 'web3-utils';
 
 /**
  * Signs the `payload` using an ECDSA private key.
@@ -162,9 +166,43 @@ export const populateTransactionECDSA: TransactionBuilder = async (
 		}
 		return provider.eip712;
 	};
-	tx.from = account.address;
 	tx.type = EIP712_TX_TYPE;
-	return provider.populateTransaction(tx as web3Types.Transaction) as Promise<Eip712TxData>;
+	tx.chainId = format({ format: 'uint' }, tx.chainId ?? (await provider.eth.getChainId()));
+	tx.value = format({ format: 'uint' }, tx.value ? tx.value : 0n);
+	tx.data ??= '0x';
+	tx.gasPrice = format({ format: 'uint' }, tx.gasPrice ?? (await provider.eth.getGasPrice()));
+	tx.nonce = format(
+		{ format: 'uint' },
+		tx.nonce ?? (await provider.eth.getTransactionCount(tx.from as Address, 'pending')),
+	);
+	tx.customData = tx.customData ?? {};
+	tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
+	tx.customData.factoryDeps ??= [];
+	tx.from = tx.from ?? account.address;
+	tx.type = format({ format: 'uint' }, EIP712_TX_TYPE);
+
+	tx.customData = tx.customData ?? {};
+	tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
+	tx.customData.factoryDeps ??= [];
+
+	if (tx.from) {
+		const code = await provider.eth.getCode(tx.from);
+		const isContractAccount = code !== '0x';
+		if (isContractAccount) {
+			const web3Account = (
+				typeof secret === 'string' ? privateKeyToAccount(secret) : secret
+			) as Web3Account;
+			// Gas estimation does not work when initiator is contract account (works only with EOA).
+			// In order to estimation gas, the transaction's from value is replaced with signer's address.
+			tx.gasLimit ??= await provider.estimateGas({
+				...tx,
+				from: web3Account.address,
+			} as web3Types.Transaction);
+		}
+	}
+	tx.gasLimit ??= await provider.estimateGas(tx as Transaction);
+
+	return tx;
 };
 
 /**

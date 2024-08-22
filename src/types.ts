@@ -886,6 +886,7 @@ export interface TypedDataField {
 
 export type Eip712TxData = Omit<FeeMarketEIP1559TxData, 'gasPrice'> & {
 	/** The custom data for EIP712 transaction metadata. */
+	eip712Meta?: null | Eip712Meta;
 	customData?: null | Eip712Meta;
 	from?: Address;
 	hash?: string;

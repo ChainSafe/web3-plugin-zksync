@@ -3,10 +3,10 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
-import { estimateGas, getGasPrice, transactionBuilder } from 'web3-eth';
+import { getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
 import * as Web3 from 'web3';
-import type { Transaction } from 'web3-types';
-import { toHex } from 'web3-utils';
+import { ETH_DATA_FORMAT, Transaction } from 'web3-types';
+import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import type {
 	BatchDetails,
@@ -38,6 +38,7 @@ import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
 import { EIP712TransactionSchema } from './schemas';
+import { toUint8Array } from 'web3-eth-accounts';
 
 /**
  * The base class for interacting with ZKsync Era.
@@ -506,6 +507,55 @@ export class Web3ZkSync extends Web3.Web3 {
 		return customData;
 	}
 
+	prepareTransaction(transaction: Eip712TxData) {
+		if (!transaction.customData) {
+			return transaction;
+		}
+		const { customData, ...tx } = transaction as Eip712TxData;
+		tx.eip712Meta = {
+			gasPerPubdata: web3Utils.toHex(customData?.gasPerPubdata ?? 0),
+		} as any;
+		if (customData?.factoryDeps) {
+			const factoryDeps = customData.factoryDeps.map(dep =>
+				// TODO (SMA-1605): we arraify instead of hexlifying because server expects Vec<u8>.
+				//  We should change deserialization there.
+				Array.from(toUint8Array(dep)),
+			);
+			// @ts-ignore
+			tx.eip712Meta.factoryDeps = factoryDeps;
+		}
+		if (customData?.paymasterParams) {
+			// @ts-ignore
+			tx.eip712Meta.paymasterParams = {
+				paymaster: toHex(customData.paymasterParams.paymaster),
+				// @ts-ignore
+				paymasterInput: Array.from(toUint8Array(customData.paymasterParams.paymasterInput)),
+			};
+		}
+		return tx;
+	}
+
+	async estimateGas(transaction: Transaction) {
+		// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
+		// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
+		const tx = format(
+			transactionSchema,
+			{ ...transaction, to: transaction.to ?? ZERO_ADDRESS } as Transaction,
+			ETH_DATA_FORMAT,
+		);
+
+		const dataToSend = this.prepareTransaction({
+			...tx,
+			customData: (transaction as Eip712TxData).customData,
+		} as Eip712TxData);
+		const gas = await this.requestManager.send({
+			method: 'eth_estimateGas',
+			params: [dataToSend],
+		});
+
+		return web3Utils.toBigInt(gas);
+	}
+
 	private async populateTransactionAndGasPrice(transaction: Transaction): Promise<Transaction> {
 		transaction.nonce =
 			transaction.nonce ?? (await this.eth.getTransactionCount(transaction.from!, 'pending'));
@@ -523,7 +573,7 @@ export class Web3ZkSync extends Web3.Web3 {
 			(populated as Eip712TxData).customData = (transaction as Eip712TxData).customData;
 			populated.type = EIP712_TX_TYPE;
 		} else {
-			populated.type = transaction.type;
+			populated.type = transaction.type === undefined ? 2n : transaction.type;
 		}
 
 		const formatted = web3Utils.format(EIP712TransactionSchema, populated);
@@ -532,6 +582,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		delete formatted.chain;
 		delete formatted.hardfork;
 		delete formatted.networkId;
+
 		if (
 			formatted.accessList &&
 			Array.isArray(formatted.accessList) &&
@@ -539,17 +590,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		) {
 			delete formatted.accessList;
 		}
-
-		formatted.gasLimit =
-			formatted.gasLimit ??
-			(await estimateGas(
-				this,
-				// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
-				// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
-				{ ...formatted, to: formatted.to ?? ZERO_ADDRESS } as Transaction,
-				'latest',
-				DEFAULT_RETURN_FORMAT,
-			));
+		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
 		if (formatted.type === 0n) {
 			formatted.gasPrice = formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
@@ -557,6 +598,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		if (formatted.type === 2n && formatted.gasPrice) {
 			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
 			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+			delete formatted.gasPrice;
 			return formatted;
 		}
 		if (formatted.maxPriorityFeePerGas && formatted.maxFeePerGas) {
@@ -565,16 +607,23 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
-			formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
-			formatted.maxPriorityFeePerGas =
-				formatted.maxPriorityFeePerGas ??
-				(web3Utils.toBigInt(formatted.maxFeePerGas) >
-				web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
-					? formatted.maxFeePerGas
-					: gasFees.maxPriorityFeePerGas);
+			if (formatted.type !== BigInt(EIP712_TX_TYPE)) {
+				formatted.maxFeePerGas =
+					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxPriorityFeePerGas =
+					formatted.maxPriorityFeePerGas ??
+					(web3Utils.toBigInt(formatted.maxFeePerGas) >
+					web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
+						? formatted.maxFeePerGas
+						: gasFees.maxPriorityFeePerGas);
+			}
 		} else {
 			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
 			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+		}
+
+		if (gasFees.gasPrice && (!formatted.maxFeePerGas || !formatted.maxPriorityFeePerGas)) {
+			formatted.gasPrice = gasFees.gasPrice;
 		}
 
 		return formatted;

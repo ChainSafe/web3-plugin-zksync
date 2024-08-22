@@ -3,7 +3,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
 import type { types } from '../../src';
 import { utils } from '../../src';
-import { ADDRESS1, ADDRESS3 } from '../utils';
+import { ADDRESS1 } from '../utils';
 import * as constants from '../../src/constants';
 import { getL2HashFromPriorityOp } from '../../src/utils';
 
@@ -164,7 +164,7 @@ describe('utils', () => {
 				{
 					chainId: 270,
 					from: ADDRESS1,
-					to: ADDRESS3,
+					to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 					value: 1_000_000,
 				},
 				'0x73a20167b8d23b610b058c05368174495adf7da3a4ed4a57eb6dbdeb1fafc24aaf87530d663a0d061f69bb564d2c6fb46ae5ae776bbd4bd2a2a4478b9cd1b42a',
@@ -227,7 +227,7 @@ describe('utils', () => {
 				maxPriorityFeePerGas: 0n,
 				maxFeePerGas: 0n,
 				gasLimit: 0n,
-				to: ADDRESS3,
+				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 1_000_000n,
 				data: '0x',
 				chainId: 270n,
@@ -238,7 +238,7 @@ describe('utils', () => {
 					customSignature: '0x',
 					paymasterParams: undefined,
 				},
-				hash: '0x9ed410ce33179ac1ff6b721060605afc72d64febfe0c08cacab5a246602131ee',
+				hash: '0x3f46d97e4252ac44214ab9072cd4a86c871bff88e169e558fa8edeecf7461841',
 			};
 
 			const serializedTx =
@@ -254,7 +254,7 @@ describe('utils', () => {
 				maxPriorityFeePerGas: 0n,
 				maxFeePerGas: 0n,
 				gasLimit: 0n,
-				to: ADDRESS3,
+				to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 				value: 0n,
 				data: '0x',
 				chainId: 270n,
@@ -265,7 +265,7 @@ describe('utils', () => {
 					customSignature: '0x',
 					paymasterParams: undefined,
 				},
-				hash: '0x7d3aab3e3d06d6a702228d911c2a9afaccddd52514fb89dc9d0ff81a67bfff04',
+				hash: '0x5db19fe19a319eea52d4ef3d612275b9f5db3d45ac90a6da8ead2337411c47cf',
 			};
 
 			const serializedTx =
@@ -280,7 +280,7 @@ describe('utils', () => {
 			const account = web3Accounts.create();
 			const ADDRESS = account.address;
 			const message = 'Hello, world!';
-			const signature = utils.EIP712.sign(message, account.privateKey).serialized;
+			const signature = utils.EIP712.sign(message, account.privateKey).signature;
 			const web3 = new Web3();
 			const isValidSignature = await utils.isMessageSignatureCorrect(
 				web3,
