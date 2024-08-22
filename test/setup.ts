@@ -103,6 +103,7 @@ async function sendTokenToL2(l1TokenAddress: string) {
 }
 
 async function main() {
+	console.log('===== Minting and sending base token =====');
 	const baseToken = await wallet.getBaseToken();
 	console.log(`Wallet address: ${await wallet.getAddress()}`);
 	console.log(`Base token L1: ${baseToken}`);
@@ -117,6 +118,8 @@ async function main() {
 	console.log(`L2 base token balance after: ${await wallet.getBalance()} \n`);
 
 	if (baseToken !== ETH_ADDRESS_IN_CONTRACTS) {
+		console.log('===== No Eth based network so: Minting and sending ETH =====');
+
 		const l2EthAddress = await wallet.l2TokenAddress(ETH_ADDRESS_IN_CONTRACTS);
 		console.log(`ETH L1: ${ETH_ADDRESS_IN_CONTRACTS}`);
 		console.log(`ETH L2: ${l2EthAddress}`);
@@ -125,11 +128,14 @@ async function main() {
 		console.log(`L2 ETH balance before: ${await wallet.getBalance(l2EthAddress)}`);
 
 		await mintTokensOnL1(ETH_ADDRESS_IN_CONTRACTS);
+		console.log(`Minted ETH on L1 successfully. Now sending the token to L2...`);
 		await sendTokenToL2(ETH_ADDRESS_IN_CONTRACTS);
 
 		console.log(`L1 ETH balance after: ${await wallet.getBalanceL1()}`);
 		console.log(`L2 ETH balance after: ${await wallet.getBalance(l2EthAddress)}\n`);
 	}
+
+	console.log('===== Minting and sending DAI =====');
 
 	const l2DAIAddress = await wallet.l2TokenAddress(DAI_L1);
 	console.log(`DAI L1: ${DAI_L1}`);
@@ -139,6 +145,7 @@ async function main() {
 	console.log(`L2 DAI balance before: ${await wallet.getBalance(l2DAIAddress)}`);
 
 	await mintTokensOnL1(DAI_L1);
+	console.log(`Minted DAI on L1 successfully. Now sending the DAI token to L2...`);
 	await sendTokenToL2(DAI_L1);
 
 	console.log(`L1 DAI balance after: ${await wallet.getBalanceL1(DAI_L1)}`);
