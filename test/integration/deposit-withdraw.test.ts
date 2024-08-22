@@ -1,9 +1,7 @@
 import * as web3Accounts from 'web3-eth-accounts';
-import { TransactionFactory } from 'web3-eth-accounts';
 import { Network as ZkSyncNetwork } from '../../src/types';
-import { Web3ZkSyncL2, Web3ZkSyncL1, ZKSyncWallet } from '../../src';
-import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
-import * as utils from '../../src/utils';
+import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
+import { ETH_ADDRESS } from '../../src/constants';
 
 // TODO: This test needs to setup local dev nodes for L1 and L2
 // and also needs to have a private key with funds in the L1
@@ -12,14 +10,12 @@ import * as utils from '../../src/utils';
 
 jest.setTimeout(50000);
 describe('wallet', () => {
-	// @ts-ignore
-	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
-	const l1Provider = new Web3ZkSyncL1(
+	const l1Provider = new Web3ZKsyncL1(
 		'https://eth-sepolia.g.alchemy.com/v2/VCOFgnRGJF_vdAY2ZjgSksL6-6pYvRkz',
 	);
-	const l2Provider = Web3ZkSyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
+	const l2Provider = Web3ZKsyncL2.initWithDefaultProvider(ZkSyncNetwork.Sepolia);
 	const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || web3Accounts.create().privateKey;
-	const wallet = new ZKSyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
+	const wallet = new ZKsyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
 	it('should deposit', async () => {
 		const tx = await wallet.deposit({
 			token: ETH_ADDRESS,

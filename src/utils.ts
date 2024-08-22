@@ -8,16 +8,16 @@ import type {
 	AbiEventFragment,
 	BlockNumberOrTag,
 	Bytes,
+	EthExecutionAPI,
 	LogsInput,
 	TransactionHash,
 	TransactionReceipt,
 } from 'web3-types';
 import { toUint8Array } from 'web3-eth-accounts';
 import type { Web3Eth } from 'web3-eth';
-import { ALL_EVENTS_ABI, decodeEventABI } from 'web3-eth';
-import { keccak256, toBigInt } from 'web3-utils';
+import { ALL_EVENTS_ABI, decodeEventABI, waitForTransactionReceipt } from 'web3-eth';
 import { encodeEventSignature, jsonInterfaceMethodToString } from 'web3-eth-abi';
-import { PriorityOpTree, PriorityQueueType } from './types';
+import { NameResolver, PriorityOpTree, PriorityQueueType } from './types';
 import type {
 	DeploymentInfo,
 	EthereumSignature,
@@ -44,12 +44,16 @@ import {
 	EIP1271_MAGIC_VALUE,
 	L1_FEE_ESTIMATION_COEF_NUMERATOR,
 	L1_FEE_ESTIMATION_COEF_DENOMINATOR,
-	// EIP712_TX_TYPE,
-	// DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 
-import type { Web3ZkSyncL2 } from './web3zksync-l2';
-import { Web3ZkSyncL1 } from './web3zksync-l1';
+import type { Web3ZKsyncL2 } from './web3zksync-l2';
+import { Web3ZKsyncL1 } from './web3zksync-l1';
+import { Address, DEFAULT_RETURN_FORMAT, HexString } from 'web3';
+import { ethRpcMethods } from 'web3-rpc-methods';
+import { ZKTransactionReceiptSchema } from './schemas';
+import { Web3Context } from 'web3-core';
+import { isNullish } from 'web3-validator';
+import { ReceiptError } from './errors';
 
 export * from './Eip712'; // to be used instead of the one at zksync-ethers: Provider from ./provider
 
@@ -115,11 +119,9 @@ export const NonceHolderContract = new web3.Contract(INonceHolderABI);
 export const evenHex = (hex: string) => {
 	return hex.length % 2 === 0 ? hex : `0x0${hex.slice(2)}`;
 };
+
 export const toBytes = (number: web3Types.Numbers | Uint8Array) => {
-	const hex =
-		typeof number === 'number' || typeof number === 'bigint'
-			? web3Utils.numberToHex(number)
-			: web3Utils.bytesToHex(number);
+	const hex = web3Utils.toHex(number);
 
 	return web3Utils.hexToBytes(evenHex(hex));
 };
@@ -249,14 +251,10 @@ export const MessagePrefix: string = '\x19Ethereum Signed Message:\n';
  */
 export function hashMessage(message: Uint8Array | string): string {
 	if (typeof message === 'string') {
-		message = web3Accounts.toUint8Array(message);
+		message = toUtf8Bytes(message);
 	}
 	return web3Utils.keccak256(
-		concat([
-			web3Accounts.toUint8Array(MessagePrefix),
-			web3Accounts.toUint8Array(String(message.length)),
-			message,
-		]),
+		concat([toUtf8Bytes(MessagePrefix), toUtf8Bytes(String(message.length)), message]),
 	);
 }
 
@@ -344,10 +342,6 @@ export function getHashedL2ToL1Msg(
  * Returns a log containing details of all deployed contracts related to a transaction receipt.
  *
  * @param receipt The transaction receipt containing deployment information.
- *
- * @example
- *
- *
  */
 export function getDeployedContracts(receipt: web3Types.TransactionReceipt): DeploymentInfo[] {
 	const addressBytesLen = 40;
@@ -384,7 +378,7 @@ export function getDeployedContracts(receipt: web3Types.TransactionReceipt): Dep
  * @param salt A randomization element used to create the contract address.
  * @param input The ABI-encoded constructor arguments, if any.
  *
- * @remarks The implementation of `create2Address` in zkSync Era may differ slightly from Ethereum.
+ * @remarks The implementation of `create2Address` in ZKsync Era may differ slightly from Ethereum.
  *
  * @example
  *
@@ -515,15 +509,6 @@ export function hashBytecode(bytecode: web3Types.Bytes): Uint8Array {
 	return hash;
 }
 
-/**
- * Returns the hash of the L2 priority operation from a given transaction receipt and L2 address.
- *
- * @param txReceipt The receipt of the L1 transaction.
- * @param zkSyncAddress The address of the zkSync Era main contract.
- *
- * @example
- */
-
 let ZkSyncABIEvents: Array<AbiEventFragment & { signature: string }> | null = null;
 
 const getZkSyncEvents = () => {
@@ -536,6 +521,12 @@ const getZkSyncEvents = () => {
 	return ZkSyncABIEvents;
 };
 
+/**
+ * Returns the hash of the L2 priority operation from a given transaction receipt and L2 address.
+ * @param txReceipt The receipt of the L1 transaction.
+ * @param zkSyncAddress The address of the ZKsync Era main contract.
+ * @returns The hash of the L2 priority operation.
+ */
 export function getL2HashFromPriorityOp(
 	txReceipt: web3Types.TransactionReceipt,
 	zkSyncAddress: web3.Address,
@@ -654,10 +645,6 @@ export async function getERC20DefaultBridgeData(
  * @param l2Receiver The recipient address on L2.
  * @param amount The gas fee for the number of tokens to bridge.
  * @param bridgeData Additional bridge data.
- *
- * @example
- *
- *
  */
 export async function getERC20BridgeCalldata(
 	l1TokenAddress: string,
@@ -722,9 +709,6 @@ function isECDSASignatureCorrect(
  *
  * @see
  * {@link isMessageSignatureCorrect} and {@link isTypedDataSignatureCorrect} to validate signatures.
- *
- * @example
- *
  */
 async function isEIP1271SignatureCorrect(
 	context: web3.Web3Context, // or maybe use RpcMethods?
@@ -876,8 +860,8 @@ export async function isTypedDataSignatureCorrect(
 /**
  * Returns an estimation of the L2 gas required for token bridging via the default ERC20 bridge.
  *
- * @param providerL1 The Ethers provider for the L1 network.
- * @param providerL2 The zkSync provider for the L2 network.
+ * @param providerL1 The provider for the L1 network.
+ * @param providerL2 The ZKsync provider for the L2 network.
  * @param token The address of the token to be bridged.
  * @param amount The deposit amount.
  * @param to The recipient address on the L2 network.
@@ -886,14 +870,10 @@ export async function isTypedDataSignatureCorrect(
  *
  * @see
  * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#default-bridges Default bridges documentation}.
- *
- * @example
- *
- *
  */
 export async function estimateDefaultBridgeDepositL2Gas(
 	providerL1: web3.Web3,
-	providerL2: Web3ZkSyncL2,
+	providerL2: Web3ZKsyncL2,
 	token: web3.Address,
 	amount: web3Types.Numbers,
 	to: web3.Address,
@@ -958,7 +938,7 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
 /**
  * Returns an estimation of the L2 gas required for token bridging via the custom ERC20 bridge.
  *
- * @param providerL2 The zkSync provider for the L2 network.
+ * @param providerL2 The ZKsync provider for the L2 network.
  * @param l1BridgeAddress The address of the custom L1 bridge.
  * @param l2BridgeAddress The address of the custom L2 bridge.
  * @param token The address of the token to be bridged.
@@ -971,13 +951,9 @@ export function scaleGasLimit(gasLimit: bigint): bigint {
  *
  * @see
  * {@link https://docs.zksync.io/build/developer-reference/bridging-asset.html#custom-bridges-on-l1-and-l2 Custom bridges documentation}.
- *
- * @example
- *
- *
  */
 export async function estimateCustomBridgeDepositL2Gas(
-	providerL2: Web3ZkSyncL2,
+	providerL2: Web3ZKsyncL2,
 	l1BridgeAddress: web3.Address,
 	l2BridgeAddress: web3.Address,
 	token: web3.Address,
@@ -1028,16 +1004,49 @@ export function isAddressEq(a: web3.Address, b: web3.Address): boolean {
 	return a.toLowerCase() === b.toLowerCase();
 }
 
-export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
-	while (true) {
-		try {
-			const receipt = await web3Eth.getTransactionReceipt(txHash);
-			if (receipt && receipt.blockNumber) {
-				return receipt;
-			}
-		} catch {}
-		await sleep(500);
+const checkReceipt = (
+	hash: string,
+	receipt: undefined | null | TransactionReceipt,
+): TransactionReceipt => {
+	if (!receipt) {
+		throw new ReceiptError(`Transaction with hash ${hash} not found`, {
+			hash,
+		});
 	}
+	if (Number(receipt.status) === 0) {
+		throw new ReceiptError(`Transaction ${hash} failed with status 0`, {
+			hash,
+			receipt,
+		});
+	}
+	return receipt;
+};
+
+const customGetTransactionReceipt = async (
+	web3Context: Web3Context<EthExecutionAPI>,
+	transactionHash: Bytes,
+	returnFormat: typeof DEFAULT_RETURN_FORMAT = DEFAULT_RETURN_FORMAT,
+): Promise<any> => {
+	const response = await ethRpcMethods.getTransactionReceipt(
+		web3Context.requestManager,
+		transactionHash as HexString,
+	);
+	return isNullish(response)
+		? response
+		: web3Utils.format(
+				ZKTransactionReceiptSchema,
+				response as unknown as TransactionReceipt,
+				returnFormat ?? web3Context.defaultReturnFormat,
+			);
+};
+export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
+	const receipt = await waitForTransactionReceipt(
+		web3Eth,
+		txHash,
+		DEFAULT_RETURN_FORMAT,
+		customGetTransactionReceipt,
+	);
+	return checkReceipt(txHash, receipt);
 }
 export async function waitTxByHashConfirmation(
 	web3Eth: Web3Eth,
@@ -1047,7 +1056,10 @@ export async function waitTxByHashConfirmation(
 	const receipt = await waitTxReceipt(web3Eth, txHash);
 	while (true) {
 		const blockNumber = await web3Eth.getBlockNumber();
-		if (toBigInt(blockNumber) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+		if (
+			web3Utils.toBigInt(blockNumber) - web3Utils.toBigInt(receipt.blockNumber) + 1n >=
+			waitConfirmations
+		) {
 			return receipt;
 		}
 		await sleep(500);
@@ -1055,62 +1067,60 @@ export async function waitTxByHashConfirmation(
 }
 
 export const getPriorityOpResponse = (
-	context: Web3ZkSyncL1 | Web3ZkSyncL2,
+	context: Web3ZKsyncL1 | Web3ZKsyncL2,
 	l1TxPromise: Promise<TransactionHash>,
-	contextL2?: Web3ZkSyncL2,
-): PriorityOpResponse => {
-	if (context instanceof Web3ZkSyncL1) {
+	contextL2?: Web3ZKsyncL2,
+): Promise<PriorityOpResponse> => {
+	if (context instanceof Web3ZKsyncL1) {
 		return getPriorityOpL1Response(context, l1TxPromise, contextL2);
 	} else {
 		return getPriorityOpL2Response(context, l1TxPromise);
 	}
 };
 
-export const getPriorityOpL1Response = (
-	context: Web3ZkSyncL1,
+export const getPriorityOpL1Response = async (
+	context: Web3ZKsyncL1,
 	l1TxPromise: Promise<TransactionHash>,
-	contextL2?: Web3ZkSyncL2,
-): PriorityOpResponse => {
+	contextL2?: Web3ZKsyncL2,
+): Promise<PriorityOpResponse> => {
+	const hash = await l1TxPromise;
 	return {
+		hash,
 		waitL1Commit: async () => {
-			const hash = await l1TxPromise;
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		wait: async () => {
-			const hash = await l1TxPromise;
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		waitFinalize: async () => {
-			const hash = await l1TxPromise;
-			const receipt = await waitTxReceipt(context.eth, hash);
-			const l2TxHash = await (contextL2 as Web3ZkSyncL2).getL2TransactionFromPriorityOp(
-				receipt,
+			const l1Receipt = await waitTxReceipt(context.eth, hash);
+			const l2Hash = await (contextL2 as Web3ZKsyncL2).getL2TransactionFromPriorityOp(
+				l1Receipt,
 			);
 
 			if (!contextL2) {
 				return {
-					transactionHash: l2TxHash,
+					transactionHash: l2Hash,
 				} as TransactionReceipt;
 			}
 
-			return await waitTxByHashConfirmationFinalized(contextL2.eth, l2TxHash, 1);
+			return await waitTxByHashConfirmationFinalized(contextL2.eth, l2Hash, 1, 'finalized');
 		},
 	};
 };
 
-export const getPriorityOpL2Response = (
-	context: Web3ZkSyncL2,
+export const getPriorityOpL2Response = async (
+	context: Web3ZKsyncL2,
 	txPromise: Promise<TransactionHash>,
-): PriorityL2OpResponse => {
+): Promise<PriorityL2OpResponse> => {
+	const hash = await txPromise;
 	return {
+		hash,
 		wait: async () => {
-			const hash = await txPromise;
 			return waitTxByHashConfirmation(context.eth, hash, 1);
 		},
 		waitFinalize: async () => {
-			const hash = await txPromise;
-
-			return await waitTxByHashConfirmationFinalized(context.eth, hash, 1, 'finalized');
+			return await waitTxByHashConfirmationFinalized(context.eth, hash, 1);
 		},
 	};
 };
@@ -1121,15 +1131,16 @@ export async function waitTxByHashConfirmationFinalized(
 	waitConfirmations = 1,
 	blogTag?: BlockNumberOrTag,
 ): Promise<TransactionReceipt> {
-	const receipt = await waitTxReceipt(web3Eth, txHash);
 	while (true) {
-		const block = await web3Eth.getBlock(blogTag ?? 'latest');
-		if (toBigInt(block.number) - toBigInt(receipt.blockNumber) + 1n >= waitConfirmations) {
+		const receipt = await waitTxReceipt(web3Eth, txHash);
+		const block = await web3Eth.getBlock(blogTag ?? 'finalized');
+		if (
+			web3Utils.toBigInt(block.number) - web3Utils.toBigInt(receipt.blockNumber) + 1n >=
+			waitConfirmations
+		) {
 			return receipt;
 		}
 		await sleep(500);
-		// 3298012n // block.number
-		// 3303874n
 	}
 }
 
@@ -1139,7 +1150,7 @@ export async function waitTxByHashConfirmationFinalized(
  * @param value
  */
 export function id(value: string): string {
-	return keccak256(value);
+	return web3Utils.keccak256(toUtf8Bytes(value));
 }
 
 export function dataSlice(data: Bytes, start?: number, end?: number): string {
@@ -1150,4 +1161,86 @@ export function dataSlice(data: Bytes, start?: number, end?: number): string {
 	return web3Utils.toHex(
 		bytes.slice(start == null ? 0 : start, end == null ? bytes.length : end),
 	);
+}
+
+export function toUtf8Bytes(str: string): Uint8Array {
+	if (typeof str !== 'string') {
+		throw new Error(`invalid string value ${str}`);
+	}
+
+	let result: Array<number> = [];
+	for (let i = 0; i < str.length; i++) {
+		const c = str.charCodeAt(i);
+
+		if (c < 0x80) {
+			result.push(c);
+		} else if (c < 0x800) {
+			result.push((c >> 6) | 0xc0);
+			result.push((c & 0x3f) | 0x80);
+		} else if ((c & 0xfc00) == 0xd800) {
+			i++;
+			const c2 = str.charCodeAt(i);
+
+			if (!(i < str.length && (c2 & 0xfc00) === 0xdc00)) {
+				throw new Error(`invalid surrogate pair ${str}`);
+			}
+
+			// Surrogate Pair
+			const pair = 0x10000 + ((c & 0x03ff) << 10) + (c2 & 0x03ff);
+			result.push((pair >> 18) | 0xf0);
+			result.push(((pair >> 12) & 0x3f) | 0x80);
+			result.push(((pair >> 6) & 0x3f) | 0x80);
+			result.push((pair & 0x3f) | 0x80);
+		} else {
+			result.push((c >> 12) | 0xe0);
+			result.push(((c >> 6) & 0x3f) | 0x80);
+			result.push((c & 0x3f) | 0x80);
+		}
+	}
+
+	return new Uint8Array(result);
+}
+export function getAddress(address: string): string {
+	if (!web3Utils.isAddress(address)) {
+		throw new Error(`Invalid address ${address}`);
+	}
+	return address;
+}
+async function checkAddress(target: any, promise: Promise<null | string>): Promise<string> {
+	const result = await promise;
+	if (result == null || result === '0x0000000000000000000000000000000000000000') {
+		if (typeof target === 'string') {
+			throw new Error(`ENS name resolution failed for ${target}`);
+		}
+		throw new Error(`invalid AddressLike value; did not resolve to a value address`);
+	}
+	return getAddress(result);
+}
+export interface Addressable {
+	/**
+	 *  Get the object address.
+	 */
+	getAddress(): Promise<string>;
+}
+export function resolveAddress(
+	target: Address | Addressable | Promise<string>,
+	resolver?: null | NameResolver,
+): string | Promise<string> {
+	if (typeof target === 'string') {
+		if (target.match(/^0x[0-9a-f]{40}$/i)) {
+			return getAddress(target);
+		}
+
+		if (resolver == null) {
+			throw new Error('ENS name resolution requires a provider');
+		}
+
+		return checkAddress(target, resolver.resolveName(target));
+	} else if (target && typeof (target as Addressable).getAddress === 'function') {
+		return checkAddress(target, (target as Addressable).getAddress());
+	} else if (target && typeof (target as Promise<string>).then === 'function') {
+		return checkAddress(target, target as Promise<string>);
+	}
+
+	throw new Error('unsupported addressable value');
 }

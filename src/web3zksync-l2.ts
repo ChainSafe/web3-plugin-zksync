@@ -4,15 +4,8 @@
 // import type { Address, HexString } from 'web3';
 
 import type { Block } from 'web3';
-import { DEFAULT_RETURN_FORMAT } from 'web3-types';
-import type {
-	BlockNumberOrTag,
-	Bytes,
-	DataFormat,
-	Numbers,
-	Transaction,
-	TransactionReceipt,
-} from 'web3-types';
+import { type BlockNumberOrTag, DEFAULT_RETURN_FORMAT, ETH_DATA_FORMAT } from 'web3-types';
+import type { Bytes, DataFormat, Numbers, Transaction, TransactionReceipt } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
@@ -31,72 +24,11 @@ import {
 } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
+import * as utils from './utils';
 
 // Equivalent to both Provider and Signer in zksync-ethers
-export class Web3ZkSyncL2 extends Web3ZkSync {
-	// protected _contractAddresses: {
-	// 	mainContract?: Address;
-	// 	erc20BridgeL1?: Address;
-	// 	erc20BridgeL2?: Address;
-	// 	wethBridgeL1?: Address;
-	// 	wethBridgeL2?: Address;
-	// };
-
-	// override contractAddresses(): {
-	// 	mainContract?: Address;
-	// 	erc20BridgeL1?: Address;
-	// 	erc20BridgeL2?: Address;
-	// 	wethBridgeL1?: Address;
-	// 	wethBridgeL2?: Address;
-	// } {
-	// 	return this._contractAddresses;
-	// }
-
-	// /**
-	//  * Creates a new `Provider` instance for connecting to an L2 network.
-	//  * Caching is disabled for local networks.
-	//  * @param [url] The network RPC URL. Defaults to the local network.
-	//  * @param [network] The network name, chain ID, or object with network details.
-	//  * @param [options] Additional options for the provider.
-	//  */
-	// constructor(url?: ethers.FetchRequest | string, network?: Networkish, options?: any) {
-	// 	if (!url) {
-	// 		url = 'http://localhost:3050';
-	// 	}
-
-	// 	const isLocalNetwork =
-	// 		typeof url === 'string'
-	// 			? url.includes('localhost') || url.includes('127.0.0.1')
-	// 			: url.url.includes('localhost') || url.url.includes('127.0.0.1');
-
-	// 	const optionsWithDisabledCache = isLocalNetwork ? { ...options, cacheTimeout: -1 } : options;
-
-	// 	super(url, network, optionsWithDisabledCache);
-	// 	typeof url === 'string'
-	// 		? (this.#connect = new FetchRequest(url))
-	// 		: (this.#connect = url.clone());
-	// 	this.pollingInterval = 500;
-	// 	this._contractAddresses = {};
-	// }
-
-	// override async _send(
-	// 	payload: JsonRpcPayload | Array<JsonRpcPayload>,
-	// ): Promise<Array<JsonRpcResult>> {
-	// 	const request = this._getConnection();
-	// 	request.body = JSON.stringify(payload);
-	// 	request.setHeader('content-type', 'application/json');
-
-	// 	const response = await request.send();
-	// 	response.assertOk();
-
-	// 	let resp = response.bodyJson;
-	// 	if (!Array.isArray(resp)) {
-	// 		resp = [resp];
-	// 	}
-
-	// 	return resp;
-	// }
-
+export class Web3ZKsyncL2 extends Web3ZkSync {
+	eip712!: utils.EIP712Signer;
 	async getZKTransactionReceipt<ReturnFormat extends DataFormat>(
 		transactionHash: Bytes,
 		returnFormat: ReturnFormat = DEFAULT_RETURN_FORMAT as ReturnFormat,
@@ -222,6 +154,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		overrides?: TransactionOverrides;
 	}) {
 		const { ...tx } = transaction;
+		tx.amount = format({ format: 'uint' }, transaction.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();
 
 		// In case of Ether on non Ether based chain it should get l2 Ether address,
@@ -313,6 +246,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 		overrides?: TransactionOverrides;
 	}) {
 		const { ...tx } = transaction;
+		tx.amount = format({ format: 'uint' }, tx.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();
 
 		// In case of Ether on non Ether based chain it should get l2 Ether address,
@@ -366,7 +300,7 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	/**
 	 * Creates a new `Provider` from provided URL or network name.
 	 *
-	 * @param zksyncNetwork The type of zkSync network.
+	 * @param zksyncNetwork The type of ZKsync network.
 	 *
 	 * @example
 	 *
@@ -376,22 +310,33 @@ export class Web3ZkSyncL2 extends Web3ZkSync {
 	 */
 	static initWithDefaultProvider(
 		zksyncNetwork: ZkSyncNetwork = ZkSyncNetwork.Localhost,
-	): Web3ZkSyncL2 {
+	): Web3ZKsyncL2 {
 		switch (zksyncNetwork) {
 			case ZkSyncNetwork.Localhost:
-				return new Web3ZkSyncL2('http://localhost:3050');
+				return new Web3ZKsyncL2('http://localhost:3050');
 			case ZkSyncNetwork.Sepolia:
-				return new Web3ZkSyncL2('https://sepolia.era.zksync.dev');
+				return new Web3ZKsyncL2('https://sepolia.era.zksync.dev');
 			case ZkSyncNetwork.Mainnet:
-				return new Web3ZkSyncL2('https://mainnet.era.zksync.io');
+				return new Web3ZKsyncL2('https://mainnet.era.zksync.io');
 			case ZkSyncNetwork.EraTestNode:
-				return new Web3ZkSyncL2('http://localhost:8011');
+				return new Web3ZKsyncL2('http://localhost:8011');
 			default:
-				return new Web3ZkSyncL2('http://localhost:3050');
+				return new Web3ZKsyncL2('http://localhost:3050');
 		}
 	}
-
-	getBalance(address: Address, blockNumber: BlockNumberOrTag = this.defaultBlock) {
-		return this.eth.getBalance(address, blockNumber);
+	async getBalance(
+		address: Address,
+		blockTag?: BlockNumberOrTag,
+		tokenAddress?: Address,
+	): Promise<bigint> {
+		if (!tokenAddress || (await this.isBaseToken(tokenAddress))) {
+			return this.eth.getBalance(address, blockTag);
+		} else {
+			try {
+				return this.getTokenBalance(tokenAddress, address);
+			} catch {
+				return 0n;
+			}
+		}
 	}
 }

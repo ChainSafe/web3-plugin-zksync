@@ -1,15 +1,15 @@
 import type { Transaction } from 'web3-types';
 import { ethRpcMethods } from 'web3-rpc-methods';
 
-import { Web3ZkSyncL2, Web3ZkSyncL1 } from '../../src';
+import { Web3ZKsyncL2, Web3ZKsyncL1 } from '../../src';
 import { getPriorityOpResponse } from '../../src/utils';
 import type { PriorityL1OpResponse } from '../../src/types';
 
 jest.mock('web3-rpc-methods');
 
 describe('Web3ZkSyncL2 as a Provider', () => {
-	it.skip('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
-		const web3ZkSyncL2 = new Web3ZkSyncL2('https://mainnet.era.zksync.io');
+	it('should correctly initialize and assign function properties in getPriorityOpResponse', async () => {
+		const web3ZkSyncL2 = new Web3ZKsyncL2('https://mainnet.era.zksync.io');
 		const acc = web3ZkSyncL2.eth.accounts.privateKeyToAccount(
 			'0x1f953dc9b6437fb94fcafa5dabe3faa0c34315b954dd66f41bf53273339c6d26',
 		);
@@ -23,6 +23,7 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 			// blockNumber: 123456,
 			to: '0xabcdef1234567890abcdef1234567890abcdef12',
 			type: 0,
+			networkId: 0,
 			nonce: 42,
 			gasLimit: 2000000n,
 			// index: 3,
@@ -46,7 +47,7 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 
 		const txPromise = web3ZkSyncL2.sendRawTransaction(signed);
 
-		const priorityOpResponse = await getPriorityOpResponse(new Web3ZkSyncL1(), txPromise);
+		const priorityOpResponse = await getPriorityOpResponse(new Web3ZKsyncL1(), txPromise);
 		// 'The waitL1Commit function should be properly initialized'
 		expect(typeof (priorityOpResponse as PriorityL1OpResponse).waitL1Commit).toEqual(
 			'function',

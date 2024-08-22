@@ -1,16 +1,27 @@
 // import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
 import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
+import type { Contract } from 'web3-eth-contract';
 import type {
 	Bytes,
 	HexString,
 	Numbers,
 	Transaction,
-	EIP1193Provider,
 	TransactionWithSenderAPI,
 	TransactionReceipt,
+	Log,
+	TransactionReceiptBase,
 } from 'web3-types';
 
-import type { RpcMethods } from './rpc.methods';
+import type { Web3ZKsyncL2 } from './web3zksync-l2';
+import type { IERC20ABI } from './contracts/IERC20';
+import type { IL2BridgeABI } from './contracts/IL2Bridge';
+import type { IZkSyncABI } from './contracts/IZkSyncStateTransition';
+import type { IBridgehubABI } from './contracts/IBridgehub';
+import type { IContractDeployerABI } from './contracts/IContractDeployer';
+import type { IL1MessengerABI } from './contracts/IL1Messenger';
+import type { IERC1271ABI } from './contracts/IERC1271';
+import type { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
+import type { INonceHolderABI } from './contracts/INonceHolder';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -519,8 +530,7 @@ export interface L2ToL1Log {
 }
 
 /**
- * A `TransactionRequest` is an extension of {@link ethers.TransactionRequest} with additional features for interacting
- * with zkSync Era.
+ * A transaction request that includes additional features for interacting with ZKsync Era.
  */
 export declare type TransactionRequest = DeepWriteable<
 	TransactionWithSenderAPI & {
@@ -531,7 +541,7 @@ export declare type TransactionRequest = DeepWriteable<
 >;
 
 /**
- * Interface representation of priority op response that extends {@link ethers.TransactionResponse} and adds a function
+ * Interface representation of priority op response with a function
  * that waits to commit a L1 transaction, including when given on optional confirmation number.
  */
 export interface PriorityL1OpResponse {
@@ -543,8 +553,10 @@ export interface PriorityL1OpResponse {
 	waitL1Commit(confirmation?: number): Promise<TransactionReceipt>;
 	wait(confirmation?: number): Promise<TransactionReceipt>;
 	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
+	hash: string;
 }
 export interface PriorityL2OpResponse {
+	hash: string;
 	wait(confirmation?: number): Promise<TransactionReceipt>;
 	waitFinalize(confirmation?: number): Promise<TransactionReceipt>;
 }
@@ -736,7 +748,7 @@ export interface RawBlockTransaction {
 
 /** Contains parameters for finalizing the withdrawal transaction. */
 export interface FinalizeWithdrawalParams {
-	l1BatchNumber: number | null;
+	l1BatchNumber: number | null | Numbers;
 	l2MessageIndex: number;
 	l2TxNumberInBlock: number | null;
 	message: any;
@@ -763,42 +775,37 @@ export interface StorageProof {
  *  @param [provider] The provider is used to fetch data from the network if it is required for signing.
  *  @returns A promise that resolves to the serialized signature in hexadecimal format.
  */
-export type PayloadSigner = (
-	payload: Bytes,
-	secret?: any,
-	provider?: null | EIP1193Provider<RpcMethods>,
-) => Promise<string>;
-
-// /**
-//  * Populates missing fields in a transaction with default values.
-//  *
-//  * @param transaction The transaction that needs to be populated.
-//  * @param [secret] The secret used for populating the transaction.
-//  * @param [provider] The provider is used to fetch data from the network if it is required for signing.
-//  * @returns A promise that resolves to the populated transaction.
-//  */
-// export type TransactionBuilder = (
-// 	transaction: TransactionRequest,
-// 	secret?: any,
-// 	provider?: null | EIP1193Provider<RpcMethods>,
-// ) => Promise<TransactionLike>;
-
-// /**
-//  * Encapsulates the required input parameters for creating a signer for `SmartAccount`.
-//  */
-// export interface SmartAccountSigner {
-// 	/** Address to which the `SmartAccount` is bound. */
-// 	address: string;
-// 	/** Secret in any form that can be used for signing different payloads. */
-// 	secret: any;
-// 	/** Custom method for signing different payloads. */
-// 	payloadSigner?: PayloadSigner;
-// 	/** Custom method for populating transaction requests. */
-// 	transactionBuilder?: TransactionBuilder;
-// }
+export type PayloadSigner = (payload: Bytes, secret?: any, provider?: Web3ZKsyncL2) => string;
 
 export interface WalletBalances {
 	[key: Address]: Numbers;
+}
+/**
+ * Populates missing fields in a transaction with default values.
+ *
+ * @param transaction The transaction that needs to be populated.
+ * @param [secret] The secret used for populating the transaction.
+ * @param [provider] The provider is used to fetch data from the network if it is required for signing.
+ * @returns A promise that resolves to the populated transaction.
+ */
+export type TransactionBuilder = (
+	transaction: Eip712TxData,
+	secret?: any,
+	provider?: Web3ZKsyncL2,
+) => Promise<Eip712TxData>;
+
+/**
+ * Encapsulates the required input parameters for creating a signer for `SmartAccount`.
+ */
+export interface SmartAccountSigner {
+	/** Address to which the `SmartAccount` is bound. */
+	address: string;
+	/** Secret in any form that can be used for signing different payloads. */
+	secret: any;
+	/** Custom method for signing different payloads. */
+	payloadSigner?: PayloadSigner;
+	/** Custom method for populating transaction requests. */
+	transactionBuilder?: TransactionBuilder;
 }
 
 export interface TokenInfo {
@@ -879,6 +886,7 @@ export interface TypedDataField {
 
 export type Eip712TxData = Omit<FeeMarketEIP1559TxData, 'gasPrice'> & {
 	/** The custom data for EIP712 transaction metadata. */
+	eip712Meta?: null | Eip712Meta;
 	customData?: null | Eip712Meta;
 	from?: Address;
 	hash?: string;
@@ -906,14 +914,76 @@ export type Eip712SignedInput = FeeMarketEIP1559TxData & {
 	[key: string]: unknown;
 };
 
-export type ZKTransactionReceipt = TransactionReceipt & {
+export type ZKTransactionReceiptLog = Log & {
+	l1BatchNumber: Numbers;
+};
+
+export type ZKTransactionReceipt = TransactionReceiptBase<
+	Numbers,
+	Bytes,
+	Bytes,
+	ZKTransactionReceiptLog
+> & {
 	l1BatchNumber: Numbers;
 	l1BatchTxIndex: Numbers;
 	l2ToL1Logs: L2ToL1Log[];
-	logs: TransactionReceipt['logs'] & {
-		l1BatchNumber: Numbers;
-	};
 };
 
 export interface OverridesReadOnly extends Omit<TransactionRequest, 'to' | 'data'> {}
 export type Overrides = DeepWriteable<OverridesReadOnly>;
+export interface NameResolver {
+	/**
+	 *  Resolve to the address for the ENS %%name%%.
+	 *
+	 *  Resolves to ``null`` if the name is unconfigued. Use
+	 *  [[resolveAddress]] (passing this object as %%resolver%%) to
+	 *  throw for names that are unconfigured.
+	 */
+	resolveName(name: string): Promise<null | string>;
+}
+
+export type ZKSyncContractsCollection = {
+	Generic: {
+		/**
+		 * The web3.js Contract instance for the `IERC20` interface, which is utilized for interacting with ERC20 tokens.
+		 */
+		IERC20Contract: Contract<typeof IERC20ABI>;
+		/**
+		 * The web3.js Contract instance for the `IERC1271` interface, which is utilized for signature validation by contracts.
+		 */
+		IERC1271Contract: Contract<typeof IERC1271ABI>;
+	};
+	L1: {
+		/**
+		 * The web3.js Contract instance for the `ZkSync` interface.
+		 */
+		ZkSyncMainContract: Contract<typeof IZkSyncABI>;
+		/**
+		 * The ABI of the `Bridgehub` interface.
+		 */
+		BridgehubContract: Contract<typeof IBridgehubABI>;
+		/**
+		 * The web3.js Contract instance for the `IL1Bridge` interface, which is utilized for transferring ERC20 tokens from L1 to L2.
+		 */
+		L1BridgeContract: Contract<typeof IL1BridgeABI>;
+	};
+	L2: {
+		/**
+		 * The web3.js Contract instance for the `IContractDeployer` interface, which is utilized for deploying smart contracts.
+		 */
+		ContractDeployerContract: Contract<typeof IContractDeployerABI>;
+		/**
+		 * The web3.js Contract instance for the `IL1Messenger` interface, which is utilized for sending messages from the L2 to L1.
+		 */
+		L1MessengerContract: Contract<typeof IL1MessengerABI>;
+		/**
+		 * The web3.js Contract instance for the `IL2Bridge` interface, which is utilized for transferring ERC20 tokens from L2 to L1.
+		 */
+		L2BridgeContract: Contract<typeof IL2BridgeABI>;
+
+		/**
+		 * The web3.js Contract instance for the `INonceHolder` interface, which is utilized for managing deployment nonces.
+		 */
+		NonceHolderContract: Contract<typeof INonceHolderABI>;
+	};
+};

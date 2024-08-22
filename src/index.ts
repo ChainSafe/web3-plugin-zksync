@@ -1,7 +1,14 @@
-export { ZkSyncPlugin } from './plugin';
-export { Web3ZkSyncL1 } from './web3zksync-l1';
-export { Web3ZkSyncL2 } from './web3zksync-l2';
-export { ZKSyncWallet } from './zksync-wallet';
+export { ZKsyncPlugin } from './plugin';
+export { Web3ZKsyncL1 } from './web3zksync-l1';
+export { Web3ZKsyncL2 } from './web3zksync-l2';
+export { ZKsyncWallet } from './zksync-wallet';
+export { RpcMethods } from './rpc.methods';
+export { TypedDataEncoder } from './TypedDataEncoder';
+export { ContractFactory } from './contract-factory';
+export * from './Eip712';
+export * from './paymaster-utils';
+export * from './smart-account';
+export * from './smart-account-utils';
 export * as utils from './utils';
 export * as types from './types';
 export * as constants from './constants';

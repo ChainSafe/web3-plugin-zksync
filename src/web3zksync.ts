@@ -3,10 +3,10 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import * as web3Accounts from 'web3-eth-accounts';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
-import { estimateGas, getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
+import { getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
 import * as Web3 from 'web3';
-import type { Transaction } from 'web3-types';
-import { toHex } from 'web3-utils';
+import { ETH_DATA_FORMAT, Transaction } from 'web3-types';
+import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import type {
 	BatchDetails,
@@ -31,15 +31,18 @@ import {
 	L2_BASE_TOKEN_ADDRESS,
 	LEGACY_ETH_ADDRESS,
 	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
+	ZERO_ADDRESS,
 } from './constants';
-import { EIP712, type EIP712Signer, isAddressEq } from './utils';
+import { EIP712, type EIP712Signer, isAddressEq, isETH } from './utils';
 import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
+import { EIP712TransactionSchema } from './schemas';
+import { toUint8Array } from 'web3-eth-accounts';
 
 /**
- * The base class for interacting with zkSync Era.
- * It extends the `Web3Eth` class and provides additional methods for interacting with zkSync Era.
+ * The base class for interacting with ZKsync Era.
+ * It extends the `Web3Eth` class and provides additional methods for interacting with ZKsync Era.
  * It is the base class for the `Web3ZkSyncL1` and `Web3ZkSyncL2`.
  */
 // Note: Code logic here is similar to JsonRpcApiProvider class in zksync-ethers
@@ -121,7 +124,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns additional zkSync-specific information about the L2 block.
+	 * Returns additional ZKsync-specific information about the L2 block.
 	 *
 	 * committed: The batch is closed and the state transition it creates exists on layer 1.
 	 * proven: The batch proof has been created, submitted, and accepted on layer 1.
@@ -210,10 +213,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 * Returns whether the `token` is the base token.
 	 */
 	async isBaseToken(token: web3Types.Address): Promise<boolean> {
-		return (
-			isAddressEq(token, await this.getBaseTokenContractAddress()) ||
-			isAddressEq(token, L2_BASE_TOKEN_ADDRESS)
-		);
+		return isETH(token) || isAddressEq(token, await this.getBaseTokenContractAddress());
 	}
 
 	/**
@@ -229,7 +229,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns the addresses of the default zkSync Era bridge contracts on both L1 and L2.
+	 * Returns the addresses of the default ZKsync Era bridge contracts on both L1 and L2.
 	 *
 	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getbridgecontracts zks_getBridgeContracts} JSON-RPC method.
 	 */
@@ -288,7 +288,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns the address of the zkSync Era contract.
+	 * Returns the address of the ZKsync Era contract.
 	 *
 	 * @param returnFormat - The format of the return value.
 	 */
@@ -429,7 +429,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	 * Returns the L2 token address equivalent for a L1 token address as they are not equal.
 	 * ETH address is set to zero address.
 	 *
-	 * @remarks Only works for tokens bridged on default zkSync Era bridges.
+	 * @remarks Only works for tokens bridged on default ZKsync Era bridges.
 	 *
 	 * @param token The address of the token on L1.
 	 */
@@ -451,7 +451,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	}
 
 	/**
-	 * Returns the main zkSync Era smart contract address.
+	 * Returns the main ZKsync Era smart contract address.
 	 *
 	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getmaincontract zks_getMainContract} JSON-RPC method.
 	 */
@@ -503,21 +503,82 @@ export class Web3ZkSync extends Web3.Web3 {
 		return customData;
 	}
 
+	prepareTransaction(transaction: Eip712TxData) {
+		if (!transaction.customData) {
+			return transaction;
+		}
+		const { customData, ...tx } = transaction as Eip712TxData;
+		tx.eip712Meta = {
+			gasPerPubdata: web3Utils.toHex(customData?.gasPerPubdata ?? 0),
+		} as any;
+		if (customData?.factoryDeps) {
+			const factoryDeps = customData.factoryDeps.map(dep =>
+				// TODO (SMA-1605): we arraify instead of hexlifying because server expects Vec<u8>.
+				//  We should change deserialization there.
+				Array.from(toUint8Array(dep)),
+			);
+			// @ts-ignore
+			tx.eip712Meta.factoryDeps = factoryDeps;
+		}
+		if (customData?.paymasterParams) {
+			// @ts-ignore
+			tx.eip712Meta.paymasterParams = {
+				paymaster: toHex(customData.paymasterParams.paymaster),
+				// @ts-ignore
+				paymasterInput: Array.from(toUint8Array(customData.paymasterParams.paymasterInput)),
+			};
+		}
+		return tx;
+	}
+
+	async estimateGas(transaction: Transaction) {
+		// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
+		// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
+		const tx = format(
+			transactionSchema,
+			{ ...transaction, to: transaction.to ?? ZERO_ADDRESS } as Transaction,
+			ETH_DATA_FORMAT,
+		);
+
+		const dataToSend = this.prepareTransaction({
+			...tx,
+			customData: (transaction as Eip712TxData).customData,
+		} as Eip712TxData);
+		const gas = await this.requestManager.send({
+			method: 'eth_estimateGas',
+			params: [dataToSend],
+		});
+
+		return web3Utils.toBigInt(gas);
+	}
+
 	private async populateTransactionAndGasPrice(transaction: Transaction): Promise<Transaction> {
 		transaction.nonce =
 			transaction.nonce ?? (await this.eth.getTransactionCount(transaction.from!, 'pending'));
 
+		const txForBuilder: Transaction = { ...transaction };
+
+		if (txForBuilder.type && toHex(txForBuilder.type) === toHex(EIP712_TX_TYPE)) {
+			delete txForBuilder.type;
+		}
 		const populated = await transactionBuilder({
-			transaction,
+			transaction: txForBuilder,
 			web3Context: this,
 		});
+		if ((transaction as Eip712TxData).customData) {
+			(populated as Eip712TxData).customData = (transaction as Eip712TxData).customData;
+			populated.type = EIP712_TX_TYPE;
+		} else {
+			populated.type = transaction.type === undefined ? 2n : transaction.type;
+		}
 
-		const formatted = web3Utils.format(transactionSchema, populated);
+		const formatted = web3Utils.format(EIP712TransactionSchema, populated);
 
 		delete formatted.input;
 		delete formatted.chain;
 		delete formatted.hardfork;
 		delete formatted.networkId;
+
 		if (
 			formatted.accessList &&
 			Array.isArray(formatted.accessList) &&
@@ -525,11 +586,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		) {
 			delete formatted.accessList;
 		}
-
-		formatted.gasLimit =
-			formatted.gasLimit ??
-			(await estimateGas(this, formatted as Transaction, 'latest', DEFAULT_RETURN_FORMAT));
-
+		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
 		if (formatted.type === 0n) {
 			formatted.gasPrice =
 				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
@@ -538,6 +595,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		if (formatted.type === 2n && formatted.gasPrice) {
 			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
 			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+			delete formatted.gasPrice;
 			return formatted;
 		}
 		if (formatted.maxPriorityFeePerGas && formatted.maxFeePerGas) {
@@ -546,17 +604,23 @@ export class Web3ZkSync extends Web3.Web3 {
 
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
-			formatted.maxFeePerGas =
-				formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
-			formatted.maxPriorityFeePerGas =
-				formatted.maxPriorityFeePerGas ??
-				(web3Utils.toBigInt(formatted.maxFeePerGas) >
-				web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
-					? formatted.maxFeePerGas
-					: gasFees.maxPriorityFeePerGas);
+			if (formatted.type !== BigInt(EIP712_TX_TYPE)) {
+				formatted.maxFeePerGas =
+					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxPriorityFeePerGas =
+					formatted.maxPriorityFeePerGas ??
+					(web3Utils.toBigInt(formatted.maxFeePerGas) >
+					web3Utils.toBigInt(gasFees.maxPriorityFeePerGas)
+						? formatted.maxFeePerGas
+						: gasFees.maxPriorityFeePerGas);
+			}
 		} else {
 			formatted.maxFeePerGas = formatted.maxFeePerGas ?? formatted.gasPrice;
 			formatted.maxPriorityFeePerGas = formatted.maxPriorityFeePerGas ?? formatted.gasPrice;
+		}
+
+		if (gasFees.gasPrice && (!formatted.maxFeePerGas || !formatted.maxPriorityFeePerGas)) {
+			formatted.gasPrice = gasFees.gasPrice;
 		}
 
 		return formatted;
@@ -570,9 +634,9 @@ export class Web3ZkSync extends Web3.Web3 {
 		) {
 			return this.populateTransactionAndGasPrice(transaction);
 		}
+
 		const populated = (await this.populateTransactionAndGasPrice(transaction)) as Eip712TxData;
-		populated.type = BigInt(EIP712_TX_TYPE);
-		populated.value ??= 0;
+		populated.value ??= 0n;
 		populated.data ??= '0x';
 
 		populated.customData = this.fillCustomData(
@@ -583,18 +647,17 @@ export class Web3ZkSync extends Web3.Web3 {
 
 	async signTransaction(tx: Transaction): Promise<string> {
 		if (tx.type && toHex(tx.type) === toHex(EIP712_TX_TYPE)) {
-			const data = EIP712.getSignInput(tx as Eip712TxData);
-			// @ts-ignore
-			delete data.txType;
-			data.type = EIP712_TX_TYPE;
 			const signer = await this._eip712Signer();
-			data.chainId = signer.getDomain().chainId;
-			data.customData = {
-				customSignature: signer.sign(data)?.serialized,
+			tx.chainId = signer.getDomain().chainId;
+			// @ts-ignore
+			tx.customData = {
+				// @ts-ignore
+				...(tx.customData || {}),
+				customSignature: await signer.sign(tx as Eip712TxData),
 			};
-			return EIP712.serialize(data);
+			// @ts-ignore
+			return EIP712.serialize(tx);
 		}
-
 		const account = this.eth.accounts.wallet.get(tx.from!);
 
 		if (!account) {
@@ -605,26 +668,6 @@ export class Web3ZkSync extends Web3.Web3 {
 		return res.rawTransaction;
 	}
 	async sendRawTransaction(signedTx: string) {
-		// tx.chainId = await this._contextL2().eth.getChainId();
-		// const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
-		// const data = { ...tx, ...other };
-		// @ts-ignore
-		// return this._contextL2().eth.sendTransaction(data);
-
-		//
-		// const populated = await this.populateTransaction(tx);
-
-		// const signedTx = await this.signTransaction(populated);
-
-		// data.nonce = await this._contextL2().eth.getTransactionCount(this.getAddress(), 'pending');
-		// const { gasPrice, ...other } = await this._contextL2().eth.calculateFeeData();
-		// const dataWithGas = { ...data, ...other, gasLimit: 5000000n };
-		//
-		// dataWithGas.customData = {
-		// 	customSignature: signer.sign(dataWithGas)?.serialized,
-		// };
-		//
-		// const serialized = EIP712.serialize(dataWithGas);
 		return ethRpcMethods.sendRawTransaction(this.requestManager, signedTx);
 	}
 }

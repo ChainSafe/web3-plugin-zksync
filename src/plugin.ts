@@ -4,7 +4,6 @@ import type { Address } from 'web3-types';
 import { Contract } from 'web3-eth-contract';
 import { Web3PluginBase } from 'web3-core';
 
-import { TransactionFactory } from 'web3-eth-accounts';
 import { IERC20ABI } from './contracts/IERC20';
 import { RpcMethods } from './rpc.methods';
 import * as constants from './constants';
@@ -16,71 +15,35 @@ import { IL1MessengerABI } from './contracts/IL1Messenger';
 import { IERC1271ABI } from './contracts/IERC1271';
 import { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
-import { EIP712Transaction } from './Eip712';
-import { ZKSyncWallet } from './zksync-wallet';
-import { Web3ZkSyncL2 } from './web3zksync-l2';
-import { Web3ZkSyncL1 } from './web3zksync-l1';
-import type { ContractsAddresses } from './types';
+import { ZKsyncWallet } from './zksync-wallet';
+import { Web3ZKsyncL2 } from './web3zksync-l2';
+import { Web3ZKsyncL1 } from './web3zksync-l1';
+import type { ContractsAddresses, ZKSyncContractsCollection } from './types';
 
 interface ZKSyncWalletConstructor {
-	new (privateKey: string): ZKSyncWallet;
+	new (privateKey: string): ZKsyncWallet;
 }
 
-export type ZKSyncContractsCollection = {
-	Generic: {
-		/**
-		 * The web3.js Contract instance for the `IERC20` interface, which is utilized for interacting with ERC20 tokens.
-		 */
-		IERC20Contract: Contract<typeof IERC20ABI>;
-		/**
-		 * The web3.js Contract instance for the `IERC1271` interface, which is utilized for signature validation by contracts.
-		 */
-		IERC1271Contract: Contract<typeof IERC1271ABI>;
-	};
-	L1: {
-		/**
-		 * The web3.js Contract instance for the `ZkSync` interface.
-		 */
-		ZkSyncMainContract: Contract<typeof IZkSyncABI>;
-		/**
-		 * The ABI of the `Bridgehub` interface.
-		 */
-		BridgehubContract: Contract<typeof IBridgehubABI>;
-		/**
-		 * The web3.js Contract instance for the `IL1Bridge` interface, which is utilized for transferring ERC20 tokens from L1 to L2.
-		 */
-		L1BridgeContract: Contract<typeof IL1BridgeABI>;
-	};
-	L2: {
-		/**
-		 * The web3.js Contract instance for the `IContractDeployer` interface, which is utilized for deploying smart contracts.
-		 */
-		ContractDeployerContract: Contract<typeof IContractDeployerABI>;
-		/**
-		 * The web3.js Contract instance for the `IL1Messenger` interface, which is utilized for sending messages from the L2 to L1.
-		 */
-		L1MessengerContract: Contract<typeof IL1MessengerABI>;
-		/**
-		 * The web3.js Contract instance for the `IL2Bridge` interface, which is utilized for transferring ERC20 tokens from L2 to L1.
-		 */
-		L2BridgeContract: Contract<typeof IL2BridgeABI>;
+export class ZKsyncPlugin extends Web3PluginBase {
+	/**
+	 * Connection to the L1 chain (derived from the Web3 object the plugin is registered with)
+	 */
+	public L1: Web3ZKsyncL1 | undefined;
 
-		/**
-		 * The web3.js Contract instance for the `INonceHolder` interface, which is utilized for managing deployment nonces.
-		 */
-		NonceHolderContract: Contract<typeof INonceHolderABI>;
-	};
-};
-
-export class ZkSyncPlugin extends Web3PluginBase {
-	public L1: Web3ZkSyncL1 | undefined;
-	public L2: Web3ZkSyncL2;
-	public pluginNamespace = 'zkSync';
+	/**
+	 * Connection to the ZKsync Era chain
+	 */
+	public L2: Web3ZKsyncL2;
+	public pluginNamespace = 'ZKsync';
 	public _rpc?: RpcMethods;
 	public _l2BridgeContracts: Record<Address, Contract<typeof IL2BridgeABI>>;
 	public _erc20Contracts: Record<Address, Contract<typeof IERC20ABI>>;
 
 	private contracts: ZKSyncContractsCollection | undefined;
+
+	/**
+	 * Returns initialized instances of the main contract and bridging contracts, calling {@link initContracts} if necessary
+	 */
 	public get Contracts(): Promise<ZKSyncContractsCollection> {
 		if (this.contracts) {
 			return Promise.resolve(this.contracts);
@@ -88,7 +51,14 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		return this.initContracts();
 	}
 
+	/**
+	 * Addresses for the main contract and bridging contracts
+	 */
 	contractsAddresses: Promise<ContractsAddresses>;
+
+	/**
+	 * Returns addresses for the main contract and bridging contracts, calling {@link initContractsAddresses} if necessary
+	 */
 	public get ContractsAddresses(): Promise<ContractsAddresses> {
 		if (this.contractsAddresses) {
 			return Promise.resolve(this.contractsAddresses);
@@ -96,11 +66,25 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		return this.initContractsAddresses();
 	}
 
+	/**
+	 * Returns a convenience constructor for creating a {@link ZKsyncWallet} that uses the plugin's {@link L1} and {@link L2} providers
+	 *
+	 * @example
+	 *
+	 * import { Web3 } from "web3";
+	 * import { ZKsyncPlugin } from "web3-plugin-zksync";
+	 *
+	 * const web3 = new Web3("https://rpc.sepolia.org");
+	 * web3.registerPlugin(new ZKsyncPlugin("https://sepolia.era.zksync.dev"));
+	 *
+	 * const PRIVATE_KEY = "<WALLET_PRIVATE_KEY>";
+	 * const zkWallet = new web3.ZKsync.ZkWallet(PRIVATE_KEY);
+	 */
 	// the wallet type in this class is different from the parent class. So, they should have different names.
 	ZkWallet: ZKSyncWalletConstructor;
 
 	/**
-	 * Constructor
+	 * Create a new ZKsync plugin for the provided L2 network
 	 * @param providerOrContextL2 - The provider or context for the L2 network
 	 */
 	constructor(
@@ -108,7 +92,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 			| string
 			| web3Types.SupportedProviders<any>
 			| Web3ContextInitOptions
-			| Web3ZkSyncL2,
+			| Web3ZKsyncL2,
 	) {
 		super(
 			providerOrContextL2 as
@@ -116,13 +100,13 @@ export class ZkSyncPlugin extends Web3PluginBase {
 				| web3Types.SupportedProviders<any>
 				| Web3ContextInitOptions,
 		);
-		if (providerOrContextL2 instanceof Web3ZkSyncL2) {
+		if (providerOrContextL2 instanceof Web3ZKsyncL2) {
 			this.L2 = providerOrContextL2;
 		} else {
-			this.L2 = new Web3ZkSyncL2(providerOrContextL2);
+			this.L2 = new Web3ZKsyncL2(providerOrContextL2);
 		}
 		// @ts-ignore-next-line
-		TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
+		// TransactionFactory.registerTransactionType(constants.EIP712_TX_TYPE, EIP712Transaction);
 
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
@@ -130,7 +114,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this.contractsAddresses = this.initContractsAddresses();
 
 		const self = this;
-		class ZKSyncWalletWithFullContext extends ZKSyncWallet {
+		class ZKSyncWalletWithFullContext extends ZKsyncWallet {
 			constructor(privateKey: string) {
 				super(privateKey, self.L2, self.L1);
 			}
@@ -140,6 +124,10 @@ export class ZkSyncPlugin extends Web3PluginBase {
 		this.initWallet();
 	}
 
+	/**
+	 * Initializes a {@link ZKSyncContractsCollection} with the contracts' ABIs and addresses for the plugin's {@link L1} and {@link L2} providers
+	 * Use {@link ZKsyncPlugin.Contracts} to make use of caching
+	 */
 	public async initContracts() {
 		if (!this.L1 || !this.L2) {
 			throw new Error(
@@ -193,8 +181,9 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	}
 
 	/**
-	 * Try to fill the contract addresses
-	 * @returns True if the contract addresses were successfully filled, false otherwise
+	 * Populate the main contract and bridging contract addresses for the plugin's {@link L1} and {@link L2} providers
+	 * Use {@link ZKsyncPlugin.ContractsAddresses} to make use of caching
+	 * @returns The contract addresses
 	 */
 	public async initContractsAddresses() {
 		const [mainContract, bridgehubContractAddress, bridgeContracts] = await Promise.all([
@@ -214,7 +203,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	public link(parentContext: Web3Context): void {
 		super.link(parentContext);
 
-		this.L1 = new Web3ZkSyncL1(parentContext);
+		this.L1 = new Web3ZKsyncL1(parentContext);
 
 		this.initContracts();
 
@@ -223,7 +212,7 @@ export class ZkSyncPlugin extends Web3PluginBase {
 
 	private initWallet() {
 		const self = this;
-		class ZKSyncWalletWithFullContext extends ZKSyncWallet {
+		class ZKSyncWalletWithFullContext extends ZKsyncWallet {
 			constructor(privateKey: string) {
 				super(privateKey, self.L2, self.L1);
 			}
@@ -255,18 +244,18 @@ export class ZkSyncPlugin extends Web3PluginBase {
 	 */
 	public updateProviders(
 		contextL1:
-			| Web3ZkSyncL1
+			| Web3ZKsyncL1
 			| web3Types.SupportedProviders<any>
 			| Web3ContextInitOptions
 			| string,
 		contextL2:
-			| Web3ZkSyncL2
+			| Web3ZKsyncL2
 			| web3Types.SupportedProviders<any>
 			| Web3ContextInitOptions
 			| string,
 	) {
-		this.L1 = contextL1 instanceof Web3ZkSyncL1 ? contextL1 : new Web3ZkSyncL1(contextL1);
-		this.L2 = contextL2 instanceof Web3ZkSyncL2 ? contextL2 : new Web3ZkSyncL2(contextL2);
+		this.L1 = contextL1 instanceof Web3ZKsyncL1 ? contextL1 : new Web3ZKsyncL1(contextL1);
+		this.L2 = contextL2 instanceof Web3ZKsyncL2 ? contextL2 : new Web3ZKsyncL2(contextL2);
 		this.initContractsAddresses();
 		this.initContracts();
 	}
@@ -355,6 +344,6 @@ export class ZkSyncPlugin extends Web3PluginBase {
 // Module Augmentation
 declare module 'web3' {
 	interface Web3 {
-		zkSync: ZkSyncPlugin;
+		ZKsync: ZKsyncPlugin;
 	}
 }

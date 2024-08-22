@@ -1,12 +1,19 @@
 import type * as web3Types from 'web3-types';
 import * as web3Utils from 'web3-utils';
 import * as Web3EthAbi from 'web3-eth-abi';
-import { DEFAULT_RETURN_FORMAT } from 'web3';
+import { DEFAULT_RETURN_FORMAT, HexString } from 'web3';
 import * as Web3 from 'web3';
 import type { PayableMethodObject, PayableTxOptions } from 'web3-eth-contract';
-import { toBigInt, toHex, toNumber } from 'web3-utils';
-import type { Transaction, TransactionHash, TransactionReceipt } from 'web3-types';
-import type { Web3ZkSyncL2 } from './web3zksync-l2';
+import { format, toBigInt, toHex, toNumber } from 'web3-utils';
+import {
+	Bytes,
+	ETH_DATA_FORMAT,
+	Numbers,
+	Transaction,
+	TransactionHash,
+	TransactionReceipt,
+} from 'web3-types';
+import type { Web3ZKsyncL2 } from './web3zksync-l2';
 
 import type { EIP712Signer } from './utils';
 import {
@@ -36,7 +43,7 @@ import {
 	LEGACY_ETH_ADDRESS,
 	EIP712_TX_TYPE,
 } from './constants';
-import type {
+import {
 	Address,
 	FinalizeWithdrawalParams,
 	FullDepositFee,
@@ -45,6 +52,7 @@ import type {
 	PriorityOpResponse,
 	WalletBalances,
 	Eip712TxData,
+	ZKTransactionReceiptLog,
 } from './types';
 import { ZeroAddress, ZeroHash } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
@@ -54,7 +62,7 @@ import { IL1BridgeABI } from './contracts/IL1Bridge';
 import { Abi as IL1SharedBridgeABI } from './contracts/IL1SharedBridge';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
-import type { Web3ZkSyncL1 } from './web3zksync-l1';
+import type { Web3ZKsyncL1 } from './web3zksync-l1';
 
 interface TxSender {
 	getAddress(): Promise<Address>;
@@ -64,19 +72,19 @@ export class AdapterL1 implements TxSender {
 	/**
 	 * Returns a provider instance for connecting to an L2 network.
 	 */
-	protected _contextL2(): Web3ZkSyncL2 {
+	protected _contextL2(): Web3ZKsyncL2 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
 	/**
 	 * Returns a context (provider + Signer) instance for connecting to a L1 network.
 	 */
-	protected _contextL1(): Web3ZkSyncL1 {
+	protected _contextL1(): Web3ZKsyncL1 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 
 	/**
-	 * Returns `Contract` wrapper of the zkSync Era smart contract.
+	 * Returns `Contract` wrapper of the ZKsync Era smart contract.
 	 */
 	async getMainContract(
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
@@ -158,13 +166,7 @@ export class AdapterL1 implements TxSender {
 	 */
 	async getBalanceL1(token?: Address, blockTag?: web3Types.BlockNumberOrTag): Promise<bigint> {
 		token ??= LEGACY_ETH_ADDRESS;
-		if (isETH(token)) {
-			return await this._contextL1().eth.getBalance(this.getAddress(), blockTag);
-		} else {
-			const erc20 = new (this._contextL1().eth.Contract)(IERC20ABI, token);
-
-			return await erc20.methods.balanceOf(this.getAddress()).call();
-		}
+		return await this._contextL1().getBalance(this.getAddress(), blockTag, token);
 	}
 
 	/**
@@ -172,7 +174,7 @@ export class AdapterL1 implements TxSender {
 	 *
 	 * @param token The Ethereum address of the token.
 	 * @param [bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge, either `L1EthBridge` or `L1Erc20Bridge`.
+	 * Defaults to the default ZKsync Era bridge, either `L1EthBridge` or `L1Erc20Bridge`.
 	 * @param [blockTag] The block in which an allowance should be checked.
 	 * Defaults to 'committed', i.e., the latest processed block.
 	 */
@@ -199,7 +201,7 @@ export class AdapterL1 implements TxSender {
 	 * Returns the L2 token address equivalent for a L1 token address as they are not necessarily equal.
 	 * The ETH address is set to the zero address.
 	 *
-	 * @remarks Only works for tokens bridged on default zkSync Era bridges.
+	 * @remarks Only works for tokens bridged on default ZKsync Era bridges.
 	 *
 	 * @param token The address of the token on L1.
 	 */
@@ -208,7 +210,7 @@ export class AdapterL1 implements TxSender {
 	}
 
 	/**
-	 * Bridging ERC20 tokens from L1 requires approving the tokens to the zkSync Era smart contract.
+	 * Bridging ERC20 tokens from L1 requires approving the tokens to the ZKsync Era smart contract.
 	 *
 	 * @param token The L1 address of the token.
 	 * @param amount The amount of the token to be approved.
@@ -353,7 +355,7 @@ export class AdapterL1 implements TxSender {
 	 * explicitly stated in the overrides, this field will be equal to the tip the operator will receive on top of
 	 * the base cost of the transaction.
 	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
+	 * Defaults to the default ZKsync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.approveERC20] Whether or not token approval should be performed under the hood.
 	 * Set this flag to true if you bridge an ERC20 token and didn't call the {@link approveERC20} function beforehand.
 	 * @param [transaction.approveBaseERC20] Whether or not base token approval should be performed under the hood.
@@ -386,6 +388,7 @@ export class AdapterL1 implements TxSender {
 		approveBaseOverrides?: TransactionOverrides;
 		customBridgeData?: web3Types.Bytes;
 	}): Promise<PriorityOpResponse> {
+		transaction.amount = format({ format: 'uint' }, transaction.amount, ETH_DATA_FORMAT);
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}
@@ -642,7 +645,7 @@ export class AdapterL1 implements TxSender {
 	 * explicitly stated in the overrides, this field will be equal to the tip the operator will receive on top of the
 	 * base cost of the transaction.
 	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
+	 * Defaults to the default ZKsync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.l2GasLimit] Maximum amount of L2 gas that the transaction can consume during execution on L2.
 	 * @param [transaction.gasPerPubdataByte] The L2 gas price for each published L1 calldata byte.
 	 * @param [transaction.customBridgeData] Additional data that can be sent to a bridge.
@@ -687,7 +690,7 @@ export class AdapterL1 implements TxSender {
 	 * @param [transaction.operatorTip] (currently not used) If the ETH value passed with the transaction is not
 	 * explicitly stated in the overrides, this field will be equal to the tip the operator will receive on top of the
 	 * base cost of the transaction.
-	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used. Defaults to the default zkSync
+	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used. Defaults to the default ZKsync
 	 * Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.l2GasLimit] Maximum amount of L2 gas that the transaction can consume during execution on L2.
 	 * @param [transaction.gasPerPubdataByte] The L2 gas price for each published L1 calldata byte.
@@ -1111,7 +1114,7 @@ export class AdapterL1 implements TxSender {
 	 * @param transaction.token The address of the token to deposit. ETH by default.
 	 * @param [transaction.to] The address that will receive the deposited tokens on L2.
 	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * Defaults to the default zkSync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
+	 * Defaults to the default ZKsync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
 	 * @param [transaction.customBridgeData] Additional data that can be sent to a bridge.
 	 * @param [transaction.gasPerPubdataByte] The L2 gas price for each published L1 calldata byte.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L1 `gasLimit`, `gasPrice`, `value`, etc.
@@ -1241,20 +1244,32 @@ export class AdapterL1 implements TxSender {
 		return this._contextL2().getPriorityOpConfirmation(txHash, index);
 	}
 
-	async _getWithdrawalLog(withdrawalHash: web3Types.Bytes, index = 0) {
+	async _getWithdrawalLog(
+		withdrawalHash: web3Types.Bytes,
+		index = 0,
+	): Promise<{
+		log: ZKTransactionReceiptLog;
+		l1BatchTxId: Numbers;
+	}> {
 		const hash = web3Utils.toHex(withdrawalHash);
 		const receipt = await this._contextL2().getZKTransactionReceipt(hash);
 		if (!receipt) {
 			// @todo: or throw?
-			return {};
+			return {
+				// @ts-ignore
+				log: {},
+				l1BatchTxId: 0n,
+			};
 		}
+
+		const topic = id('L1MessageSent(address,bytes32,bytes)');
 		// @ts-ignore
 		const log = (receipt?.logs || []).filter(
 			// @ts-ignore
-			log =>
-				isAddressEq(String(log?.address), L1_MESSENGER_ADDRESS) &&
-				log?.topics &&
-				String(log?.topics[0]) === id('L1MessageSent(address,bytes32,bytes)'),
+			l =>
+				isAddressEq(String(l?.address), L1_MESSENGER_ADDRESS) &&
+				l?.topics &&
+				String(l?.topics[0]) === topic,
 		)[index];
 
 		return {
@@ -1304,13 +1319,13 @@ export class AdapterL1 implements TxSender {
 		if (!proof) {
 			throw new Error('Log proof not found!');
 		}
-		const message = Web3EthAbi.decodeParameters(['bytes'], log?.data)[0];
+		const message = Web3EthAbi.decodeParameters(['bytes'], log.data as HexString)[0];
 		return {
 			l1BatchNumber: log.l1BatchNumber,
 			l2MessageIndex: Number(toNumber(proof.id)),
-			l2TxNumberInBlock: l1BatchTxId ? Number(toNumber(l1BatchTxId)) : null,
+			l2TxNumberInBlock: l1BatchTxId !== undefined ? Number(toNumber(l1BatchTxId)) : null,
 			message,
-			sender,
+			sender: sender as Address,
 			proof: proof.proof,
 		};
 	}
@@ -1367,7 +1382,7 @@ export class AdapterL1 implements TxSender {
 	async isWithdrawalFinalized(withdrawalHash: web3Types.Bytes, index = 0): Promise<boolean> {
 		const { log } = await this._getWithdrawalLog(withdrawalHash, index);
 		const { l2ToL1LogIndex } = await this._getWithdrawalL2ToL1Log(withdrawalHash, index);
-		const sender = dataSlice(log.topics[1], 12);
+		const sender = dataSlice((log && log.topics && log.topics[1]) as unknown as Bytes, 12);
 		// `getLogProof` is called not to get proof but
 		// to get the index of the corresponding L2->L1 log,
 		// which is returned as `proof.id`.
@@ -1388,11 +1403,11 @@ export class AdapterL1 implements TxSender {
 		} else {
 			const l2BridgeContract = new (this._contextL2().eth.Contract)(IL2BridgeABI, sender);
 			const l1BridgeAddress = await l2BridgeContract.methods.l1Bridge().call();
-			l1Bridge = new (this._contextL1().eth.Contract)(IL1BridgeABI, l1BridgeAddress);
+			l1Bridge = new (this._contextL1().eth.Contract)(IL1SharedBridgeABI, l1BridgeAddress);
 		}
 
 		return await l1Bridge.methods
-			.isWithdrawalFinalized(chainId, log.l1BatchNumber, proof.id)
+			.isWithdrawalFinalized(chainId, log!.l1BatchNumber, proof.id)
 			.call();
 	}
 
@@ -1439,9 +1454,8 @@ export class AdapterL1 implements TxSender {
 		const l2Bridge = new Web3.Contract(IL2BridgeABI, l1BridgeAddress);
 		l2Bridge.setProvider(this._contextL2().provider);
 
-		const calldata = l2Bridge.methods
-			.finalizeDeposit()
-			.decodeData(web3Utils.toHex(String(tx.data)));
+		const m = l2Bridge.methods.finalizeDeposit(tx.from, tx.from, tx.from, 0n, '0x');
+		const calldata = m.decodeData(tx.data as HexString);
 
 		const proof = await this._contextL2().getL2ToL1LogProof(
 			web3Utils.toHex(depositHash),
@@ -1464,7 +1478,10 @@ export class AdapterL1 implements TxSender {
 					proof.proof,
 				)
 				// @ts-ignore
-				.send(overrides ?? {})
+				.send({
+					from: this.getAddress(),
+					...(overrides ?? {}),
+				})
 		);
 	}
 
@@ -1502,7 +1519,7 @@ export class AdapterL1 implements TxSender {
 		const tx = await this.getRequestExecuteTx(transaction);
 		return this.signAndSend(tx);
 	}
-	async signAndSend(tx: Transaction, _context?: Web3ZkSyncL1 | Web3ZkSyncL2) {
+	async signAndSend(tx: Transaction, _context?: Web3ZKsyncL1 | Web3ZKsyncL2) {
 		const context = _context || this._contextL1();
 		const populated = await context.populateTransaction(tx);
 		const signed = await context.signTransaction(populated as Transaction);
@@ -1747,7 +1764,7 @@ export class AdapterL2 implements TxSender {
 	/**
 	 * Returns a context (provider + Signer) instance for connecting to an L2 network.
 	 */
-	_contextL2(): Web3ZkSyncL2 {
+	_contextL2(): Web3ZKsyncL2 {
 		throw new Error('Must be implemented by the derived class!');
 	}
 	async _eip712Signer(): Promise<EIP712Signer> {
@@ -1764,12 +1781,7 @@ export class AdapterL2 implements TxSender {
 		token?: Address,
 		blockTag: web3Types.BlockNumberOrTag = 'committed',
 	): Promise<bigint> {
-		if (token) {
-			const contract = new (this._contextL2().eth.Contract)(IERC20ABI, token);
-			return contract.methods.balanceOf(this.getAddress()).call();
-		}
-
-		return await this._contextL2().eth.getBalance(this.getAddress(), blockTag);
+		return await this._contextL2().getBalance(this.getAddress(), blockTag, token);
 	}
 
 	/**
@@ -1864,13 +1876,13 @@ export class AdapterL2 implements TxSender {
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 * @returns A Promise resolving to a transfer transaction response.
 	 */
-	async transfer(transaction: {
+	async transferTx(transaction: {
 		to: Address;
 		amount: web3Types.Numbers;
 		token?: Address;
 		paymasterParams?: PaymasterParams;
 		overrides?: TransactionOverrides;
-	}) {
+	}): Promise<Transaction> {
 		return this._contextL2().getTransferTx({
 			from: this.getAddress(),
 			...transaction,
