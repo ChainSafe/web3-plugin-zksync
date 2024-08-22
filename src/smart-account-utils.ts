@@ -8,6 +8,7 @@ import * as utils from './utils';
 import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
 import { Transaction } from 'web3-types';
 import { Address } from 'web3';
+import { format } from 'web3-utils';
 
 /**
  * Signs the `payload` using an ECDSA private key.
@@ -166,16 +167,19 @@ export const populateTransactionECDSA: TransactionBuilder = async (
 		return provider.eip712;
 	};
 	tx.type = EIP712_TX_TYPE;
-	tx.chainId ??= await provider.eth.getChainId();
-	tx.value = tx.value ? tx.value : 0n;
+	tx.chainId = format({ format: 'uint' }, tx.chainId ?? (await provider.eth.getChainId()));
+	tx.value = format({ format: 'uint' }, tx.value ? tx.value : 0n);
 	tx.data ??= '0x';
-	tx.gasPrice ??= await provider.eth.getGasPrice();
-	tx.nonce ??= await provider.eth.getTransactionCount(tx.from as Address, 'pending');
+	tx.gasPrice = format({ format: 'uint' }, tx.gasPrice ?? (await provider.eth.getGasPrice()));
+	tx.nonce = format(
+		{ format: 'uint' },
+		tx.nonce ?? (await provider.eth.getTransactionCount(tx.from as Address, 'pending')),
+	);
 	tx.customData = tx.customData ?? {};
 	tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;
 	tx.customData.factoryDeps ??= [];
 	tx.from = tx.from ?? account.address;
-	tx.type = EIP712_TX_TYPE;
+	tx.type = format({ format: 'uint' }, EIP712_TX_TYPE);
 
 	tx.customData = tx.customData ?? {};
 	tx.customData.gasPerPubdata ??= DEFAULT_GAS_PER_PUBDATA_LIMIT;

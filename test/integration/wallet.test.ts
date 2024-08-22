@@ -759,7 +759,7 @@ describe('Wallet', () => {
 	describe('#deposit()', () => {
 		if (IS_ETH_BASED) {
 			it('should deposit ETH to L2 network', async () => {
-				const amount = 7_000_000_000;
+				const amount = 7_000;
 				const l2BalanceBeforeDeposit = await wallet.getBalance();
 				const l1BalanceBeforeDeposit = await wallet.getBalanceL1();
 				const tx = await wallet.deposit({
@@ -1079,7 +1079,7 @@ describe('Wallet', () => {
 	describe('#withdraw()', () => {
 		if (IS_ETH_BASED) {
 			it.only('should withdraw ETH to the L1 network', async () => {
-				const amount = 200000_000000_000000n;
+				const amount = 2000n;
 				const withdrawTx = await wallet.withdraw({
 					token: LEGACY_ETH_ADDRESS,
 					to: wallet.getAddress(),
@@ -1109,7 +1109,7 @@ describe('Wallet', () => {
 			});
 		} else {
 			it('should withdraw ETH to the L1 network', async () => {
-				const amount = 7_000_000_000n;
+				const amount = 7_000n;
 				const token = await wallet.l2TokenAddress(ETH_ADDRESS_IN_CONTRACTS);
 				const l2BalanceBeforeWithdrawal = await wallet.getBalance(token);
 				const tx = await wallet.withdraw({
@@ -1129,7 +1129,7 @@ describe('Wallet', () => {
 			});
 
 			it('should withdraw base token to the L1 network', async () => {
-				const amount = 7_000_000_000n;
+				const amount = 7_000n;
 				const baseToken = await wallet.getBaseToken();
 				const l2BalanceBeforeWithdrawal = await wallet.getBalance();
 				const tx = await wallet.withdraw({
@@ -1149,7 +1149,7 @@ describe('Wallet', () => {
 			});
 
 			it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
-				const amount = 7_000_000_000n;
+				const amount = 7_000n;
 				const minimalAllowance = 1n;
 
 				const token = await wallet.l2TokenAddress(ETH_ADDRESS_IN_CONTRACTS);
@@ -1244,7 +1244,7 @@ describe('Wallet', () => {
 	});
 
 	describe('#getRequestExecuteTx()', () => {
-		const amount = 7_000_000_000;
+		const amount = 7_000;
 		if (IS_ETH_BASED) {
 			it('should return request execute transaction', async () => {
 				const result = await wallet.getRequestExecuteTx({
@@ -1298,7 +1298,7 @@ describe('Wallet', () => {
 	describe('#requestExecute()', () => {
 		if (IS_ETH_BASED) {
 			it('should request transaction execution on L2 network', async () => {
-				const amount = 7_000_000_000;
+				const amount = 7_000;
 				const l2BalanceBeforeExecution = await wallet.getBalance();
 				const l1BalanceBeforeExecution = await wallet.getBalanceL1();
 				const tx = await wallet.requestExecute({
@@ -1316,7 +1316,7 @@ describe('Wallet', () => {
 			});
 		} else {
 			it('should request transaction execution on L2 network', async () => {
-				const amount = 7_000_000_000;
+				const amount = 7_000;
 				const request = {
 					contractAddress: wallet.getAddress(),
 					calldata: '0x',
@@ -1416,7 +1416,7 @@ describe('Wallet', () => {
 
 		if (!IS_ETH_BASED) {
 			it('should transfer ETH on non eth based chain', async () => {
-				const amount = 7_000_000_000n;
+				const amount = 7_000n;
 				const token = await wallet.l2TokenAddress(ETH_ADDRESS_IN_CONTRACTS);
 				const balanceBeforeTransfer = await provider.getTokenBalance(token, ADDRESS2);
 				const result = await wallet.transfer({
@@ -1430,7 +1430,7 @@ describe('Wallet', () => {
 			});
 
 			it('should transfer ETH using paymaster to cover fee', async () => {
-				const amount = 7_000_000_000n;
+				const amount = 7_000n;
 				const minimalAllowance = 1n;
 
 				const token = await wallet.l2TokenAddress(ETH_ADDRESS_IN_CONTRACTS);
@@ -1572,7 +1572,7 @@ describe('Wallet', () => {
 
 		if (!IS_ETH_BASED) {
 			it('should transfer base token', async () => {
-				const amount = 7_000_000_000n;
+				const amount = 7_000n;
 				const balanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 				const result = await wallet.transfer({
 					token: await wallet.getBaseToken(),

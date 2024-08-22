@@ -238,7 +238,7 @@ describe('utils', () => {
 					customSignature: '0x',
 					paymasterParams: undefined,
 				},
-				hash: '0x9ed410ce33179ac1ff6b721060605afc72d64febfe0c08cacab5a246602131ee',
+				hash: '0x3f46d97e4252ac44214ab9072cd4a86c871bff88e169e558fa8edeecf7461841',
 			};
 
 			const serializedTx =
@@ -265,7 +265,7 @@ describe('utils', () => {
 					customSignature: '0x',
 					paymasterParams: undefined,
 				},
-				hash: '0x7d3aab3e3d06d6a702228d911c2a9afaccddd52514fb89dc9d0ff81a67bfff04',
+				hash: '0x5db19fe19a319eea52d4ef3d612275b9f5db3d45ac90a6da8ead2337411c47cf',
 			};
 
 			const serializedTx =

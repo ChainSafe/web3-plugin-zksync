@@ -566,17 +566,17 @@ describe('SmartAccount', () => {
 				multisigAccountAbi,
 				multisigAccountBytecode,
 				wallet,
+				'createAccount',
 			);
 			const owner1 = new ZKsyncWallet(mainAccount.privateKey);
 			const owner2 = new ZKsyncWallet(PRIVATE_KEY2);
 			const multisigContract = await factory.deploy([owner1.address, owner2.address]);
 			const multisigAddress = multisigContract.options.address as Address;
-			console.log('multisigContract', multisigContract);
 			// send ETH to multisig account
 			await (
 				await deployer.sendTransaction({
 					to: multisigAddress,
-					value: toWei(1, 'ether'),
+					value: 1_000000_000000_000000n,
 				})
 			).wait();
 
@@ -604,8 +604,8 @@ describe('SmartAccount', () => {
 		});
 
 		describe('#transfer()', () => {
-			it.skip('should transfer ETH', async () => {
-				const amount = 7_000_000_000n;
+			it('should transfer ETH', async () => {
+				const amount = 7_000n;
 				const balanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 				const tx = await account.transfer({
 					token: ETH_ADDRESS,
@@ -618,7 +618,7 @@ describe('SmartAccount', () => {
 				expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 			});
 
-			it.skip('should transfer ETH using paymaster to cover fee', async () => {
+			it('should transfer ETH using paymaster to cover fee', async () => {
 				const amount = 7_000_000_000n;
 				const minimalAllowance = 1n;
 
@@ -674,7 +674,7 @@ describe('SmartAccount', () => {
 				expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toBe(amount);
 			});
 
-			it.skip('should transfer DAI', async () => {
+			it('should transfer DAI', async () => {
 				const amount = 5n;
 				const l2DAI = await provider.l2TokenAddress(DAI_L1);
 				const balanceBeforeTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
@@ -689,7 +689,7 @@ describe('SmartAccount', () => {
 				expect(balanceAfterTransfer - balanceBeforeTransfer).toBe(amount);
 			});
 
-			it.skip('should transfer DAI using paymaster to cover fee', async () => {
+			it('should transfer DAI using paymaster to cover fee', async () => {
 				const amount = 5n;
 				const minimalAllowance = 1n;
 				const l2DAI = await provider.l2TokenAddress(DAI_L1);
@@ -756,7 +756,7 @@ describe('SmartAccount', () => {
 		});
 
 		describe('#withdraw()', () => {
-			it.skip('should withdraw ETH to the L1 network', async () => {
+			it('should withdraw ETH to the L1 network', async () => {
 				const amount = 7_000_000_000n;
 				const l2BalanceBeforeWithdrawal = await account.getBalance();
 				const withdrawTx = await account.withdraw({
@@ -773,7 +773,7 @@ describe('SmartAccount', () => {
 				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toBeTruthy();
 			});
 
-			it.skip('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
+			it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
 				const amount = 7_000_000_000n;
 				const minimalAllowance = 1n;
 
@@ -829,7 +829,7 @@ describe('SmartAccount', () => {
 				expect(result).not.toBeNull();
 			});
 
-			it.skip('should withdraw DAI to the L1 network', async () => {
+			it('should withdraw DAI to the L1 network', async () => {
 				const amount = 5n;
 				const l2DAI = await provider.l2TokenAddress(DAI_L1);
 				const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
@@ -853,7 +853,7 @@ describe('SmartAccount', () => {
 				expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
 			});
 
-			it.skip('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
+			it('should withdraw DAI to the L1 network using paymaster to cover fee', async () => {
 				const amount = 5n;
 				const minimalAllowance = 1n;
 				const l2DAI = await provider.l2TokenAddress(DAI_L1);

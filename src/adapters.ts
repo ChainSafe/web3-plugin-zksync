@@ -4,8 +4,15 @@ import * as Web3EthAbi from 'web3-eth-abi';
 import { DEFAULT_RETURN_FORMAT, HexString } from 'web3';
 import * as Web3 from 'web3';
 import type { PayableMethodObject, PayableTxOptions } from 'web3-eth-contract';
-import { toBigInt, toHex, toNumber } from 'web3-utils';
-import type { Bytes, Numbers, Transaction, TransactionHash, TransactionReceipt } from 'web3-types';
+import { format, toBigInt, toHex, toNumber } from 'web3-utils';
+import {
+	Bytes,
+	ETH_DATA_FORMAT,
+	Numbers,
+	Transaction,
+	TransactionHash,
+	TransactionReceipt,
+} from 'web3-types';
 import type { Web3ZKsyncL2 } from './web3zksync-l2';
 
 import type { EIP712Signer } from './utils';
@@ -381,6 +388,7 @@ export class AdapterL1 implements TxSender {
 		approveBaseOverrides?: TransactionOverrides;
 		customBridgeData?: web3Types.Bytes;
 	}): Promise<PriorityOpResponse> {
+		transaction.amount = format({ format: 'uint' }, transaction.amount, ETH_DATA_FORMAT);
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}

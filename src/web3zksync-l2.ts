@@ -4,7 +4,7 @@
 // import type { Address, HexString } from 'web3';
 
 import type { Block } from 'web3';
-import { type BlockNumberOrTag, DEFAULT_RETURN_FORMAT } from 'web3-types';
+import { type BlockNumberOrTag, DEFAULT_RETURN_FORMAT, ETH_DATA_FORMAT } from 'web3-types';
 import type { Bytes, DataFormat, Numbers, Transaction, TransactionReceipt } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
@@ -154,6 +154,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 		overrides?: TransactionOverrides;
 	}) {
 		const { ...tx } = transaction;
+		tx.amount = format({ format: 'uint' }, transaction.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();
 
 		// In case of Ether on non Ether based chain it should get l2 Ether address,
@@ -245,6 +246,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 		overrides?: TransactionOverrides;
 	}) {
 		const { ...tx } = transaction;
+		tx.amount = format({ format: 'uint' }, tx.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();
 
 		// In case of Ether on non Ether based chain it should get l2 Ether address,

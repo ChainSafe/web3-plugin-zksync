@@ -318,7 +318,6 @@ export class SmartAccount extends AdapterL2 {
 			this._contextL2(),
 		);
 	}
-
 	/**
 	 * Signs a `message` using the provided {@link PayloadSigner} function.
 	 *

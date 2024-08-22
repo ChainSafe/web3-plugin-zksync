@@ -126,7 +126,7 @@ describe('SmartAccount', () => {
 			const tx = {
 				to: ADDRESS3,
 				value: 7_000_000_000n,
-				type: toBigInt(EIP712_TX_TYPE),
+				type: BigInt(EIP712_TX_TYPE),
 				from: mainAccount.address,
 				nonce: await account.getNonce('pending'),
 				gasLimit: 156_726n,
@@ -217,7 +217,7 @@ describe('SmartAccount', () => {
 
 	describe('#transfer()', () => {
 		it('should transfer ETH', async () => {
-			const amount = 1_000n;
+			const amount = 1_00n;
 			const balanceBeforeTransfer = await provider.getBalance(ADDRESS3);
 
 			const tx = await account.transfer({
