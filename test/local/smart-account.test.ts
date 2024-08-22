@@ -145,7 +145,7 @@ describe('SmartAccount', () => {
 			const tx = {
 				to: ADDRESS2,
 				value: 7_000_000_000n,
-				type: EIP712_TX_TYPE,
+				type: BigInt(EIP712_TX_TYPE),
 				from: mainAccount.address,
 				nonce: await account.getNonce('pending'),
 				gasLimit: 156_726n,
@@ -174,7 +174,7 @@ describe('SmartAccount', () => {
 			const tx = {
 				to: ADDRESS2,
 				value: 7_000_000n,
-				type: EIP712_TX_TYPE,
+				type: BigInt(EIP712_TX_TYPE),
 				from: mainAccount.address,
 				nonce: await account.getNonce('pending'),
 				chainId: 270n,

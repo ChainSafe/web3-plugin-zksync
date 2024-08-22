@@ -1078,7 +1078,7 @@ describe('Wallet', () => {
 
 	describe('#withdraw()', () => {
 		if (IS_ETH_BASED) {
-			it.only('should withdraw ETH to the L1 network', async () => {
+			it('should withdraw ETH to the L1 network', async () => {
 				const amount = 2000n;
 				const withdrawTx = await wallet.withdraw({
 					token: LEGACY_ETH_ADDRESS,

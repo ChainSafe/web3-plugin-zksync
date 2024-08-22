@@ -230,7 +230,7 @@ describe('Wallet', () => {
 			const l2BalanceAfterWithdrawal = await wallet.getBalance(l2DAI);
 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
 			expect(result).not.toBeNull();
-			expect(l2BalanceBeforeWithdrawal > l2BalanceAfterWithdrawal).toBe(amount);
+			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
 			expect(l1BalanceAfterWithdrawal - l1BalanceBeforeWithdrawal).toBe(amount);
 		});
 
