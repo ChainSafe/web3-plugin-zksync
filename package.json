@@ -12,6 +12,7 @@
 		"lint": "eslint '{src,test}/**/*.ts'",
 		"lint:fix": "eslint '{src,test}/**/*.ts' --fix",
 		"build": "tsc --project tsconfig.build.json",
+		"build:docs": "npx -y typedoc src/index.ts",
 		"test": "jest --config=./test/jest.config.js",
 		"test:unit": "jest --config=./test/jest.config.js test/unit",
 		"test:local": "jest --config=./test/jest.config.js --runInBand --maxConcurrency=1 test/local",
