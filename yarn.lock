@@ -6740,6 +6740,19 @@ web3-eth-accounts@^4.1.3, web3-eth-accounts@^4.2.0:
     web3-utils "^4.3.1"
     web3-validator "^2.0.6"
 
+web3-eth-accounts@^4.2.1:
+  version "4.2.1"
+  resolved "https://registry.yarnpkg.com/web3-eth-accounts/-/web3-eth-accounts-4.2.1.tgz#db27399137e1a26f9d467b9500019a70771f5724"
+  integrity sha512-aOlEZFzqAgKprKs7+DGArU4r9b+ILBjThpeq42aY7LAQcP+mSpsWcQgbIRK3r/n3OwTYZ3aLPk0Ih70O/LwnYA==
+  dependencies:
+    "@ethereumjs/rlp" "^4.0.1"
+    crc-32 "^1.2.2"
+    ethereum-cryptography "^2.0.0"
+    web3-errors "^1.3.0"
+    web3-types "^1.7.0"
+    web3-utils "^4.3.1"
+    web3-validator "^2.0.6"
+
 web3-eth-contract@^4.5.0, web3-eth-contract@^4.7.0:
   version "4.7.0"
   resolved "https://registry.yarnpkg.com/web3-eth-contract/-/web3-eth-contract-4.7.0.tgz#119a744e8a35f60fd7bc3e4f8637f0380a3d0e85"
@@ -6897,16 +6910,16 @@ web3-validator@^2.0.3, web3-validator@^2.0.6:
     web3-types "^1.6.0"
     zod "^3.21.4"
 
-web3@^4.12.0:
-  version "4.12.0"
-  resolved "https://registry.yarnpkg.com/web3/-/web3-4.12.0.tgz#de9e58fed881fc496963fc356466e55cbe5c2375"
-  integrity sha512-AewEA9NKtQkH86STsLun607KT1VkCPDaX5/SCREiFpjJ4qJbbu35ne6c4LG3vFsAP2CNGz7rk7JtUrIQUryBhw==
+web3@^4.12.1:
+  version "4.12.1"
+  resolved "https://registry.yarnpkg.com/web3/-/web3-4.12.1.tgz#391215c7c82627c1a8cc329ded3366c8b55f5c3d"
+  integrity sha512-zIFUPdgo2uG5Vbl7C4KrTv8dmWKN3sGnY/GundbiJzcaJZDxaCyu3a5HXAcgUM1VvvsVb1zaUQAFPceq05/q/Q==
   dependencies:
     web3-core "^4.5.1"
     web3-errors "^1.3.0"
     web3-eth "^4.8.2"
     web3-eth-abi "^4.2.3"
-    web3-eth-accounts "^4.2.0"
+    web3-eth-accounts "^4.2.1"
     web3-eth-contract "^4.7.0"
     web3-eth-ens "^4.4.0"
     web3-eth-iban "^4.0.7"

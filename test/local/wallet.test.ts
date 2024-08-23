@@ -22,7 +22,7 @@ import {
 	prepareAccount,
 	getPreparedWallet,
 } from './fixtures';
-import { ReceiptError } from '../../lib/errors';
+import { ReceiptError } from '../../src/errors';
 
 jest.setTimeout(600000);
 

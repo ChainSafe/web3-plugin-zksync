@@ -36,7 +36,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install
-      - run: npx typedoc src/index.ts
+      - run: yarn build:docs
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

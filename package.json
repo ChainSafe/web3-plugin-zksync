@@ -1,6 +1,6 @@
 {
 	"name": "web3-plugin-zksync",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "web3.js plugin for ZkSync",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
@@ -14,6 +14,7 @@
 		"build": "tsc --project tsconfig.build.json",
 		"test:prepare": "ts-node test/setup.ts",
 		"test:wait": "ts-node test/wait.ts",
+		"build:docs": "npx -y typedoc src/index.ts",
 		"test": "jest --config=./test/jest.config.js",
 		"test:unit": "jest --config=./test/jest.config.js test/unit",
 		"test:local": "jest --config=./test/jest.config.js --runInBand --maxConcurrency=1 test/local",
@@ -31,7 +32,7 @@
 	"dependencies": {
 		"ethereum-cryptography": "^2.1.3",
 		"hardhat": "^2.19.4",
-		"web3": "^4.12.0"
+		"web3": "^4.12.1"
 	},
 	"devDependencies": {
 		"@chainsafe/eslint-config": "^2.2.4",
