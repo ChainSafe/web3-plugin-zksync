@@ -4,10 +4,8 @@ import type * as web3Types from 'web3-types';
 import type { Transaction } from 'web3-types';
 import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import type { Web3ZKsyncL1 } from './web3zksync-l1';
-import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
 import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
-import type { EIP712Signer } from './utils';
 import { getPriorityOpResponse, isAddressEq } from './utils';
 
 class Adapters extends AdapterL1 {
@@ -17,8 +15,8 @@ class Adapters extends AdapterL1 {
 		this.adapterL2 = new AdapterL2();
 		this.adapterL2.getAddress = this.getAddress.bind(this);
 		this.adapterL2._contextL2 = this._contextL2.bind(this);
-		this.adapterL2._eip712Signer = this._eip712Signer;
 	}
+
 	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'latest') {
 		return this.adapterL2.getBalance(token, blockTag);
 	}
@@ -37,9 +35,6 @@ class Adapters extends AdapterL1 {
 	}
 	getL2BridgeContracts() {
 		return this.adapterL2.getL2BridgeContracts();
-	}
-	protected async _eip712Signer(): Promise<EIP712Signer> {
-		throw new Error('Must be implemented by the derived class!');
 	}
 
 	/**
@@ -84,7 +79,6 @@ class Adapters extends AdapterL1 {
 export class ZKsyncWallet extends Adapters {
 	provider?: Web3ZKsyncL2;
 	providerL1?: Web3ZKsyncL1;
-	protected eip712!: utils.EIP712Signer;
 	public account: Web3Account;
 	/**
 	 *
@@ -138,7 +132,6 @@ export class ZKsyncWallet extends Adapters {
 		//     errno: 'ECONNREFUSED',
 		//     code: 'ECONNREFUSED'
 		//   }
-		this.provider._eip712Signer = this._eip712Signer.bind(this);
 
 		return this;
 	}
@@ -152,16 +145,6 @@ export class ZKsyncWallet extends Adapters {
 		return this;
 	}
 
-	protected async _eip712Signer(): Promise<utils.EIP712Signer> {
-		if (!this.eip712) {
-			this.eip712 = new utils.EIP712Signer(
-				this.account,
-				Number(await this.provider!.eth.getChainId()),
-			);
-		}
-
-		return this.eip712!;
-	}
 	protected _contextL1() {
 		return this.providerL1!;
 	}
