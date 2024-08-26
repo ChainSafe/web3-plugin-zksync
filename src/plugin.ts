@@ -64,7 +64,7 @@ export class ZKsyncPlugin extends Web3PluginBase {
 	/**
 	 * Addresses for the main contract and bridging contracts
 	 */
-	contractsAddresses: Promise<ContractsAddresses>;
+	contractsAddresses: Promise<ContractsAddresses> | undefined;
 
 	/**
 	 * Returns addresses for the main contract and bridging contracts, calling {@link initContractsAddresses} if necessary
@@ -107,7 +107,10 @@ export class ZKsyncPlugin extends Web3PluginBase {
 			| Web3ZKsyncL2,
 	) {
 		super(
-			providerOrContextL2 as string | web3Types.SupportedProviders<any> | Web3ContextInitOptions,
+			providerOrContextL2 as
+				| string
+				| web3Types.SupportedProviders<any>
+				| Web3ContextInitOptions,
 		);
 		if (providerOrContextL2 instanceof Web3ZKsyncL2) {
 			this.L2 = providerOrContextL2;
@@ -117,8 +120,6 @@ export class ZKsyncPlugin extends Web3PluginBase {
 
 		this._l2BridgeContracts = {};
 		this._erc20Contracts = {};
-
-		this.contractsAddresses = this.initContractsAddresses();
 
 		const self = this;
 		class ZKsyncWalletWithFullContext extends ZKsyncWallet {
@@ -163,13 +164,9 @@ export class ZKsyncPlugin extends Web3PluginBase {
 		const {
 			mainContract,
 			bridgehubContractAddress,
-			// l1Erc20DefaultBridge,
-			// l2Erc20DefaultBridge,
-			// l1WethBridge,
-			// l2WethBridge,
 			l1SharedDefaultBridge,
 			l2SharedDefaultBridge,
-		} = await this.contractsAddresses;
+		} = await this.ContractsAddresses;
 
 		const contractsCollection: ZKSyncContractsCollection = {
 			Generic: {
@@ -187,8 +184,16 @@ export class ZKsyncPlugin extends Web3PluginBase {
 					constants.CONTRACT_DEPLOYER_ADDRESS,
 					this.L2,
 				),
-				L1MessengerContract: new Contract(IL1MessengerABI, constants.L1_MESSENGER_ADDRESS, this.L2),
-				NonceHolderContract: new Contract(INonceHolderABI, constants.NONCE_HOLDER_ADDRESS, this.L2),
+				L1MessengerContract: new Contract(
+					IL1MessengerABI,
+					constants.L1_MESSENGER_ADDRESS,
+					this.L2,
+				),
+				NonceHolderContract: new Contract(
+					INonceHolderABI,
+					constants.NONCE_HOLDER_ADDRESS,
+					this.L2,
+				),
 				L2BridgeContract: new Contract(IL2BridgeABI, l2SharedDefaultBridge, this.L2),
 			},
 		};
@@ -222,8 +227,6 @@ export class ZKsyncPlugin extends Web3PluginBase {
 
 		this.L1 = new Web3ZKsyncL1(parentContext);
 
-		this.initContracts();
-
 		this.initWallet();
 	}
 
@@ -243,7 +246,9 @@ export class ZKsyncPlugin extends Web3PluginBase {
 	 */
 	get rpc(): RpcMethods {
 		if (!this._rpc) {
-			this._rpc = new RpcMethods(this.L2.requestManager as unknown as Web3RequestManager<unknown>);
+			this._rpc = new RpcMethods(
+				this.L2.requestManager as unknown as Web3RequestManager<unknown>,
+			);
 		}
 		return this._rpc;
 	}
@@ -258,13 +263,19 @@ export class ZKsyncPlugin extends Web3PluginBase {
 	 * For example, if the L1 or L2 providers were changed from testnet to mainnet, this method should be called.
 	 */
 	public updateProviders(
-		contextL1: Web3ZKsyncL1 | web3Types.SupportedProviders<any> | Web3ContextInitOptions | string,
-		contextL2: Web3ZKsyncL2 | web3Types.SupportedProviders<any> | Web3ContextInitOptions | string,
+		contextL1:
+			| Web3ZKsyncL1
+			| web3Types.SupportedProviders<any>
+			| Web3ContextInitOptions
+			| string,
+		contextL2:
+			| Web3ZKsyncL2
+			| web3Types.SupportedProviders<any>
+			| Web3ContextInitOptions
+			| string,
 	) {
 		this.L1 = contextL1 instanceof Web3ZKsyncL1 ? contextL1 : new Web3ZKsyncL1(contextL1);
 		this.L2 = contextL2 instanceof Web3ZKsyncL2 ? contextL2 : new Web3ZKsyncL2(contextL2);
-		this.initContractsAddresses();
-		this.initContracts();
 	}
 
 	/**
@@ -308,7 +319,9 @@ export class ZKsyncPlugin extends Web3PluginBase {
 						return l1Token;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L1 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
@@ -334,7 +347,9 @@ export class ZKsyncPlugin extends Web3PluginBase {
 						return l2WethToken;
 					}
 				} catch (e) {
-					throw new Error(`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`);
+					throw new Error(
+						`Error getting L2 address for token ${token}. ${JSON.stringify(e)}`,
+					);
 				}
 			}
 
