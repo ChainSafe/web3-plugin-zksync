@@ -3,7 +3,7 @@ import { L2Provider } from './fixtures';
 import { ADDRESS2, PRIVATE_KEY1, PRIVATE_KEY2 } from '../utils';
 import { EIP712_TX_TYPE } from '../../src/constants';
 describe('EIP712Signer', () => {
-	it('should be different wallet when use the same provider', async () => {
+	it('should different wallets be able to use different accounts, even when using the same EIP712Signer', async () => {
 		const l2Provider = new Web3ZKsyncL2(L2Provider);
 		const w1 = new ZKsyncWallet(PRIVATE_KEY1, l2Provider);
 
