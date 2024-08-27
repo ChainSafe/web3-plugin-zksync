@@ -1,9 +1,8 @@
 // import '../custom-matchers';
-import { EIP712Signer } from '../../src/Eip712';
+import { EIP712Signer, EIP712 } from '../../src/Eip712';
 import { ADDRESS1, ADDRESS2 } from '../utils';
 import { ZeroAddress } from '../../src/types';
 import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from '../../src/constants';
-import { EIP712 } from '../../src/Eip712';
 
 describe('EIP712Signer', () => {
 	describe('#getSignInput()', () => {

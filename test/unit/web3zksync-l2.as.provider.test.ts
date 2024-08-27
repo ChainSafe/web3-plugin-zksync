@@ -23,6 +23,7 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 			// blockNumber: 123456,
 			to: '0xabcdef1234567890abcdef1234567890abcdef12',
 			type: 0,
+			networkId: 0,
 			nonce: 42,
 			gasLimit: 2000000n,
 			// index: 3,
