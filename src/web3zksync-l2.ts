@@ -24,11 +24,9 @@ import {
 } from './constants';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
-import * as utils from './utils';
 
 // Equivalent to both Provider and Signer in zksync-ethers
 export class Web3ZKsyncL2 extends Web3ZkSync {
-	eip712!: utils.EIP712Signer;
 	async getZKTransactionReceipt<ReturnFormat extends DataFormat>(
 		transactionHash: Bytes,
 		returnFormat: ReturnFormat = DEFAULT_RETURN_FORMAT as ReturnFormat,

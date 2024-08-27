@@ -6,37 +6,39 @@ Use [Web3.js](https://web3js.org/) to interact with the [ZKsync Era](https://zks
 
 Please refer to the comprehensive
 [API documentation](https://chainsafe.github.io/web3-plugin-zksync/) for a complete overview of this
-plugin's capabilities. Usage documentation that includes explanations and code samples is coming
-soon to the [official ZKsync SDK docs](https://sdk.zksync.io/).
+plugin's capabilities. Usage documentation that includes explanations and code samples is available
+as part of the [official Web3.js plugin for ZKsync SDK docs](https://sdk.zksync.io/js/web3js).
 
 ## Plugin Components
 
--   RPC methods:
+-   [RPC methods](https://sdk.zksync.io/js/web3js/rpc):
     The[`RpcMethods` class](https://chainsafe.github.io/web3-plugin-zksync/classes/RpcMethods.html)
     implements the [ZKsync JSON-RPC API](https://docs.zksync.io/build/api-reference/zks-rpc).
--   Constants: The
+-   [Constants](https://sdk.zksync.io/js/web3js/constants-types-utilities#constants): The
     [`constants` package](https://chainsafe.github.io/web3-plugin-zksync/modules/constants.html)
     includes well-known addresses, such as the address of the L1 ETH token.
--   Types: The [`types` package](https://chainsafe.github.io/web3-plugin-zksync/modules/types.html)
-    defines enums, interfaces, and types that are used for interacting with the ZKsync Era network.
--   Utilities: The
+-   [Types](https://sdk.zksync.io/js/web3js/constants-types-utilities#types): The
+    [`types` package](https://chainsafe.github.io/web3-plugin-zksync/modules/types.html) defines
+    enums, interfaces, and types that are used for interacting with the ZKsync Era network.
+-   [Utilities](https://sdk.zksync.io/js/web3js/constants-types-utilities#utilities): The
     [`utils` package](https://chainsafe.github.io/web3-plugin-zksync/modules/utils.html) exposes
     helpful functions and contract definitions that can be used with the Web3.js plugin for ZKsync.
--   Wallet: The
+-   [Wallet](https://sdk.zksync.io/js/web3js/wallet): The
     [`ZKSyncWallet` class](https://chainsafe.github.io/web3-plugin-zksync/classes/ZKSyncWallet.html)
     allows developers to create, manage, and use ZKsync accounts.
--   Paymasters: The plugin includes a number of helpful utilities for working with
+-   [Paymasters](https://sdk.zksync.io/js/web3js/paymasters): The plugin includes a number of
+    helpful utilities for working with
     [ZKsync paymasters](https://docs.zksync.io/build/developer-reference/account-abstraction/paymasters),
     including a
     [`getPaymasterParams` function](https://chainsafe.github.io/web3-plugin-zksync/functions/getPaymasterParams.html)
     for generating paymaster parameters to add to a transaction.
--   Smart contracts: The
+-   [Smart contracts](https://sdk.zksync.io/js/web3js/contracts): The
     [`ContractFactory` class](https://chainsafe.github.io/web3-plugin-zksync/classes/ContractFactory.html)
     can be used to deploy smart contracts to the ZKsync Era network. The return type of the
     [`ContractFactory.deploy` method](https://chainsafe.github.io/web3-plugin-zksync/classes/ContractFactory.html#deploy)
     is the standard
     [Web3.js Contract class](https://docs.web3js.org/api/web3-eth-contract/class/Contract/).
--   Smart accounts: The
+-   [Smart accounts](https://sdk.zksync.io/js/web3js/smart-accounts): The
     [`SmartAccount` class](https://chainsafe.github.io/web3-plugin-zksync/classes/SmartAccount.html)
     can be used to create
     [ZKsync smart accounts](https://docs.zksync.io/build/developer-reference/account-abstraction/)

@@ -81,6 +81,14 @@ export class SmartAccount extends AdapterL2 {
 		this._address = signer.address;
 		this.payloadSigner = signer.payloadSigner || signPayloadWithECDSA;
 		this.transactionBuilder = signer.transactionBuilder || populateTransactionECDSA;
+		if (this._provider) {
+			const accounts = Array.isArray(this._account) ? this._account : [this._account];
+			for (const account of accounts) {
+				if (!this._provider.eth.accounts.wallet.get(account.address)) {
+					this._provider.eth.accounts.wallet.add(account);
+				}
+			}
+		}
 	}
 	_contextL2(): Web3ZKsyncL2 {
 		return this._provider!;

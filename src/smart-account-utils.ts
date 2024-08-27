@@ -4,7 +4,6 @@ import { privateKeyToAccount, signMessageWithPrivateKey, Web3Account } from 'web
 // import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
 import { Web3ZKsyncL2 } from './web3zksync-l2';
 import type * as web3Types from 'web3-types';
-import * as utils from './utils';
 import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
 import { Transaction } from 'web3-types';
 import { Address } from 'web3';
@@ -157,15 +156,11 @@ export const populateTransactionECDSA: TransactionBuilder = async (
 		typeof secret === 'object' && secret.privateKey
 			? (secret as Web3Account)
 			: privateKeyToAccount(secret as string);
-	provider._eip712Signer = async () => {
-		if (!provider.eip712) {
-			provider.eip712 = new utils.EIP712Signer(
-				account,
-				Number(await provider.eth.getChainId()),
-			);
-		}
-		return provider.eip712;
-	};
+
+	if (!provider.eth.accounts.wallet.get(account.address)) {
+		provider.eth.accounts.wallet.add(account);
+	}
+
 	tx.type = EIP712_TX_TYPE;
 	tx.chainId = format({ format: 'uint' }, tx.chainId ?? (await provider.eth.getChainId()));
 	tx.value = format({ format: 'uint' }, tx.value ? tx.value : 0n);
