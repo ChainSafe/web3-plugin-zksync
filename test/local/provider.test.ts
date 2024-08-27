@@ -35,7 +35,7 @@ describe('EIP712Signer', () => {
 		expect(w1.getAddress()).not.toBe(w2.getAddress());
 	});
 
-	it('should be different wallet when use the same provider', async () => {
+	it('should different smart accounts be able to use different accounts, even when using the same EIP712Signer', async () => {
 		const l2Provider = new Web3ZKsyncL2(L2Provider);
 		const acc = privateKeyToAccount(PRIVATE_KEY1);
 		const acc2 = privateKeyToAccount(PRIVATE_KEY2);
