@@ -269,7 +269,10 @@ export class Web3ZkSync extends Web3.Web3 {
 		transaction: Partial<TransactionRequest>,
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<web3Types.Numbers> {
-		return this._rpc.estimateGasL1ToL2(transaction, returnFormat);
+		return this._rpc.estimateGasL1ToL2(
+			this.prepareTransaction(transaction as Eip712TxData, returnFormat) as TransactionRequest,
+			returnFormat,
+		);
 	}
 
 	/**
@@ -463,35 +466,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		}
 		return this.contractAddresses().mainContract!;
 	}
-	// /**
-	//  * Returns `tx` as a normalized JSON-RPC transaction request, which has all values `hexlified` and any numeric
-	//  * values converted to Quantity values.
-	//  * @param tx The transaction request that should be normalized.
-	//  */
-	// override getRpcTransaction(tx: TransactionRequest): JsonRpcTransactionRequest {
-	// 	const result: any = super.getRpcTransaction(tx);
-	// 	if (!tx.customData) {
-	// 		return result;
-	// 	}
-	// 	result.type = ethers.toBeHex(EIP712_TX_TYPE);
-	// 	result.eip712Meta = {
-	// 		gasPerPubdata: ethers.toBeHex(tx.customData.gasPerPubdata ?? 0),
-	// 	} as any;
-	// 	if (tx.customData.factoryDeps) {
-	// 		result.eip712Meta.factoryDeps = tx.customData.factoryDeps.map((dep: ethers.BytesLike) =>
-	// 			// TODO (SMA-1605): we arraify instead of hexlifying because server expects Vec<u8>.
-	// 			//  We should change deserialization there.
-	// 			Array.from(ethers.getBytes(dep)),
-	// 		);
-	// 	}
-	// 	if (tx.customData.paymasterParams) {
-	// 		result.eip712Meta.paymasterParams = {
-	// 			paymaster: ethers.hexlify(tx.customData.paymasterParams.paymaster),
-	// 			paymasterInput: Array.from(ethers.getBytes(tx.customData.paymasterParams.paymasterInput)),
-	// 		};
-	// 	}
-	// 	return result;
-	// }
+
 	async getTokenBalance(token: Address, walletAddress: Address): Promise<bigint> {
 		const erc20 = new this.eth.Contract(IERC20ABI, token);
 
@@ -505,14 +480,24 @@ export class Web3ZkSync extends Web3.Web3 {
 		return customData;
 	}
 
-	prepareTransaction(transaction: Eip712TxData) {
-		if (!transaction.customData) {
-			return transaction;
+	// /**
+	//  * Returns `tx` as a normalized JSON-RPC transaction request, which has all values `hexlified` and any numeric
+	//  * values converted to Quantity values.
+	//  * @param tx The transaction request that should be normalized.
+	//  */
+	prepareTransaction(
+		transaction: Eip712TxData,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
+	): web3Types.FormatType<Eip712TxData, typeof returnFormat> {
+		const tx = format(transactionSchema, transaction, returnFormat);
+
+		if (!tx.customData) {
+			return tx;
 		}
-		const { customData, ...tx } = transaction as Eip712TxData;
+		const { customData } = transaction;
 		tx.eip712Meta = {
 			gasPerPubdata: web3Utils.toHex(customData?.gasPerPubdata ?? 0),
-		} as any;
+		};
 		if (customData?.factoryDeps) {
 			const factoryDeps = customData.factoryDeps.map(dep =>
 				// TODO (SMA-1605): we arraify instead of hexlifying because server expects Vec<u8>.
@@ -536,16 +521,8 @@ export class Web3ZkSync extends Web3.Web3 {
 	async estimateGas(transaction: Transaction) {
 		// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
 		// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
-		const tx = format(
-			transactionSchema,
-			{ ...transaction, to: transaction.to ?? ZERO_ADDRESS } as Transaction,
-			ETH_DATA_FORMAT,
-		);
-
-		const dataToSend = this.prepareTransaction({
-			...tx,
-			customData: (transaction as Eip712TxData).customData,
-		} as Eip712TxData);
+		const tx = { ...transaction, to: transaction.to ?? ZERO_ADDRESS };
+		const dataToSend = this.prepareTransaction(tx as Eip712TxData, ETH_DATA_FORMAT);
 		const gas = await this.requestManager.send({
 			method: 'eth_estimateGas',
 			params: [dataToSend],
@@ -606,8 +583,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
 			if (formatted.type !== BigInt(EIP712_TX_TYPE)) {
-				formatted.maxFeePerGas =
-					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 				formatted.maxPriorityFeePerGas =
 					formatted.maxPriorityFeePerGas ??
 					(web3Utils.toBigInt(formatted.maxFeePerGas) >
