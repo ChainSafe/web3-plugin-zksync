@@ -33,12 +33,13 @@ import {
 	REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT,
 	ZERO_ADDRESS,
 } from './constants';
-import { EIP712, type EIP712Signer, isAddressEq, isETH } from './utils';
+import { EIP712, isAddressEq, isETH } from './utils';
 import { RpcMethods } from './rpc.methods';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { IERC20ABI } from './contracts/IERC20';
 import { EIP712TransactionSchema } from './schemas';
-import { toUint8Array } from 'web3-eth-accounts';
+import { toUint8Array, Web3Account } from 'web3-eth-accounts';
+import * as utils from './utils';
 
 /**
  * The base class for interacting with ZKsync Era.
@@ -95,9 +96,6 @@ export class Web3ZkSync extends Web3.Web3 {
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<bigint> {
 		return this._rpc.l1ChainId(returnFormat);
-	}
-	async _eip712Signer(): Promise<EIP712Signer> {
-		throw new Error('Must be implemented by the derived class!');
 	}
 	/**
 	 * Returns the latest L1 batch number.
@@ -647,8 +645,11 @@ export class Web3ZkSync extends Web3.Web3 {
 
 	async signTransaction(tx: Transaction): Promise<string> {
 		if (tx.type && toHex(tx.type) === toHex(EIP712_TX_TYPE)) {
-			const signer = await this._eip712Signer();
-			tx.chainId = signer.getDomain().chainId;
+			const signer = new utils.EIP712Signer(
+				this.eth.accounts.wallet.get(tx.from!) as Web3Account,
+				Number(tx.chainId),
+			);
+			// tx.chainId = signer.getDomain().chainId;
 			// @ts-ignore
 			tx.customData = {
 				// @ts-ignore
