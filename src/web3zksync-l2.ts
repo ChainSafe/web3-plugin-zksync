@@ -10,7 +10,7 @@ import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
 import { getL2HashFromPriorityOp, isAddressEq, isETH, sleep } from './utils';
-import { Network as ZkSyncNetwork, TransactionRequest, TransactionStatus } from './types';
+import { Network as ZKsyncNetwork, TransactionRequest, TransactionStatus } from './types';
 import type { Address, TransactionOverrides, PaymasterParams, ZKTransactionReceipt } from './types';
 import { Web3ZkSync } from './web3zksync';
 import { ZKTransactionReceiptSchema } from './schemas';
@@ -47,7 +47,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					ZKTransactionReceiptSchema,
 					response as unknown as ZKTransactionReceipt,
 					returnFormat ?? this.defaultReturnFormat,
-			  );
+				);
 	}
 
 	async _getPriorityOpConfirmationL2ToL1Log(txHash: string, index = 0) {
@@ -163,7 +163,10 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			tx.token = L2_BASE_TOKEN_ADDRESS;
 		}
 
-		if ((tx.to === null || tx.to === undefined) && (tx.from === null || tx.from === undefined)) {
+		if (
+			(tx.to === null || tx.to === undefined) &&
+			(tx.from === null || tx.from === undefined)
+		) {
 			throw new Error('Withdrawal target address is undefined!');
 		}
 
@@ -295,25 +298,25 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	/**
 	 * Creates a new `Provider` from provided URL or network name.
 	 *
-	 * @param zksyncNetwork The type of ZKsync network.
+	 * @param ZKsyncNetwork The type of ZKsync network.
 	 *
 	 * @example
 	 *
 	 * import { initWithDefaultProvider, types } from "web3-plugin-zksync";
 	 *
-	 * const provider = ZkSyncNetwork.initWithDefaultProvider(types.Network.Sepolia);
+	 * const provider = ZKsyncNetwork.initWithDefaultProvider(types.Network.Sepolia);
 	 */
 	static initWithDefaultProvider(
-		zksyncNetwork: ZkSyncNetwork = ZkSyncNetwork.Localhost,
+		zksyncNetwork: ZKsyncNetwork = ZKsyncNetwork.Localhost,
 	): Web3ZKsyncL2 {
 		switch (zksyncNetwork) {
-			case ZkSyncNetwork.Localhost:
+			case ZKsyncNetwork.Localhost:
 				return new Web3ZKsyncL2('http://localhost:3050');
-			case ZkSyncNetwork.Sepolia:
+			case ZKsyncNetwork.Sepolia:
 				return new Web3ZKsyncL2('https://sepolia.era.zksync.dev');
-			case ZkSyncNetwork.Mainnet:
+			case ZKsyncNetwork.Mainnet:
 				return new Web3ZKsyncL2('https://mainnet.era.zksync.io');
-			case ZkSyncNetwork.EraTestNode:
+			case ZKsyncNetwork.EraTestNode:
 				return new Web3ZKsyncL2('http://localhost:8011');
 			default:
 				return new Web3ZKsyncL2('http://localhost:3050');
