@@ -3,7 +3,6 @@ import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts'
 import type * as web3Types from 'web3-types';
 import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import type { Web3ZKsyncL1 } from './web3zksync-l1';
-import * as utils from './utils';
 import { AdapterL1, AdapterL2 } from './adapters';
 import { Address, PaymasterParams, TransactionOverrides, TransactionRequest } from './types';
 import { getPriorityOpResponse, isAddressEq } from './utils';
