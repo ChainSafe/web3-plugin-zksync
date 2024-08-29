@@ -5,7 +5,6 @@ import type {
 	HexString,
 	Numbers,
 	Transaction,
-	TransactionWithSenderAPI,
 	TransactionReceipt,
 	Log,
 	TransactionReceiptBase,
@@ -172,7 +171,7 @@ export declare type TransactionRequest = DeepWriteable<
 	Transaction & {
 		/** The custom data for EIP712 transaction metadata. */
 		customData?: null | Eip712Meta;
-		type?: TransactionWithSenderAPI['type'] & Numbers;
+		type?: Numbers;
 	}
 >;
 

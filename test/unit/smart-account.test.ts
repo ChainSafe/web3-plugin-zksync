@@ -7,12 +7,12 @@ import {
 	signPayloadWithMultipleECDSA,
 } from '../../src';
 import { ADDRESS1, PRIVATE_KEY1, ADDRESS2, deepEqualExcluding } from '../utils';
-import { Eip712TxData } from '../../src/types';
 import { TypedDataEncoder } from '../../src/TypedDataEncoder';
+import { TransactionRequest } from '../../lib/types';
 
 describe('signPayloadWithECDSA()', () => {
 	it('should return signature by signing EIP712 transaction hash', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270,
 			from: ADDRESS1,
 			to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
@@ -69,7 +69,7 @@ describe('signPayloadWithMultipleECDSA()', () => {
 	const PRIVATE_KEY2 = '0xac1e735be8536c6534bb4f17f06f6afc73b2b5ba84ac2cfb12f7461b20c0bbe3';
 
 	it('should return signature by signing EIP712 transaction hash', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270n,
 			from: ADDRESS1,
 			to: ADDRESS2,
@@ -119,7 +119,7 @@ describe('populateTransaction()', () => {
 	const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 
 	it('should populate `tx.from` to address derived from private key if it not set', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270n,
 			to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 			value: 7_000_000_000n,
@@ -154,7 +154,7 @@ describe('populateTransaction()', () => {
 	});
 
 	it('should throw an error when provider is not set', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270,
 			from: ADDRESS1,
 			to: ADDRESS2,
@@ -171,7 +171,7 @@ describe('populateTransaction()', () => {
 
 describe('populateTransactionMultisig()', () => {
 	it('should throw an error when multiple keys are not provided', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270,
 			from: ADDRESS1,
 			to: ADDRESS2,

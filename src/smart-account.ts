@@ -1,7 +1,6 @@
 import {
 	Address,
 	BlockTag,
-	Eip712TxData,
 	Numbers,
 	PayloadSigner,
 	PaymasterParams,

@@ -366,9 +366,8 @@ export class Web3ZkSync extends Web3.Web3 {
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		if (!this.contractAddresses().bridgehubContract) {
-			this.contractAddresses().bridgehubContract = await this._rpc.getBridgehubContractAddress(
-				returnFormat,
-			);
+			this.contractAddresses().bridgehubContract =
+				await this._rpc.getBridgehubContractAddress(returnFormat);
 		}
 		return this.contractAddresses().bridgehubContract!;
 	}
@@ -573,7 +572,10 @@ export class Web3ZkSync extends Web3.Web3 {
 			populated.type = toHex(transaction.type === undefined ? 2n : transaction.type);
 		}
 
-		const formatted = web3Utils.format(EIP712TransactionSchema, populated) as TransactionRequest;
+		const formatted = web3Utils.format(
+			EIP712TransactionSchema,
+			populated,
+		) as TransactionRequest;
 
 		delete formatted.input;
 		delete formatted.chain;
@@ -589,7 +591,8 @@ export class Web3ZkSync extends Web3.Web3 {
 		}
 		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
 		if (toBigInt(formatted.type) === 0n) {
-			formatted.gasPrice = formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
+			formatted.gasPrice =
+				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
 		}
 		if (toBigInt(formatted.type) === 2n && formatted.gasPrice) {
@@ -605,7 +608,8 @@ export class Web3ZkSync extends Web3.Web3 {
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
 			if (toBigInt(formatted.type) !== BigInt(EIP712_TX_TYPE)) {
-				formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxFeePerGas =
+					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 				formatted.maxPriorityFeePerGas =
 					formatted.maxPriorityFeePerGas ??
 					(web3Utils.toBigInt(formatted.maxFeePerGas) >
@@ -649,13 +653,10 @@ export class Web3ZkSync extends Web3.Web3 {
 				Number(tx.chainId),
 			);
 			// tx.chainId = signer.getDomain().chainId;
-			// @ts-ignore
 			tx.customData = {
-				// @ts-ignore
 				...(tx.customData || {}),
 				customSignature: await signer.sign(tx as Eip712TxData),
 			};
-			// @ts-ignore
 			return EIP712.serialize(tx);
 		}
 		const account = this.eth.accounts.wallet.get(tx.from!);
@@ -668,6 +669,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		return res.rawTransaction;
 	}
 	async sendRawTransaction(signedTx: string) {
+		// @ts-ignore
 		return ethRpcMethods.sendRawTransaction(this.requestManager, signedTx);
 	}
 }
