@@ -20,6 +20,11 @@ const SALT = '0x293328ad84b118194c65a0dc0defdb6483740d3163fd99b260907e15f2e2f642
 const TOKEN = '0x841c43Fa5d8fFfdB9efE3358906f7578d8700Dd4'; // deployed by using create2 and SALT
 const PAYMASTER = '0xa222f0c183AFA73a8Bc1AFb48D34C88c9Bf7A174'; // approval based paymaster for TOKEN deployed by using create2 and SALT
 
+// needed for some console.log
+(BigInt.prototype as any).toJSON = function () {
+	return this.toString();
+};
+
 // Deploys token and approval based paymaster for that token using create2 method.
 // Mints tokens to wallet and sends ETH to paymaster.
 async function deployPaymasterAndToken(): Promise<{
