@@ -487,9 +487,10 @@ export class Web3ZkSync extends Web3.Web3 {
 	): web3Types.FormatType<Eip712TxData, typeof returnFormat> {
 		const tx = format(transactionSchema, transaction, returnFormat);
 
-		if (!tx.customData) {
+		if (!transaction.customData) {
 			return tx;
 		}
+		tx.type = web3Utils.toHex(EIP712_TX_TYPE);
 		const { customData } = transaction;
 		tx.eip712Meta = {
 			gasPerPubdata: web3Utils.toHex(customData?.gasPerPubdata ?? 0),
