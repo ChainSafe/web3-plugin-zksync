@@ -98,11 +98,22 @@ export class Web3ZkSync extends Web3.Web3 {
 		return customData;
 	}
 
-	prepareTransaction(transaction: Eip712TxData) {
+	// /**
+	//  * Returns `tx` as a normalized JSON-RPC transaction request, which has all values `hexlified` and any numeric
+	//  * values converted to Quantity values.
+	//  * @param tx The transaction request that should be normalized.
+	//  */
+	prepareTransaction(
+		transaction: Eip712TxData,
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
+	): web3Types.FormatType<Eip712TxData, typeof returnFormat> {
+		const tx = format(transactionSchema, transaction, returnFormat);
+
 		if (!transaction.customData) {
-			return transaction;
+			return tx;
 		}
-		const { customData, ...tx } = transaction as Eip712TxData;
+		tx.type = web3Utils.toHex(EIP712_TX_TYPE);
+		const { customData } = transaction;
 		tx.eip712Meta = {
 			gasPerPubdata: web3Utils.toHex(customData?.gasPerPubdata ?? 0),
 		} as Eip712Meta;
@@ -129,16 +140,8 @@ export class Web3ZkSync extends Web3.Web3 {
 	async estimateGas(transaction: Transaction) {
 		// if `to` is not set, when `eth_estimateGas` was called, the connected node returns the error: "Failed to serialize transaction: toAddressIsNull".
 		// for this pass the zero address as the `to` parameter, in-case if `to` was not provided if it is a contract deployment transaction.
-		const tx = format(
-			transactionSchema,
-			{ ...transaction, to: transaction.to ?? ZERO_ADDRESS } as Transaction,
-			ETH_DATA_FORMAT,
-		);
-
-		const dataToSend = this.prepareTransaction({
-			...tx,
-			customData: (transaction as Eip712TxData).customData,
-		} as Eip712TxData);
+		const tx = { ...transaction, to: transaction.to ?? ZERO_ADDRESS };
+		const dataToSend = this.prepareTransaction(tx as Eip712TxData, ETH_DATA_FORMAT);
 		const gas = await this.requestManager.send({
 			method: 'eth_estimateGas',
 			params: [dataToSend],
@@ -183,8 +186,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		}
 		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
 		if (formatted.type === 0n) {
-			formatted.gasPrice =
-				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
+			formatted.gasPrice = formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
 		}
 		if (formatted.type === 2n && formatted.gasPrice) {
@@ -200,8 +202,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
 			if (formatted.type !== BigInt(EIP712_TX_TYPE)) {
-				formatted.maxFeePerGas =
-					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 				formatted.maxPriorityFeePerGas =
 					formatted.maxPriorityFeePerGas ??
 					(web3Utils.toBigInt(formatted.maxFeePerGas) >
