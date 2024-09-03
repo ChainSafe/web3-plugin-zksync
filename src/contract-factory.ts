@@ -79,7 +79,9 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 
 		this.deploymentType = deploymentType || 'create';
 
-		this.contractToBeDeployed = new zkWallet.provider!.eth.Contract(this.abi);
+		this.contractToBeDeployed = new zkWallet.provider!.eth.Contract(this.abi, {
+			from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
+		});
 	}
 
 	private encodeCalldata(
