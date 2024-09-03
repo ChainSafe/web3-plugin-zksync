@@ -4,10 +4,10 @@ import type * as web3Types from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import { getGasPrice, transactionBuilder, transactionSchema } from 'web3-eth';
 import * as Web3 from 'web3';
-import { ETH_DATA_FORMAT, Transaction } from 'web3-types';
+import { Bytes, ETH_DATA_FORMAT, Transaction } from 'web3-types';
 import { format, toBigInt, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
-import type { Address, Eip712TxData, Eip712Meta } from './types';
+import type { Address, Eip712TxData, Eip712Meta, TransactionRequest } from './types';
 import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE, ZERO_ADDRESS } from './constants';
 import { EIP712 } from './utils';
 import { IERC20ABI } from './contracts/IERC20';
@@ -172,7 +172,10 @@ export class Web3ZkSync extends Web3.Web3 {
 			populated.type = toHex(transaction.type === undefined ? 2n : transaction.type);
 		}
 
-		const formatted = web3Utils.format(EIP712TransactionSchema, populated) as TransactionRequest;
+		const formatted = web3Utils.format(
+			EIP712TransactionSchema,
+			populated,
+		) as TransactionRequest;
 
 		delete formatted.input;
 		delete formatted.chain;
@@ -188,7 +191,8 @@ export class Web3ZkSync extends Web3.Web3 {
 		}
 		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
 		if (toBigInt(formatted.type) === 0n) {
-			formatted.gasPrice = formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
+			formatted.gasPrice =
+				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
 		}
 		if (toBigInt(formatted.type) === 2n && formatted.gasPrice) {
@@ -204,7 +208,8 @@ export class Web3ZkSync extends Web3.Web3 {
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
 			if (toBigInt(formatted.type) !== BigInt(EIP712_TX_TYPE)) {
-				formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxFeePerGas =
+					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 				formatted.maxPriorityFeePerGas =
 					formatted.maxPriorityFeePerGas ??
 					(web3Utils.toBigInt(formatted.maxFeePerGas) >

@@ -17,7 +17,7 @@ import {
 	BridgeAddresses,
 	EstimateFee,
 	L2ToL1Proof,
-	Network as ZkSyncNetwork,
+	Network as ZKsyncNetwork,
 	RawBlockTransaction,
 	TransactionDetails,
 	TransactionRequest,
@@ -74,7 +74,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					ZKTransactionReceiptSchema,
 					response as unknown as ZKTransactionReceipt,
 					returnFormat ?? this.defaultReturnFormat,
-			  );
+				);
 	}
 
 	/**
@@ -353,9 +353,8 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		if (!this.contractAddresses().bridgehubContract) {
-			this.contractAddresses().bridgehubContract = await this._rpc.getBridgehubContractAddress(
-				returnFormat,
-			);
+			this.contractAddresses().bridgehubContract =
+				await this._rpc.getBridgehubContractAddress(returnFormat);
 		}
 		return this.contractAddresses().bridgehubContract!;
 	}
@@ -561,7 +560,10 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			tx.token = L2_BASE_TOKEN_ADDRESS;
 		}
 
-		if ((tx.to === null || tx.to === undefined) && (tx.from === null || tx.from === undefined)) {
+		if (
+			(tx.to === null || tx.to === undefined) &&
+			(tx.from === null || tx.from === undefined)
+		) {
 			throw new Error('Withdrawal target address is undefined!');
 		}
 
