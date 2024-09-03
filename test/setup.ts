@@ -53,7 +53,7 @@ async function deployPaymasterAndToken(): Promise<{
 		'create2Account',
 	);
 
-	const paymasterContract = await accountFactory.deploy(tokenAddress, {
+	const paymasterContract = await accountFactory.deploy([tokenAddress], {
 		customData: { salt: SALT },
 	});
 	const paymasterAddress = (await paymasterContract.options.address) as string;
@@ -168,4 +168,5 @@ main()
 	.then()
 	.catch(error => {
 		console.log(`Error: ${error}`);
+		console.warn(error.stack);
 	});
