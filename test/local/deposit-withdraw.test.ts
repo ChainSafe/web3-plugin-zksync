@@ -1,7 +1,5 @@
-import { TransactionFactory } from 'web3-eth-accounts';
 import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
-import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
-import * as utils from '../../src/utils';
+import { ETH_ADDRESS } from '../../src/constants';
 import { getAccounts, L1Provider, L2Provider } from './fixtures';
 
 // TODO: This test needs to setup local dev nodes for L1 and L2
@@ -11,8 +9,6 @@ import { getAccounts, L1Provider, L2Provider } from './fixtures';
 
 jest.setTimeout(10000);
 describe('wallet', () => {
-	// @ts-ignore
-	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
 	const l1Provider = new Web3ZKsyncL1(L1Provider);
 	const accounts = getAccounts();
 	const l2Provider = new Web3ZKsyncL2(L2Provider);

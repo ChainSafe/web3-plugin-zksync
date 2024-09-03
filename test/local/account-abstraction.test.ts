@@ -261,7 +261,6 @@ describe('Account Abstraction', () => {
 			...(await storage.methods
 				.set(storageValue)
 				.populateTransaction({ from: account.address })),
-			// @ts-ignore
 			customData: {
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',

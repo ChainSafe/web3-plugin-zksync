@@ -1,19 +1,15 @@
 import * as web3Utils from 'web3-utils';
 import type { Contract } from 'web3-eth-contract';
 
-import { TransactionFactory } from 'web3-eth-accounts';
-import { ContractFactory, utils, Web3ZKsyncL2, ZKsyncWallet } from '../../src';
+import { ContractFactory, Web3ZKsyncL2, ZKsyncWallet } from '../../src';
 import { PRIVATE_KEY1, DAI_L1, L2_CHAIN_URL } from '../utils';
 
 import Token from '../files/Token.json';
 import Paymaster from '../files/Paymaster.json';
 import Storage from '../files/Storage.json';
 import Demo from '../files/Demo.json';
-import { EIP712_TX_TYPE } from '../../src/constants';
 
 describe('ContractFactory', () => {
-	// @ts-ignore
-	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
 	const provider = new Web3ZKsyncL2(L2_CHAIN_URL);
 	const wallet = new ZKsyncWallet(PRIVATE_KEY1, provider);
 

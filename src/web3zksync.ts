@@ -252,7 +252,6 @@ export class Web3ZkSync extends Web3.Web3 {
 				this.eth.accounts.wallet.get(tx.from!) as Web3Account,
 				Number(tx.chainId),
 			);
-			// tx.chainId = signer.getDomain().chainId;
 			tx.customData = {
 				...(tx.customData || {}),
 				customSignature: await signer.sign(tx as Eip712TxData),
@@ -269,7 +268,6 @@ export class Web3ZkSync extends Web3.Web3 {
 		return res.rawTransaction;
 	}
 	async sendRawTransaction(signedTx: string) {
-		// @ts-ignore
 		return ethRpcMethods.sendRawTransaction(this.requestManager, signedTx);
 	}
 }

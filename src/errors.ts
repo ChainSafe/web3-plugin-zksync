@@ -9,7 +9,7 @@ export class ReceiptError extends Error {
 	constructor(message: string, info: TxInfo) {
 		super(message);
 		this.info = info;
-		this.name = 'DepositError';
+		this.name = 'ReceiptError';
 	}
 	get hash() {
 		return this.info?.hash;

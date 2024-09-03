@@ -57,9 +57,10 @@ import { Abi as IL1SharedBridgeABI } from './contracts/IL1SharedBridge';
 import { IL2BridgeABI } from './contracts/IL2Bridge';
 import { INonceHolderABI } from './contracts/INonceHolder';
 import type { Web3ZKsyncL1 } from './web3zksync-l1';
+import { ReceiptError } from './errors';
 
 interface TxSender {
-	getAddress(): Promise<Address>;
+	getAddress(): Address;
 }
 
 export class AdapterL1 implements TxSender {
@@ -1248,18 +1249,13 @@ export class AdapterL1 implements TxSender {
 		const hash = web3Utils.toHex(withdrawalHash);
 		const receipt = await this._contextL2().getZKTransactionReceipt(hash);
 		if (!receipt) {
-			// @todo: or throw?
-			return {
-				// @ts-ignore
-				log: {},
-				l1BatchTxId: 0n,
-			};
+			throw new ReceiptError('Transaction receipt not found!', {
+				hash,
+			});
 		}
 
 		const topic = id('L1MessageSent(address,bytes32,bytes)');
-		// @ts-ignore
 		const log = (receipt?.logs || []).filter(
-			// @ts-ignore
 			l =>
 				isAddressEq(String(l?.address), L1_MESSENGER_ADDRESS) &&
 				l?.topics &&
@@ -1276,8 +1272,9 @@ export class AdapterL1 implements TxSender {
 		const hash = web3Utils.toHex(withdrawalHash);
 		const receipt = await this._contextL2().getZKTransactionReceipt(hash);
 		if (!receipt) {
-			// @todo: or throw?
-			return {};
+			throw new ReceiptError('Transaction receipt not found!', {
+				hash,
+			});
 		}
 		const messages = Array.from(receipt.l2ToL1Logs.entries()).filter(([, log]) =>
 			isAddressEq(log.sender, L1_MESSENGER_ADDRESS),
@@ -1350,19 +1347,16 @@ export class AdapterL1 implements TxSender {
 		overrides = overrides ?? {};
 		overrides.from ??= this.getAddress();
 
-		return (
-			contract.methods
-				.finalizeWithdrawal(
-					(await this._contextL2().eth.getChainId()) as web3Types.Numbers,
-					l1BatchNumber as web3Types.Numbers,
-					l2MessageIndex as web3Types.Numbers,
-					l2TxNumberInBlock as web3Types.Numbers,
-					message,
-					proof,
-				)
-				// @ts-ignore
-				.send(overrides ?? {})
-		);
+		return contract.methods
+			.finalizeWithdrawal(
+				(await this._contextL2().eth.getChainId()) as web3Types.Numbers,
+				l1BatchNumber as web3Types.Numbers,
+				l2MessageIndex as web3Types.Numbers,
+				l2TxNumberInBlock as web3Types.Numbers,
+				message,
+				proof,
+			)
+			.send((overrides ?? {}) as PayableTxOptions);
 	}
 
 	/**
@@ -1458,25 +1452,22 @@ export class AdapterL1 implements TxSender {
 		if (!proof) {
 			throw new Error('Log proof not found!');
 		}
-		return (
-			l1Bridge.methods
-				.claimFailedDeposit(
-					(await this._contextL2().eth.getChainId()) as web3Types.Numbers,
-					calldata[0], //_l1Sender
-					calldata[2], //_l1Token
-					calldata[3], //_amount
-					depositHash,
-					receipt.l1BatchNumber,
-					proof.id,
-					receipt.l1BatchTxIndex,
-					proof.proof,
-				)
-				// @ts-ignore
-				.send({
-					from: this.getAddress(),
-					...(overrides ?? {}),
-				})
-		);
+		return l1Bridge.methods
+			.claimFailedDeposit(
+				(await this._contextL2().eth.getChainId()) as web3Types.Numbers,
+				calldata[0], //_l1Sender
+				calldata[2], //_l1Token
+				calldata[3], //_amount
+				depositHash,
+				receipt.l1BatchNumber,
+				proof.id,
+				receipt.l1BatchTxIndex,
+				proof.proof,
+			)
+			.send({
+				from: this.getAddress(),
+				...(overrides ?? {}),
+			} as PayableTxOptions);
 	}
 
 	/**
@@ -1748,8 +1739,8 @@ export class AdapterL1 implements TxSender {
 
 		return populated;
 	}
-	// @ts-ignore
-	public getAddress(): string {
+
+	public getAddress(): Address {
 		throw new Error('Must be implemented by the derived class!');
 	}
 }
@@ -1882,8 +1873,7 @@ export class AdapterL2 implements TxSender {
 			...transaction,
 		});
 	}
-	// @ts-ignore
-	public getAddress(): string {
+	public getAddress(): Address {
 		throw new Error('Must be implemented by the derived class!');
 	}
 

@@ -44,6 +44,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Utils from 'web3-utils';
 import * as Web3 from 'web3';
 import type { Web3ContextInitOptions } from 'web3-core';
+import { PayableTxOptions } from 'web3-eth-contract/lib/commonjs/types';
 
 // Equivalent to both Provider and Signer in zksync-ethers
 export class Web3ZKsyncL2 extends Web3ZkSync {
@@ -587,8 +588,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			const ethL2Token = new this.eth.Contract(IEthTokenAbi, L2_BASE_TOKEN_ADDRESS);
 			const populatedTx = ethL2Token.methods
 				.withdraw(tx.to)
-				// @ts-ignore
-				.populateTransaction(tx.overrides);
+				.populateTransaction(tx.overrides as PayableTxOptions);
 			if (tx.paymasterParams) {
 				return {
 					...populatedTx,
@@ -608,8 +608,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 
 		const populatedTx = bridge.methods
 			.withdraw(tx.to, tx.token, tx.amount)
-			// @ts-ignore
-			.populateTransaction(tx.overrides);
+			.populateTransaction(tx.overrides as PayableTxOptions);
 
 		if (tx.paymasterParams) {
 			return {
@@ -677,8 +676,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			const token = new this.eth.Contract(IERC20ABI, tx.token);
 			const populatedTx = token.methods
 				.transfer(tx.to, tx.amount)
-				// @ts-ignore
-				.populateTransaction(tx.overrides);
+				.populateTransaction(tx.overrides as PayableTxOptions);
 
 			if (tx.paymasterParams) {
 				return {
