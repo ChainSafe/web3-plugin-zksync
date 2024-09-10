@@ -1,17 +1,16 @@
 import {
 	Address,
 	BlockTag,
-	Numbers,
 	PayloadSigner,
-	PaymasterParams,
 	PriorityOpResponse,
 	SmartAccountSigner,
 	TransactionBuilder,
-	type TransactionOverrides,
 	TransactionRequest,
+	TransferTransactionDetails,
 	TypedDataDomain,
 	TypedDataField,
 	type WalletBalances,
+	WithdrawTransactionDetails,
 } from './types';
 
 import {
@@ -465,14 +464,7 @@ export class SmartAccount extends AdapterL2 {
 	 *   }),
 	 * });
 	 */
-	async withdraw(transaction: {
-		token: Address;
-		amount: Numbers;
-		to?: Address;
-		bridgeAddress?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async withdraw(transaction: WithdrawTransactionDetails) {
 		checkProvider(this, 'withdraw');
 		return super.withdraw(transaction);
 	}
@@ -543,13 +535,7 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * console.log(`The sum of ${receipt.value} ETH was transferred to ${receipt.to}`);
 	 */
-	async transfer(transaction: {
-		to: Address;
-		amount: Numbers;
-		token?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}): Promise<PriorityOpResponse> {
+	async transfer(transaction: TransferTransactionDetails): Promise<PriorityOpResponse> {
 		const transferTx = await super.transferTx(transaction);
 		return this.sendTransaction(transferTx);
 	}

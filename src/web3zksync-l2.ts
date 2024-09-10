@@ -24,6 +24,7 @@ import {
 	TransactionStatus,
 	WalletBalances,
 	StorageProof,
+	WithdrawTransactionDetails,
 } from './types';
 import type { Address, TransactionOverrides, PaymasterParams, ZKTransactionReceipt } from './types';
 import { Web3ZkSync } from './web3zksync';
@@ -540,15 +541,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * @param [transaction.paymasterParams] Paymaster parameters.
 	 * @param [transaction.overrides] Transaction overrides including `gasLimit`, `gasPrice`, and `value`.
 	 */
-	async getWithdrawTx(transaction: {
-		token: Address;
-		amount: Numbers;
-		from?: Address;
-		to?: Address;
-		bridgeAddress?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async getWithdrawTx(transaction: WithdrawTransactionDetails) {
 		const { ...tx } = transaction;
 		tx.amount = format({ format: 'uint' }, transaction.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();

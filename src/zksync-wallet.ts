@@ -4,7 +4,13 @@ import type * as web3Types from 'web3-types';
 import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import type { Web3ZKsyncL1 } from './web3zksync-l1';
 import { AdapterL1, AdapterL2 } from './adapters';
-import { Address, PaymasterParams, TransactionOverrides, TransactionRequest } from './types';
+import {
+	Address,
+	DepositTransactionDetails,
+	TransactionRequest,
+	TransferTransactionDetails,
+	WithdrawTransactionDetails,
+} from './types';
 import { getPriorityOpResponse, isAddressEq } from './utils';
 
 class Adapters extends AdapterL1 {
@@ -46,23 +52,10 @@ class Adapters extends AdapterL1 {
 	 * @param [transaction.paymasterParams] Paymaster parameters.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	withdraw(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		bridgeAddress?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	withdraw(transaction: WithdrawTransactionDetails) {
 		return this.adapterL2.withdraw(transaction);
 	}
-	async transfer(transaction: {
-		to: Address;
-		amount: web3Types.Numbers;
-		token?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async transfer(transaction: TransferTransactionDetails) {
 		return this.signAndSend(await this.adapterL2.transferTx(transaction), this._contextL2());
 	}
 }
@@ -119,14 +112,6 @@ export class ZKsyncWallet extends Adapters {
 			);
 		}
 		this.provider = provider;
-		// TODO: needs to check when used with ports 15100 and 15200 for the error that would happen for every rpc call (like: get chain id):
-		// 	 FetchError {
-		//     message: 'request to http://127.0.0.1:15100/ failed, reason: connect ECONNREFUSED 127.0.0.1:15100',
-		//     type: 'system',
-		//     errno: 'ECONNREFUSED',
-		//     code: 'ECONNREFUSED'
-		//   }
-
 		return this;
 	}
 	public connectToL1(provider: Web3ZKsyncL1) {
@@ -152,28 +137,13 @@ export class ZKsyncWallet extends Adapters {
 	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'latest') {
 		return super.getBalance(token, blockTag);
 	}
-	getAddress(): any {
+	getAddress(): Address {
 		return this.account.address;
 	}
-	get address() {
+	get address(): Address {
 		return this.getAddress();
 	}
-	deposit(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}) {
+	deposit(transaction: DepositTransactionDetails) {
 		return super.deposit(transaction);
 	}
 	getNonce(blockNumber?: web3Types.BlockNumberOrTag) {

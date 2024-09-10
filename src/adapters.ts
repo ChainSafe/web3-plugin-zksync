@@ -47,6 +47,8 @@ import {
 	Eip712TxData,
 	ZKTransactionReceiptLog,
 	TransactionRequest,
+	TransferTransactionDetails,
+	DepositTransactionDetails,
 } from './types';
 import { ZeroAddress, ZeroHash } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
@@ -694,18 +696,7 @@ export class AdapterL1 implements TxSender {
 	 * If the transaction fails, it will also be the address to receive `l2Value`.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L1 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	async getDepositTx(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<any> {
+	async getDepositTx(transaction: DepositTransactionDetails): Promise<any> {
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}
@@ -1861,13 +1852,7 @@ export class AdapterL2 implements TxSender {
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 * @returns A Promise resolving to a transfer transaction response.
 	 */
-	async transferTx(transaction: {
-		to: Address;
-		amount: web3Types.Numbers;
-		token?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}): Promise<TransactionRequest> {
+	async transferTx(transaction: TransferTransactionDetails): Promise<TransactionRequest> {
 		return this._contextL2().getTransferTx({
 			from: this.getAddress(),
 			...transaction,

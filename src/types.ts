@@ -20,6 +20,7 @@ import type { IL1MessengerABI } from './contracts/IL1Messenger';
 import type { IERC1271ABI } from './contracts/IERC1271';
 import type { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
 import type { INonceHolderABI } from './contracts/INonceHolder';
+import type * as web3Types from 'web3-types';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -621,4 +622,39 @@ export type ZKSyncContractsCollection = {
 		 */
 		NonceHolderContract: Contract<typeof INonceHolderABI>;
 	};
+};
+
+export type DepositTransactionDetails = {
+	token: Address;
+	amount: web3Types.Numbers;
+	to?: Address;
+	operatorTip?: web3Types.Numbers;
+	bridgeAddress?: Address;
+	approveERC20?: boolean;
+	approveBaseERC20?: boolean;
+	l2GasLimit?: web3Types.Numbers;
+	gasPerPubdataByte?: web3Types.Numbers;
+	refundRecipient?: Address;
+	overrides?: TransactionOverrides;
+	approveOverrides?: TransactionOverrides;
+	approveBaseOverrides?: TransactionOverrides;
+	customBridgeData?: web3Types.Bytes;
+};
+
+export type WithdrawTransactionDetails = {
+	token: Address;
+	amount: web3Types.Numbers;
+	to?: Address;
+	from?: Address;
+	bridgeAddress?: Address;
+	paymasterParams?: PaymasterParams;
+	overrides?: TransactionOverrides;
+};
+
+export type TransferTransactionDetails = {
+	to: Address;
+	amount: web3Types.Numbers;
+	token?: Address;
+	paymasterParams?: PaymasterParams;
+	overrides?: TransactionOverrides;
 };
