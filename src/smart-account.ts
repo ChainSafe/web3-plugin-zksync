@@ -103,7 +103,7 @@ export class SmartAccount extends AdapterL2 {
 	get address() {
 		return this._address;
 	}
-	getAddress() {
+	getAddress(): Address {
 		return this.address;
 	}
 	getNonce(blockNumber: web3Types.BlockNumberOrTag = 'latest') {
