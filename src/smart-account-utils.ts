@@ -1,5 +1,5 @@
 import { toBytes, concat } from './utils';
-import { TransactionBuilder, PayloadSigner } from './types';
+import { TransactionBuilder, PayloadSigner, TransactionRequest } from './types';
 import { privateKeyToAccount, signMessageWithPrivateKey, Web3Account } from 'web3-eth-accounts';
 import { Web3ZKsyncL2 } from './web3zksync-l2';
 import { DEFAULT_GAS_PER_PUBDATA_LIMIT, EIP712_TX_TYPE } from './constants';
