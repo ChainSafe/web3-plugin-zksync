@@ -169,4 +169,7 @@ main()
 	.catch(error => {
 		console.log(`Error: ${error}`);
 		console.warn(error.stack);
+		console.warn(
+			'Test Setup is verified with node 18. If you use nvm, you can execute this before running the script: `nvm use 18`.',
+		);
 	});

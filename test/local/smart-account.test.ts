@@ -1,13 +1,12 @@
-import { IS_ETH_BASED, deepEqualExcluding, PRIVATE_KEY2, ADDRESS2 } from '../utils';
 import {
-	PAYMASTER,
-	APPROVAL_TOKEN,
-	DAI_L1,
-	getAccounts,
-	L2Provider,
-	L1Provider,
-	prepareAccount,
-} from './fixtures';
+	IS_ETH_BASED,
+	deepEqualExcluding,
+	PRIVATE_KEY2,
+	ADDRESS2,
+	L1_CHAIN_URL,
+	L2_CHAIN_URL,
+} from '../utils';
+import { PAYMASTER, APPROVAL_TOKEN, DAI_L1, getAccounts, prepareAccount } from './fixtures';
 import MultisigAccount from './files/TwoUserMultisig.json';
 import { EIP712_TX_TYPE, ETH_ADDRESS, ETH_ADDRESS_IN_CONTRACTS } from '../../src/constants';
 import { toBigInt, toWei } from 'web3-utils';
@@ -28,8 +27,8 @@ jest.setTimeout(50000);
 const accounts = getAccounts();
 const mainAccount = accounts[0];
 const PRIVATE_KEY = mainAccount.privateKey;
-const provider = new Web3ZKsyncL2(L2Provider);
-const l1Provider = new Web3ZKsyncL1(L1Provider);
+const provider = new Web3ZKsyncL2(L2_CHAIN_URL);
+const l1Provider = new Web3ZKsyncL1(L1_CHAIN_URL);
 const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, l1Provider);
 const account = new SmartAccount(
 	{ address: mainAccount.address, secret: mainAccount.privateKey },
@@ -548,8 +547,8 @@ describe('SmartAccount', () => {
 		});
 	});
 	describe('MultisigECDSASmartAccount', () => {
-		const provider = new Web3ZKsyncL2(L2Provider);
-		const ethProvider = new Web3ZKsyncL1(L1Provider);
+		const provider = new Web3ZKsyncL2(L2_CHAIN_URL);
+		const ethProvider = new Web3ZKsyncL1(L1_CHAIN_URL);
 		const wallet = new ZKsyncWallet(mainAccount.privateKey, provider, ethProvider);
 		let account: SmartAccount;
 

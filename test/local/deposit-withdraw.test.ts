@@ -2,7 +2,8 @@ import { TransactionFactory } from 'web3-eth-accounts';
 import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
 import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
 import * as utils from '../../src/utils';
-import { getAccounts, L1Provider, L2Provider } from './fixtures';
+import { getAccounts } from './fixtures';
+import { L1_CHAIN_URL, L2_CHAIN_URL } from 'test/utils';
 
 // TODO: This test needs to setup local dev nodes for L1 and L2
 // and also needs to have a private key with funds in the L1
@@ -13,9 +14,9 @@ jest.setTimeout(10000);
 describe('wallet', () => {
 	// @ts-ignore
 	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
-	const l1Provider = new Web3ZKsyncL1(L1Provider);
+	const l1Provider = new Web3ZKsyncL1(L1_CHAIN_URL);
 	const accounts = getAccounts();
-	const l2Provider = new Web3ZKsyncL2(L2Provider);
+	const l2Provider = new Web3ZKsyncL2(L2_CHAIN_URL);
 	const PRIVATE_KEY = accounts[0].privateKey;
 	const wallet = new ZKsyncWallet(PRIVATE_KEY, l2Provider, l1Provider);
 	it('should deposit', async () => {
