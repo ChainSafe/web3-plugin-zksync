@@ -79,7 +79,9 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 
 		this.deploymentType = deploymentType || 'create';
 
-		this.contractToBeDeployed = new zkWallet.provider!.eth.Contract(this.abi);
+		this.contractToBeDeployed = new zkWallet.provider!.eth.Contract(this.abi, {
+			from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
+		});
 	}
 
 	private encodeCalldata(
@@ -274,7 +276,13 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 			deploymentTransaction(): web3Types.TransactionReceipt;
 		}
 	> {
-		const tx = await this.getDeployTransaction(args, overrides);
+		let modArgs = args;
+		if (!Array.isArray(args)) {
+			// tolerate if there was only one parameter for deploy,
+			// which was passed as-is without wrapping it inside an array.
+			modArgs = [args] as any;
+		}
+		const tx = await this.getDeployTransaction(modArgs, overrides);
 
 		const receipt = await (await this.zkWallet?.sendTransaction(tx)).wait();
 
