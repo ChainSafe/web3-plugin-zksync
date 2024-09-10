@@ -12,6 +12,8 @@
 		"lint": "eslint '{src,test}/**/*.ts'",
 		"lint:fix": "eslint '{src,test}/**/*.ts' --fix",
 		"build": "tsc --project tsconfig.build.json",
+		"test:prepare": "ts-node test/setup.ts",
+		"test:wait": "ts-node test/wait.ts",
 		"build:docs": "npx -y typedoc src/index.ts",
 		"test": "jest --config=./test/jest.config.js",
 		"test:unit": "jest --config=./test/jest.config.js test/unit",

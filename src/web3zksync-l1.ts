@@ -17,7 +17,7 @@ export class Web3ZKsyncL1 extends Web3ZkSync {
 			return this.eth.getBalance(address, blockTag);
 		} else {
 			try {
-				return this.getTokenBalance(tokenAddress, address);
+				return await this.getTokenBalance(tokenAddress, address);
 			} catch {
 				return 0n;
 			}

@@ -49,9 +49,7 @@ describe('Web3ZkSyncL2 as a Provider', () => {
 
 		const priorityOpResponse = await getPriorityOpResponse(new Web3ZKsyncL1(), txPromise);
 		// 'The waitL1Commit function should be properly initialized'
-		expect(typeof (priorityOpResponse as PriorityL1OpResponse).waitL1Commit).toEqual(
-			'function',
-		);
+		expect(typeof (priorityOpResponse as PriorityL1OpResponse).waitL1Commit).toEqual('function');
 		// 'The wait function should be properly initialized'
 		expect(typeof priorityOpResponse.wait).toBe('function');
 		// 'The waitFinalize function should be properly initialized'
