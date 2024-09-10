@@ -631,9 +631,14 @@ export async function getERC20DefaultBridgeData(
 		? 18
 		: await token.methods.decimals().call();
 
+
+	const nameBytes = web3Abi.encodeParameters(['string'], [name]);
+	const symbolBytes = web3Abi.encodeParameters(['string'], [symbol]);
+	const decimalsBytes = web3Abi.encodeParameters(['uint256'], [decimals]);
+
 	return web3Abi.encodeParameters(
-		['string', 'string', 'uint256'],
-		[name, symbol, Number(decimals)],
+		['bytes', 'bytes', 'bytes'],
+		[nameBytes, symbolBytes, decimalsBytes],
 	);
 }
 
