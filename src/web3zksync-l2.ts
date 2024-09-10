@@ -76,7 +76,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					ZKTransactionReceiptSchema,
 					response as unknown as ZKTransactionReceipt,
 					returnFormat ?? this.defaultReturnFormat,
-				);
+			  );
 	}
 
 	/**
@@ -355,8 +355,9 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		if (!this.contractAddresses().bridgehubContract) {
-			this.contractAddresses().bridgehubContract =
-				await this._rpc.getBridgehubContractAddress(returnFormat);
+			this.contractAddresses().bridgehubContract = await this._rpc.getBridgehubContractAddress(
+				returnFormat,
+			);
 		}
 		return this.contractAddresses().bridgehubContract!;
 	}
@@ -405,7 +406,11 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 				from: transaction.caller,
 				data: transaction.calldata,
 				to: transaction.contractAddress,
-				value: transaction.l2Value ? web3Utils.toHex(transaction.l2Value) : undefined,
+				value: transaction.l2Value
+					? typeof transaction.l2Value !== 'string'
+						? web3Utils.toHex(transaction.l2Value)
+						: transaction.l2Value
+					: undefined,
 				customData,
 			},
 			returnFormat,
@@ -554,10 +559,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			tx.token = L2_BASE_TOKEN_ADDRESS;
 		}
 
-		if (
-			(tx.to === null || tx.to === undefined) &&
-			(tx.from === null || tx.from === undefined)
-		) {
+		if ((tx.to === null || tx.to === undefined) && (tx.from === null || tx.from === undefined)) {
 			throw new Error('Withdrawal target address is undefined!');
 		}
 
@@ -719,7 +721,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			return this.eth.getBalance(address, blockTag);
 		} else {
 			try {
-				return this.getTokenBalance(tokenAddress, address);
+				return await this.getTokenBalance(tokenAddress, address);
 			} catch {
 				return 0n;
 			}

@@ -172,10 +172,7 @@ export class Web3ZkSync extends Web3.Web3 {
 			populated.type = toHex(transaction.type === undefined ? 2n : transaction.type);
 		}
 
-		const formatted = web3Utils.format(
-			EIP712TransactionSchema,
-			populated,
-		) as TransactionRequest;
+		const formatted = web3Utils.format(EIP712TransactionSchema, populated) as TransactionRequest;
 
 		delete formatted.input;
 		delete formatted.chain;
@@ -191,8 +188,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		}
 		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
 		if (toBigInt(formatted.type) === 0n) {
-			formatted.gasPrice =
-				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
+			formatted.gasPrice = formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
 		}
 		if (toBigInt(formatted.type) === 2n && formatted.gasPrice) {
@@ -208,8 +204,7 @@ export class Web3ZkSync extends Web3.Web3 {
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
 			if (toBigInt(formatted.type) !== BigInt(EIP712_TX_TYPE)) {
-				formatted.maxFeePerGas =
-					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 				formatted.maxPriorityFeePerGas =
 					formatted.maxPriorityFeePerGas ??
 					(web3Utils.toBigInt(formatted.maxFeePerGas) >

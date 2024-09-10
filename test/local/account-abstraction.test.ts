@@ -5,17 +5,18 @@ import Storage from './files/Storage.json';
 import Token from './files/Token.json';
 import Paymaster from './files/Paymaster.json';
 import MultisigAccount from './files/TwoUserMultisig.json';
-import { getAccounts, L2Provider, PAYMASTER, APPROVAL_TOKEN } from './fixtures';
+import { getAccounts, PAYMASTER, APPROVAL_TOKEN } from './fixtures';
 import { getPaymasterParams, ContractFactory } from '../../src';
 import { Address } from 'web3';
 import { Eip712TxData } from '../../src/types';
 import { Transaction } from 'web3-types';
+import { L2_CHAIN_URL } from 'test/utils';
 const { ETH_ADDRESS } = constants;
 const accounts = getAccounts();
 
 jest.setTimeout(300000);
 describe('Account Abstraction', () => {
-	const l2Provider = new Web3ZKsyncL2(L2Provider);
+	const l2Provider = new Web3ZKsyncL2(L2_CHAIN_URL);
 	const PRIVATE_KEY1 = accounts[0].privateKey;
 	const ADDRESS1 = accounts[0].address;
 	const wallet = new ZKsyncWallet(PRIVATE_KEY1, l2Provider);
@@ -98,8 +99,7 @@ describe('Account Abstraction', () => {
 
 		expect(walletBalanceBeforeTx - walletBalanceAfterTx >= 0n).toBeTruthy();
 		expect(
-			walletTokenBalanceAfterTx ===
-				walletTokenBalanceBeforeTx - minimalAllowance + mintAmount,
+			walletTokenBalanceAfterTx === walletTokenBalanceBeforeTx - minimalAllowance + mintAmount,
 		).toBeTruthy();
 	});
 
@@ -119,7 +119,7 @@ describe('Account Abstraction', () => {
 		);
 		const owner1 = new ZKsyncWallet(
 			'0x63bbd75f81a3b889bf4faf581162dfe52bbd09d0149f4987d9a8cb654684441c',
-			new Web3ZKsyncL2(L2Provider),
+			new Web3ZKsyncL2(L2_CHAIN_URL),
 		);
 		// refill owner1 for gas estimation
 		await (
@@ -130,7 +130,7 @@ describe('Account Abstraction', () => {
 		).wait();
 		const owner2 = new ZKsyncWallet(
 			'0x2553cbc2c37248d0058a736f79ce1dac13e24dbecb0d371df6f4f53fa97ef789',
-			new Web3ZKsyncL2(L2Provider),
+			new Web3ZKsyncL2(L2_CHAIN_URL),
 		);
 		const args = [owner1.getAddress(), owner2.getAddress()];
 		const multisigContract = await factory.deploy(args);
@@ -190,7 +190,7 @@ describe('Account Abstraction', () => {
 		);
 		const owner1 = new ZKsyncWallet(
 			'0x63bbd75f81a3b889bf4faf581162dfe52bbd09d0149f4987d9a8cb654684441c',
-			new Web3ZKsyncL2(L2Provider),
+			new Web3ZKsyncL2(L2_CHAIN_URL),
 		);
 		// refill owner1 for gas estimation
 		await (
@@ -201,7 +201,7 @@ describe('Account Abstraction', () => {
 		).wait();
 		const owner2 = new ZKsyncWallet(
 			'0x2553cbc2c37248d0058a736f79ce1dac13e24dbecb0d371df6f4f53fa97ef789',
-			new Web3ZKsyncL2(L2Provider),
+			new Web3ZKsyncL2(L2_CHAIN_URL),
 		);
 		const args = [owner1.getAddress(), owner2.getAddress()];
 		const multisigContract = await factory.deploy(args);
@@ -258,9 +258,7 @@ describe('Account Abstraction', () => {
 		const accountApprovalTokenBalanceBeforeTx = await account.getBalance(APPROVAL_TOKEN);
 
 		const paymasterSetTx = await account.sendTransaction({
-			...(await storage.methods
-				.set(storageValue)
-				.populateTransaction({ from: account.address })),
+			...(await storage.methods.set(storageValue).populateTransaction({ from: account.address })),
 			customData: {
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',
@@ -277,8 +275,7 @@ describe('Account Abstraction', () => {
 
 		expect(accountBalanceBeforeTx === accountBalanceAfterTx).toBeTruthy();
 		expect(
-			accountApprovalTokenBalanceAfterTx ===
-				accountApprovalTokenBalanceBeforeTx - minimalAllowance,
+			accountApprovalTokenBalanceAfterTx === accountApprovalTokenBalanceBeforeTx - minimalAllowance,
 		).toBeTruthy();
 		expect(await storage.methods.get().call()).toBe(storageValue);
 	});

@@ -1,13 +1,5 @@
-import { IS_ETH_BASED, deepEqualExcluding, PRIVATE_KEY2, ADDRESS2 } from '../utils';
-import {
-	PAYMASTER,
-	APPROVAL_TOKEN,
-	DAI_L1,
-	getAccounts,
-	L2Provider,
-	L1Provider,
-	prepareAccount,
-} from './fixtures';
+import { deepEqualExcluding, PRIVATE_KEY2, ADDRESS2, L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';
+import { PAYMASTER, APPROVAL_TOKEN, DAI_L1, getAccounts, prepareAccount } from './fixtures';
 import MultisigAccount from './files/TwoUserMultisig.json';
 import { EIP712_TX_TYPE, ETH_ADDRESS, ETH_ADDRESS_IN_CONTRACTS } from '../../src/constants';
 import { toBigInt, toWei } from 'web3-utils';
@@ -28,8 +20,8 @@ jest.setTimeout(50000);
 const accounts = getAccounts();
 const mainAccount = accounts[0];
 const PRIVATE_KEY = mainAccount.privateKey;
-const provider = new Web3ZKsyncL2(L2Provider);
-const l1Provider = new Web3ZKsyncL1(L1Provider);
+const provider = new Web3ZKsyncL2(L2_CHAIN_URL);
+const l1Provider = new Web3ZKsyncL1(L1_CHAIN_URL);
 const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, l1Provider);
 const account = new SmartAccount(
 	{ address: mainAccount.address, secret: mainAccount.privateKey },
@@ -263,8 +255,7 @@ describe('SmartAccount', () => {
 				APPROVAL_TOKEN,
 			);
 			const senderBalanceBeforeTransfer = await account.getBalance();
-			const senderApprovalTokenBalanceBeforeTransfer =
-				await account.getBalance(APPROVAL_TOKEN);
+			const senderApprovalTokenBalanceBeforeTransfer = await account.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 
 			const tx = await account.transfer({
@@ -287,13 +278,10 @@ describe('SmartAccount', () => {
 				APPROVAL_TOKEN,
 			);
 			const senderBalanceAfterTransfer = await account.getBalance();
-			const senderApprovalTokenBalanceAfterTransfer =
-				await account.getBalance(APPROVAL_TOKEN);
+			const senderApprovalTokenBalanceAfterTransfer = await account.getBalance(APPROVAL_TOKEN);
 			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2);
 
-			expect(
-				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-			).toBeTruthy();
+			expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toBeTruthy();
 			expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
 				minimalAllowance,
 			);
@@ -334,13 +322,8 @@ describe('SmartAccount', () => {
 				APPROVAL_TOKEN,
 			);
 			const senderBalanceBeforeTransfer = await account.getBalance(l2DAI);
-			const senderApprovalTokenBalanceBeforeTransfer =
-				await account.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceBeforeTransfer = await provider.getBalance(
-				ADDRESS2,
-				'latest',
-				l2DAI,
-			);
+			const senderApprovalTokenBalanceBeforeTransfer = await account.getBalance(APPROVAL_TOKEN);
+			const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 
 			const tx = await account.transfer({
 				token: l2DAI,
@@ -362,17 +345,10 @@ describe('SmartAccount', () => {
 				APPROVAL_TOKEN,
 			);
 			const senderBalanceAfterTransfer = await account.getBalance(l2DAI);
-			const senderApprovalTokenBalanceAfterTransfer =
-				await account.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceAfterTransfer = await provider.getBalance(
-				ADDRESS2,
-				'latest',
-				l2DAI,
-			);
+			const senderApprovalTokenBalanceAfterTransfer = await account.getBalance(APPROVAL_TOKEN);
+			const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 
-			expect(
-				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-			).toBeTruthy();
+			expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toBeTruthy();
 			expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
 				minimalAllowance,
 			);
@@ -447,12 +423,10 @@ describe('SmartAccount', () => {
 			const l2BalanceAfterWithdrawal = await account.getBalance();
 			const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
 
-			expect(
-				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-			).toBeTruthy();
-			expect(
-				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-			).toBe(minimalAllowance);
+			expect(paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n).toBeTruthy();
+			expect(paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal).toBe(
+				minimalAllowance,
+			);
 
 			expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
 			expect(
@@ -531,12 +505,10 @@ describe('SmartAccount', () => {
 			const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
 			const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
 
-			expect(
-				paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-			).toBeTruthy();
-			expect(
-				paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-			).toBe(minimalAllowance);
+			expect(paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n).toBeTruthy();
+			expect(paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal).toBe(
+				minimalAllowance,
+			);
 			expect(
 				l2ApprovalTokenBalanceAfterWithdrawal ===
 					l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
@@ -548,8 +520,8 @@ describe('SmartAccount', () => {
 		});
 	});
 	describe('MultisigECDSASmartAccount', () => {
-		const provider = new Web3ZKsyncL2(L2Provider);
-		const ethProvider = new Web3ZKsyncL1(L1Provider);
+		const provider = new Web3ZKsyncL2(L2_CHAIN_URL);
+		const ethProvider = new Web3ZKsyncL1(L1_CHAIN_URL);
 		const wallet = new ZKsyncWallet(mainAccount.privateKey, provider, ethProvider);
 		let account: SmartAccount;
 
@@ -629,8 +601,7 @@ describe('SmartAccount', () => {
 					APPROVAL_TOKEN,
 				);
 				const senderBalanceBeforeTransfer = await account.getBalance();
-				const senderApprovalTokenBalanceBeforeTransfer =
-					await account.getBalance(APPROVAL_TOKEN);
+				const senderApprovalTokenBalanceBeforeTransfer = await account.getBalance(APPROVAL_TOKEN);
 				const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS2);
 
 				const tx = await account.transfer({
@@ -653,16 +624,13 @@ describe('SmartAccount', () => {
 					APPROVAL_TOKEN,
 				);
 				const senderBalanceAfterTransfer = await account.getBalance();
-				const senderApprovalTokenBalanceAfterTransfer =
-					await account.getBalance(APPROVAL_TOKEN);
+				const senderApprovalTokenBalanceAfterTransfer = await account.getBalance(APPROVAL_TOKEN);
 				const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2);
 
-				expect(
-					paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-				).toBeTruthy();
-				expect(
-					paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer,
-				).toBe(minimalAllowance);
+				expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toBeTruthy();
+				expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
+					minimalAllowance,
+				);
 
 				expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toBe(amount);
 				expect(
@@ -701,13 +669,8 @@ describe('SmartAccount', () => {
 					APPROVAL_TOKEN,
 				);
 				const senderBalanceBeforeTransfer = await account.getBalance(l2DAI);
-				const senderApprovalTokenBalanceBeforeTransfer =
-					await account.getBalance(APPROVAL_TOKEN);
-				const receiverBalanceBeforeTransfer = await provider.getBalance(
-					ADDRESS2,
-					'latest',
-					l2DAI,
-				);
+				const senderApprovalTokenBalanceBeforeTransfer = await account.getBalance(APPROVAL_TOKEN);
+				const receiverBalanceBeforeTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 
 				const tx = await account.transfer({
 					token: l2DAI,
@@ -729,20 +692,13 @@ describe('SmartAccount', () => {
 					APPROVAL_TOKEN,
 				);
 				const senderBalanceAfterTransfer = await account.getBalance(l2DAI);
-				const senderApprovalTokenBalanceAfterTransfer =
-					await account.getBalance(APPROVAL_TOKEN);
-				const receiverBalanceAfterTransfer = await provider.getBalance(
-					ADDRESS2,
-					'latest',
-					l2DAI,
-				);
+				const senderApprovalTokenBalanceAfterTransfer = await account.getBalance(APPROVAL_TOKEN);
+				const receiverBalanceAfterTransfer = await provider.getBalance(ADDRESS2, 'latest', l2DAI);
 
-				expect(
-					paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-				).toBeTruthy();
-				expect(
-					paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer,
-				).toBe(minimalAllowance);
+				expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toBeTruthy();
+				expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
+					minimalAllowance,
+				);
 
 				expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toBe(amount);
 				expect(
@@ -784,8 +740,7 @@ describe('SmartAccount', () => {
 					APPROVAL_TOKEN,
 				);
 				const l2BalanceBeforeWithdrawal = await account.getBalance();
-				const l2ApprovalTokenBalanceBeforeWithdrawal =
-					await account.getBalance(APPROVAL_TOKEN);
+				const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
 
 				const withdrawTx = await account.withdraw({
 					token: ETH_ADDRESS,
@@ -810,15 +765,14 @@ describe('SmartAccount', () => {
 					APPROVAL_TOKEN,
 				);
 				const l2BalanceAfterWithdrawal = await account.getBalance();
-				const l2ApprovalTokenBalanceAfterWithdrawal =
-					await account.getBalance(APPROVAL_TOKEN);
+				const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
 
 				expect(
 					paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0,
 				).toBeTruthy();
-				expect(
-					paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-				).toBe(minimalAllowance);
+				expect(paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal).toBe(
+					minimalAllowance,
+				);
 
 				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal).toBe(amount);
 				expect(
@@ -866,8 +820,7 @@ describe('SmartAccount', () => {
 				);
 				const l2BalanceBeforeWithdrawal = await account.getBalance(l2DAI);
 				const l1BalanceBeforeWithdrawal = await wallet.getBalanceL1(DAI_L1);
-				const l2ApprovalTokenBalanceBeforeWithdrawal =
-					await account.getBalance(APPROVAL_TOKEN);
+				const l2ApprovalTokenBalanceBeforeWithdrawal = await account.getBalance(APPROVAL_TOKEN);
 
 				const withdrawTx = await account.withdraw({
 					token: l2DAI,
@@ -893,15 +846,14 @@ describe('SmartAccount', () => {
 				);
 				const l2BalanceAfterWithdrawal = await account.getBalance(l2DAI);
 				const l1BalanceAfterWithdrawal = await wallet.getBalanceL1(DAI_L1);
-				const l2ApprovalTokenBalanceAfterWithdrawal =
-					await account.getBalance(APPROVAL_TOKEN);
+				const l2ApprovalTokenBalanceAfterWithdrawal = await account.getBalance(APPROVAL_TOKEN);
 
 				expect(
 					paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
 				).toBeTruthy();
-				expect(
-					paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
-				).toBe(minimalAllowance);
+				expect(paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal).toBe(
+					minimalAllowance,
+				);
 				expect(
 					l2ApprovalTokenBalanceAfterWithdrawal ===
 						l2ApprovalTokenBalanceBeforeWithdrawal - minimalAllowance,
