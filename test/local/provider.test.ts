@@ -1,11 +1,10 @@
 import { Web3ZKsyncL2, ZKsyncWallet, SmartAccount } from '../../src';
-import { L2Provider } from './fixtures';
-import { ADDRESS2, PRIVATE_KEY1, PRIVATE_KEY2 } from '../utils';
+import { ADDRESS2, L2_CHAIN_URL, PRIVATE_KEY1, PRIVATE_KEY2 } from '../utils';
 import { EIP712_TX_TYPE } from '../../src/constants';
 import { privateKeyToAccount } from 'web3-eth-accounts';
 describe('EIP712Signer', () => {
 	it('should different wallets be able to use different accounts, even when using the same EIP712Signer', async () => {
-		const l2Provider = new Web3ZKsyncL2(L2Provider);
+		const l2Provider = new Web3ZKsyncL2(L2_CHAIN_URL);
 		const w1 = new ZKsyncWallet(PRIVATE_KEY1, l2Provider);
 
 		const s1 = await w1.provider?.signTransaction({
@@ -36,7 +35,7 @@ describe('EIP712Signer', () => {
 	});
 
 	it('should different smart accounts be able to use different accounts, even when using the same EIP712Signer', async () => {
-		const l2Provider = new Web3ZKsyncL2(L2Provider);
+		const l2Provider = new Web3ZKsyncL2(L2_CHAIN_URL);
 		const acc = privateKeyToAccount(PRIVATE_KEY1);
 		const acc2 = privateKeyToAccount(PRIVATE_KEY2);
 		const sa1 = new SmartAccount(

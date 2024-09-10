@@ -2,7 +2,14 @@ import * as ethAccounts from 'web3-eth-accounts';
 import * as web3Utils from 'web3-utils';
 import type { Transaction } from 'web3-types';
 import { utils, Web3ZKsyncL2, ZKsyncWallet, Web3ZKsyncL1, getPaymasterParams } from '../../src';
-import { IS_ETH_BASED, ADDRESS1, ADDRESS2, deepEqualExcluding } from '../utils';
+import {
+	IS_ETH_BASED,
+	ADDRESS1,
+	ADDRESS2,
+	deepEqualExcluding,
+	L1_CHAIN_URL,
+	L2_CHAIN_URL,
+} from '../utils';
 import {
 	ETH_ADDRESS,
 	ETH_ADDRESS_IN_CONTRACTS,
@@ -14,8 +21,6 @@ import {
 import { IERC20ABI } from '../../src/contracts/IERC20';
 import {
 	getAccounts,
-	L1Provider,
-	L2Provider,
 	PAYMASTER,
 	DAI_L1,
 	APPROVAL_TOKEN,
@@ -29,8 +34,8 @@ jest.setTimeout(600000);
 const accounts = getAccounts();
 const mainAccount = accounts[0];
 const PRIVATE_KEY = mainAccount.privateKey;
-const provider = new Web3ZKsyncL2(L2Provider);
-const ethProvider = new Web3ZKsyncL1(L1Provider);
+const provider = new Web3ZKsyncL2(L2_CHAIN_URL);
+const ethProvider = new Web3ZKsyncL1(L1_CHAIN_URL);
 const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, ethProvider);
 const walletAddress = wallet.getAddress();
 

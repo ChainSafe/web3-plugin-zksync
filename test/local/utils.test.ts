@@ -2,7 +2,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import { Web3 } from 'web3';
 import * as constants from '../../src/constants';
 import * as utils from '../../src/utils';
-import { L2Provider } from './fixtures';
+import { L2_CHAIN_URL } from 'test/utils';
 
 describe('utils', () => {
 	describe('#isTypedDataSignatureCorrect()', () => {
@@ -22,7 +22,7 @@ describe('utils', () => {
 				270,
 			);
 			const signature = await eip712Signer.sign(tx);
-			const web3 = new Web3(L2Provider);
+			const web3 = new Web3(L2_CHAIN_URL);
 			expect(signature).toBe(
 				'0x5ea12f3d54a1624d7e7f5161dbf6ab746c3335e643b2966264e740cf8e10e9b64b0251fb79d9a5b11730387085a0d58f105926f72e20242ecb274639991939ca1b',
 			);

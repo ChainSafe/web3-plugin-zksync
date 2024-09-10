@@ -1,10 +1,8 @@
 import { Web3ZKsyncL2, ZKsyncWallet, Web3ZKsyncL1, getPaymasterParams } from '../../src';
-import { IS_ETH_BASED } from '../utils';
+import { IS_ETH_BASED, L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';
 import { ETH_ADDRESS_IN_CONTRACTS, LEGACY_ETH_ADDRESS } from '../../src/constants';
 import {
 	getAccounts,
-	L1Provider,
-	L2Provider,
 	ERC20_CROWN,
 	PAYMASTER,
 	DAI_L1,
@@ -17,8 +15,8 @@ jest.setTimeout(600000);
 const accounts = getAccounts();
 const mainAccount = accounts[0];
 const PRIVATE_KEY = mainAccount.privateKey;
-const provider = new Web3ZKsyncL2(L2Provider);
-const ethProvider = new Web3ZKsyncL1(L1Provider);
+const provider = new Web3ZKsyncL2(L2_CHAIN_URL);
+const ethProvider = new Web3ZKsyncL1(L1_CHAIN_URL);
 const wallet = new ZKsyncWallet(PRIVATE_KEY, provider, ethProvider);
 
 describe('Wallet', () => {
