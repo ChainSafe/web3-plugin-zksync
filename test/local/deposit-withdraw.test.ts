@@ -2,7 +2,7 @@ import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
 import { ETH_ADDRESS } from '../../src/constants';
 import * as utils from '../../src/utils';
 import { getAccounts } from './fixtures';
-import { L1_CHAIN_URL, L2_CHAIN_URL } from 'test/utils';
+import { L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';
 
 // TODO: This test needs to setup local dev nodes for L1 and L2
 // and also needs to have a private key with funds in the L1

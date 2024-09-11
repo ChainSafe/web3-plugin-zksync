@@ -10,7 +10,7 @@ import { getPaymasterParams, ContractFactory } from '../../src';
 import { Address } from 'web3';
 import { Eip712TxData } from '../../src/types';
 import { Transaction } from 'web3-types';
-import { L2_CHAIN_URL } from 'test/utils';
+import { L2_CHAIN_URL } from '../utils';
 const { ETH_ADDRESS } = constants;
 const accounts = getAccounts();
 
@@ -99,7 +99,8 @@ describe('Account Abstraction', () => {
 
 		expect(walletBalanceBeforeTx - walletBalanceAfterTx >= 0n).toBeTruthy();
 		expect(
-			walletTokenBalanceAfterTx === walletTokenBalanceBeforeTx - minimalAllowance + mintAmount,
+			walletTokenBalanceAfterTx ===
+				walletTokenBalanceBeforeTx - minimalAllowance + mintAmount,
 		).toBeTruthy();
 	});
 
@@ -258,7 +259,9 @@ describe('Account Abstraction', () => {
 		const accountApprovalTokenBalanceBeforeTx = await account.getBalance(APPROVAL_TOKEN);
 
 		const paymasterSetTx = await account.sendTransaction({
-			...(await storage.methods.set(storageValue).populateTransaction({ from: account.address })),
+			...(await storage.methods
+				.set(storageValue)
+				.populateTransaction({ from: account.address })),
 			customData: {
 				paymasterParams: getPaymasterParams(PAYMASTER, {
 					type: 'ApprovalBased',
@@ -275,7 +278,8 @@ describe('Account Abstraction', () => {
 
 		expect(accountBalanceBeforeTx === accountBalanceAfterTx).toBeTruthy();
 		expect(
-			accountApprovalTokenBalanceAfterTx === accountApprovalTokenBalanceBeforeTx - minimalAllowance,
+			accountApprovalTokenBalanceAfterTx ===
+				accountApprovalTokenBalanceBeforeTx - minimalAllowance,
 		).toBeTruthy();
 		expect(await storage.methods.get().call()).toBe(storageValue);
 	});
