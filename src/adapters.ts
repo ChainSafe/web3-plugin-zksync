@@ -35,13 +35,13 @@ import {
 	ETH_ADDRESS_IN_CONTRACTS,
 	LEGACY_ETH_ADDRESS,
 	EIP712_TX_TYPE,
+	DEFAULT_GAS_PER_PUBDATA_LIMIT,
 } from './constants';
 import {
 	Address,
 	FinalizeWithdrawalParams,
 	FullDepositFee,
 	TransactionOverrides,
-	PaymasterParams,
 	PriorityOpResponse,
 	WalletBalances,
 	Eip712TxData,
@@ -49,6 +49,13 @@ import {
 	TransactionRequest,
 	TransferTransactionDetails,
 	DepositTransactionDetails,
+	L2GasLimitDetails,
+	FullRequiredDepositFeeDetails,
+	BaseCostDetails,
+	TokenAllowanceResult,
+	RequestExecuteDetails,
+	L2BridgeContractsResult,
+	WithdrawTransactionDetails,
 } from './types';
 import { ZeroAddress, ZeroHash } from './types';
 import { IZkSyncABI } from './contracts/IZkSyncStateTransition';
@@ -107,14 +114,24 @@ export class AdapterL1 implements TxSender {
 	 *
 	 * @remarks There is no separate Ether bridge contract, {@link getBridgehubContractAddress Bridgehub} is used instead.
 	 */
-	async getL1BridgeContracts(returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT): Promise<{
+	async getL1BridgeContracts(
+		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<{
 		erc20: Web3.Contract<typeof IERC20ABI>;
 		weth: Web3.Contract<typeof IERC20ABI>;
 		shared: Web3.Contract<typeof IL1SharedBridgeABI>;
 	}> {
 		const addresses = await this._contextL2().getDefaultBridgeAddresses();
-		const erc20 = new (this._contextL1().eth.Contract)(IERC20ABI, addresses.erc20L1, returnFormat);
-		const weth = new (this._contextL1().eth.Contract)(IERC20ABI, addresses.wethL1, returnFormat);
+		const erc20 = new (this._contextL1().eth.Contract)(
+			IERC20ABI,
+			addresses.erc20L1,
+			returnFormat,
+		);
+		const weth = new (this._contextL1().eth.Contract)(
+			IERC20ABI,
+			addresses.wethL1,
+			returnFormat,
+		);
 		const shared = new (this._contextL1().eth.Contract)(
 			IL1SharedBridgeABI,
 			addresses.sharedL1,
@@ -240,12 +257,7 @@ export class AdapterL1 implements TxSender {
 	 * @param [params.gasPerPubdataByte] The L2 gas price for each published L1 calldata byte.
 	 * @param [params.gasPrice] The L1 gas price of the L1 transaction that will send the request for an execute call.
 	 */
-	async getBaseCost(params: {
-		gasLimit: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		gasPrice?: web3Types.Numbers;
-		chainId?: web3Types.Numbers;
-	}): Promise<bigint> {
+	async getBaseCost(params: BaseCostDetails): Promise<bigint> {
 		const bridgehub = await this.getBridgehubContract();
 		const parameters = { ...layer1TxDefaults(), ...params };
 		parameters.gasPrice ??= (await this._contextL1().eth.calculateFeeData()).gasPrice!;
@@ -272,7 +284,7 @@ export class AdapterL1 implements TxSender {
 	async getDepositAllowanceParams(
 		token: Address,
 		amount: web3Types.Numbers,
-	): Promise<{ token: Address; allowance: web3Types.Numbers }[]> {
+	): Promise<TokenAllowanceResult[]> {
 		if (isAddressEq(token, LEGACY_ETH_ADDRESS)) {
 			token = ETH_ADDRESS_IN_CONTRACTS;
 		}
@@ -289,7 +301,8 @@ export class AdapterL1 implements TxSender {
 			return [
 				{
 					token: baseTokenAddress,
-					allowance: (await this._getDepositETHOnNonETHBasedChainTx({ token, amount })).mintValue,
+					allowance: (await this._getDepositETHOnNonETHBasedChainTx({ token, amount }))
+						.mintValue,
 				},
 			];
 		} else if (isAddressEq(token, baseTokenAddress)) {
@@ -358,22 +371,7 @@ export class AdapterL1 implements TxSender {
 	 * to pass L1 `gasLimit`, `gasPrice`, `value`, etc.
 	 * @param [transaction.customBridgeData] Additional data that can be sent to a bridge.
 	 */
-	async deposit(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}): Promise<PriorityOpResponse> {
+	async deposit(transaction: DepositTransactionDetails): Promise<PriorityOpResponse> {
 		transaction.amount = format({ format: 'uint' }, transaction.amount, ETH_DATA_FORMAT);
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
@@ -395,29 +393,17 @@ export class AdapterL1 implements TxSender {
 		}
 	}
 
-	async _depositNonBaseTokenToNonETHBasedChain(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}): Promise<PriorityOpResponse> {
+	async _depositNonBaseTokenToNonETHBasedChain(
+		transaction: DepositTransactionDetails,
+	): Promise<PriorityOpResponse> {
 		// Deposit a non-ETH and non-base token to a non-ETH-based chain.
 		// Go through the BridgeHub and obtain approval for both tokens.
 		const bridgehub = await this.getBridgehubContract();
 		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const bridgeContracts = await this.getL1BridgeContracts();
-		const { tx, mintValue } = await this._getDepositNonBaseTokenToNonETHBasedChainTx(transaction);
+		const { tx, mintValue } =
+			await this._getDepositNonBaseTokenToNonETHBasedChainTx(transaction);
 
 		if (transaction.approveBaseERC20) {
 			// Only request the allowance if the current one is not enough.
@@ -454,22 +440,9 @@ export class AdapterL1 implements TxSender {
 		return this.signAndSend(tx.populateTransaction({ gasLimit } as PayableTxOptions));
 	}
 
-	async _depositBaseTokenToNonETHBasedChain(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}): Promise<PriorityOpResponse> {
+	async _depositBaseTokenToNonETHBasedChain(
+		transaction: DepositTransactionDetails,
+	): Promise<PriorityOpResponse> {
 		// Bridging the base token to a non-ETH-based chain.
 		// Go through the BridgeHub, and give approval.
 		const bridgehub = await this.getBridgehubContract();
@@ -479,7 +452,8 @@ export class AdapterL1 implements TxSender {
 		const { tx, mintValue } = await this._getDepositBaseTokenOnNonETHBasedChainTx(transaction);
 
 		if (transaction.approveERC20 || transaction.approveBaseERC20) {
-			const approveOverrides = transaction.approveBaseOverrides ?? transaction.approveOverrides!;
+			const approveOverrides =
+				transaction.approveBaseOverrides ?? transaction.approveOverrides!;
 			// Only request the allowance if the current one is not enough.
 			const allowance = await this.getAllowanceL1(baseTokenAddress, sharedBridge);
 			if (allowance < mintValue) {
@@ -489,38 +463,26 @@ export class AdapterL1 implements TxSender {
 				});
 			}
 		}
-		const baseGasLimit = await this.estimateGasRequestExecute(tx);
+		const baseGasLimit = await this.estimateGasRequestExecute(tx as RequestExecuteDetails);
 		const gasLimit = scaleGasLimit(baseGasLimit);
 
 		tx.overrides ??= {};
 		tx.overrides.gasLimit ??= gasLimit;
 
-		return this.requestExecute(tx);
+		return this.requestExecute(tx as RequestExecuteDetails);
 	}
 
-	async _depositETHToNonETHBasedChain(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}): Promise<PriorityOpResponse> {
+	async _depositETHToNonETHBasedChain(
+		transaction: DepositTransactionDetails,
+	): Promise<PriorityOpResponse> {
 		// Depositing ETH into a non-ETH-based chain.
 		// Use requestL2TransactionTwoBridges, secondBridge is the wETH bridge.
 		const bridgehub = await this.getBridgehubContract();
 		const chainId = await this._contextL2().eth.getChainId();
 		const baseTokenAddress = await bridgehub.methods.baseToken(chainId).call();
 		const sharedBridge = (await this.getL1BridgeContracts()).shared.options.address;
-		const { tx, overrides, mintValue } = await this._getDepositETHOnNonETHBasedChainTx(transaction);
+		const { tx, overrides, mintValue } =
+			await this._getDepositETHOnNonETHBasedChainTx(transaction);
 
 		if (transaction.approveBaseERC20) {
 			// Only request the allowance if the current one is not enough.
@@ -547,28 +509,17 @@ export class AdapterL1 implements TxSender {
 		return this.signAndSend(tx.populateTransaction(overrides as PayableTxOptions));
 	}
 
-	async _depositTokenToETHBasedChain(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}): Promise<PriorityOpResponse> {
+	async _depositTokenToETHBasedChain(
+		transaction: DepositTransactionDetails,
+	): Promise<PriorityOpResponse> {
 		const bridgeContracts = await this.getL1BridgeContracts();
 		const { tx, overrides } = await this._getDepositTokenOnETHBasedChainTx(transaction);
 
 		if (transaction.approveERC20) {
 			const proposedBridge = bridgeContracts.shared.options.address;
-			const bridgeAddress = transaction.bridgeAddress ? transaction.bridgeAddress : proposedBridge;
+			const bridgeAddress = transaction.bridgeAddress
+				? transaction.bridgeAddress
+				: proposedBridge;
 
 			// Only request the allowance if the current one is not enough.
 			const allowance = await this.getAllowanceL1(transaction.token, bridgeAddress);
@@ -588,30 +539,17 @@ export class AdapterL1 implements TxSender {
 		return this.signAndSend(tx.populateTransaction(overrides as PayableTxOptions));
 	}
 
-	async _depositETHToETHBasedChain(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}): Promise<PriorityOpResponse> {
+	async _depositETHToETHBasedChain(
+		transaction: DepositTransactionDetails,
+	): Promise<PriorityOpResponse> {
 		const tx = await this._getDepositETHOnETHBasedChainTx(transaction);
-		const baseGasLimit = await this.estimateGasRequestExecute(tx);
+		const baseGasLimit = await this.estimateGasRequestExecute(tx as RequestExecuteDetails);
 		const gasLimit = scaleGasLimit(baseGasLimit);
 
 		tx.overrides ??= {};
 		tx.overrides.gasLimit ??= gasLimit;
 
-		return this.requestExecute(tx);
+		return this.requestExecute(tx as RequestExecuteDetails);
 	}
 
 	/**
@@ -638,18 +576,7 @@ export class AdapterL1 implements TxSender {
 	 * If the transaction fails, it will also be the address to receive `l2Value`.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L1 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	async estimateGasDeposit(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		customBridgeData?: web3Types.Bytes;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<bigint> {
+	async estimateGasDeposit(transaction: DepositTransactionDetails): Promise<bigint> {
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}
@@ -704,37 +631,22 @@ export class AdapterL1 implements TxSender {
 		}
 	}
 
-	async _getDepositNonBaseTokenToNonETHBasedChainTx(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}) {
+	async _getDepositNonBaseTokenToNonETHBasedChainTx(transaction: DepositTransactionDetails) {
 		const bridgehub = await this.getBridgehubContract();
 		const chainId = await this._contextL2().eth.getChainId();
 		const bridgeContracts = await this.getL1BridgeContracts();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
-		const {
-			token,
-			operatorTip,
-			amount,
-			overrides,
-			l2GasLimit,
-			to,
-			refundRecipient,
-			gasPerPubdataByte,
-		} = tx;
+		const { token, operatorTip, amount, l2GasLimit, to, refundRecipient, gasPerPubdataByte } =
+			tx;
+		let { overrides } = tx;
 
+		if (!overrides) {
+			overrides = {};
+		}
 		const baseCost = await this.getBaseCost({
 			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
-			gasLimit: l2GasLimit,
+			gasLimit: l2GasLimit ?? DEFAULT_GAS_PER_PUBDATA_LIMIT,
 			gasPerPubdataByte: gasPerPubdataByte,
 			chainId,
 		});
@@ -763,31 +675,21 @@ export class AdapterL1 implements TxSender {
 		};
 	}
 
-	async _getDepositBaseTokenOnNonETHBasedChainTx(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}) {
+	async _getDepositBaseTokenOnNonETHBasedChainTx(transaction: DepositTransactionDetails) {
 		// Depositing the base token to a non-ETH-based chain.
 		// Goes through the BridgeHub.
 		// Have to give approvals for the sharedBridge.
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
-		const { operatorTip, amount, to, overrides, l2GasLimit, gasPerPubdataByte } = tx;
-
+		const { operatorTip = 0, amount, to, overrides, l2GasLimit, gasPerPubdataByte } = tx;
 		const baseCost = await this.getBaseCost({
-			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
-			gasLimit: l2GasLimit,
+			gasPrice: overrides?.maxFeePerGas || overrides?.gasPrice,
+			gasLimit: l2GasLimit ?? DEFAULT_GAS_PER_PUBDATA_LIMIT,
 			gasPerPubdataByte: gasPerPubdataByte,
 		});
-
+		if (!tx.overrides) {
+			tx.overrides = {};
+		}
 		tx.overrides.value = 0;
 		return {
 			tx: {
@@ -801,33 +703,24 @@ export class AdapterL1 implements TxSender {
 		};
 	}
 
-	async _getDepositETHOnNonETHBasedChainTx(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}) {
+	async _getDepositETHOnNonETHBasedChainTx(transaction: DepositTransactionDetails) {
 		const bridgehub = await this.getBridgehubContract();
 		const chainId = await this._contextL2().eth.getChainId();
 		const sharedBridge = (await this.getL1BridgeContracts()).shared.options.address;
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
-		const { operatorTip, amount, overrides, l2GasLimit, to, refundRecipient, gasPerPubdataByte } =
-			tx;
+		const { operatorTip, amount, l2GasLimit, to, refundRecipient, gasPerPubdataByte } = tx;
+		let { overrides } = tx;
 
 		const baseCost = await this.getBaseCost({
-			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
-			gasLimit: l2GasLimit,
+			gasPrice: overrides?.maxFeePerGas || overrides?.gasPrice,
+			gasLimit: l2GasLimit ?? DEFAULT_GAS_PER_PUBDATA_LIMIT,
 			chainId: chainId,
 			gasPerPubdataByte: gasPerPubdataByte,
 		});
-
+		if (!overrides) {
+			overrides = {};
+		}
 		overrides.value ??= amount;
 		const mintValue = web3Utils.toBigInt(baseCost) + web3Utils.toBigInt(operatorTip);
 		await checkBaseCost(baseCost, mintValue);
@@ -852,18 +745,7 @@ export class AdapterL1 implements TxSender {
 		};
 	}
 
-	async _getDepositTokenOnETHBasedChainTx(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<{
+	async _getDepositTokenOnETHBasedChainTx(transaction: DepositTransactionDetails): Promise<{
 		tx: PayableMethodObject;
 		overrides: TransactionOverrides;
 	}> {
@@ -872,25 +754,21 @@ export class AdapterL1 implements TxSender {
 		const chainId = await this._contextL2().eth.getChainId();
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
-		const {
-			token,
-			operatorTip,
-			amount,
-			overrides,
-			l2GasLimit,
-			to,
-			refundRecipient,
-			gasPerPubdataByte,
-		} = tx;
+		const { token, operatorTip, amount, l2GasLimit, to, refundRecipient, gasPerPubdataByte } =
+			tx;
+		let { overrides } = tx;
 
 		const baseCost = await this.getBaseCost({
-			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
-			gasLimit: l2GasLimit,
+			gasPrice: overrides?.maxFeePerGas || overrides?.gasPrice,
+			gasLimit: l2GasLimit ?? DEFAULT_GAS_PER_PUBDATA_LIMIT,
 			gasPerPubdataByte,
 			chainId,
 		});
 
 		const mintValue = web3Utils.toBigInt(baseCost) + web3Utils.toBigInt(operatorTip);
+		if (!overrides) {
+			overrides = {};
+		}
 		overrides.value ??= mintValue;
 		await checkBaseCost(baseCost, mintValue);
 
@@ -898,9 +776,13 @@ export class AdapterL1 implements TxSender {
 		let secondBridgeCalldata: web3Types.Bytes;
 		if (tx.bridgeAddress) {
 			secondBridgeAddress = tx.bridgeAddress;
-			secondBridgeCalldata = await getERC20DefaultBridgeData(transaction.token, this._contextL1());
+			secondBridgeCalldata = await getERC20DefaultBridgeData(
+				transaction.token,
+				this._contextL1(),
+			);
 		} else {
-			secondBridgeAddress = (await this.getL1BridgeContracts()).shared.options.address as Address;
+			secondBridgeAddress = (await this.getL1BridgeContracts()).shared.options
+				.address as Address;
 			secondBridgeCalldata = Web3EthAbi.encodeParameters(
 				['address', 'uint256', 'address'],
 				[token, amount, to],
@@ -923,30 +805,24 @@ export class AdapterL1 implements TxSender {
 		};
 	}
 
-	async _getDepositETHOnETHBasedChainTx(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}) {
+	async _getDepositETHOnETHBasedChainTx(transaction: DepositTransactionDetails) {
 		// Call the BridgeHub directly, like it's done with the DiamondProxy.
 
 		const tx = await this._getDepositTxWithDefaults(transaction);
-		const { operatorTip, amount, overrides, l2GasLimit, gasPerPubdataByte, to } = tx;
+		const { operatorTip, amount, l2GasLimit, gasPerPubdataByte, to } = tx;
+		let { overrides } = tx;
 		const baseCost = await this.getBaseCost({
-			gasPrice: overrides.maxFeePerGas || overrides.gasPrice,
-			gasLimit: l2GasLimit,
+			gasPrice: overrides?.maxFeePerGas || overrides?.gasPrice,
+			gasLimit: l2GasLimit ?? DEFAULT_GAS_PER_PUBDATA_LIMIT,
 			gasPerPubdataByte,
 		});
-
+		if (!overrides) {
+			overrides = {};
+		}
 		overrides.value ??=
-			web3Utils.toBigInt(baseCost) + web3Utils.toBigInt(operatorTip) + web3Utils.toBigInt(amount);
+			web3Utils.toBigInt(baseCost) +
+			web3Utils.toBigInt(operatorTip) +
+			web3Utils.toBigInt(amount);
 
 		return {
 			contractAddress: to,
@@ -958,29 +834,9 @@ export class AdapterL1 implements TxSender {
 	}
 
 	// Creates a shallow copy of a transaction and populates missing fields with defaults.
-	async _getDepositTxWithDefaults(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<{
-		token: Address;
-		amount: web3Types.Numbers;
-		to: Address;
-		operatorTip: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit: web3Types.Numbers;
-		gasPerPubdataByte: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides: TransactionOverrides;
-	}> {
+	async _getDepositTxWithDefaults(
+		transaction: DepositTransactionDetails,
+	): Promise<DepositTransactionDetails> {
 		const { ...tx } = transaction;
 		tx.to = tx.to ?? this.getAddress();
 		tx.operatorTip ??= 0;
@@ -1005,18 +861,7 @@ export class AdapterL1 implements TxSender {
 	}
 
 	// Default behaviour for calculating l2GasLimit of deposit transaction.
-	async _getL2GasLimit(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<web3Types.Numbers> {
+	async _getL2GasLimit(transaction: L2GasLimitDetails): Promise<web3Types.Numbers> {
 		if (transaction.bridgeAddress) {
 			return await this._getL2GasLimitFromCustomBridge(transaction);
 		} else {
@@ -1033,23 +878,17 @@ export class AdapterL1 implements TxSender {
 	}
 
 	// Calculates the l2GasLimit of deposit transaction using custom bridge.
-	async _getL2GasLimitFromCustomBridge(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		customBridgeData?: web3Types.Bytes;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<web3Types.Numbers> {
+	async _getL2GasLimitFromCustomBridge(
+		transaction: L2GasLimitDetails,
+	): Promise<web3Types.Numbers> {
 		const customBridgeData =
 			transaction.customBridgeData ??
 			(await getERC20DefaultBridgeData(transaction.token, this._contextL1()));
 
-		const bridge = new (this._contextL1().eth.Contract)(IL1BridgeABI, transaction.bridgeAddress);
+		const bridge = new (this._contextL1().eth.Contract)(
+			IL1BridgeABI,
+			transaction.bridgeAddress,
+		);
 		const chainId = (await this._contextL2().eth.getChainId()) as web3Types.Numbers;
 		const l2Address = await bridge.methods.l2BridgeAddress(chainId).call();
 		return await estimateCustomBridgeDepositL2Gas(
@@ -1080,14 +919,9 @@ export class AdapterL1 implements TxSender {
 	 *  - There's not enough balance for the deposit under the provided gas price.
 	 *  - There's not enough allowance to cover the deposit.
 	 */
-	async getFullRequiredDepositFee(transaction: {
-		token: Address;
-		to?: Address;
-		bridgeAddress?: Address;
-		customBridgeData?: web3Types.Bytes;
-		gasPerPubdataByte?: web3Types.Numbers;
-		overrides?: TransactionOverrides;
-	}): Promise<FullDepositFee> {
+	async getFullRequiredDepositFee(
+		transaction: FullRequiredDepositFeeDetails,
+	): Promise<FullDepositFee> {
 		if (isAddressEq(transaction.token, LEGACY_ETH_ADDRESS)) {
 			transaction.token = ETH_ADDRESS_IN_CONTRACTS;
 		}
@@ -1104,7 +938,9 @@ export class AdapterL1 implements TxSender {
 			...transaction,
 			amount: dummyAmount,
 		});
-
+		if (!tx.overrides) {
+			tx.overrides = {};
+		}
 		const gasPriceForEstimation = tx.overrides.maxFeePerGas || tx.overrides.gasPrice;
 		const baseCost = await bridgehub.methods
 			.l2TransactionBaseCost(
@@ -1124,8 +960,12 @@ export class AdapterL1 implements TxSender {
 					? L1_RECOMMENDED_MIN_ETH_DEPOSIT_GAS_LIMIT
 					: L1_RECOMMENDED_MIN_ERC20_DEPOSIT_GAS_LIMIT;
 				const recommendedETHBalance =
-					BigInt(recommendedL1GasLimit) * BigInt(gasPriceForEstimation!) + toBigInt(baseCost);
-				const formattedRecommendedBalance = web3Utils.fromWei(recommendedETHBalance, 'ether');
+					BigInt(recommendedL1GasLimit) * BigInt(gasPriceForEstimation!) +
+					toBigInt(baseCost);
+				const formattedRecommendedBalance = web3Utils.fromWei(
+					recommendedETHBalance,
+					'ether',
+				);
 				throw new Error(
 					`Not enough balance for deposit! Under the provided gas price, the recommended balance to perform a deposit is ${formattedRecommendedBalance} ETH`,
 				);
@@ -1138,7 +978,7 @@ export class AdapterL1 implements TxSender {
 				throw new Error('Not enough allowance to cover the deposit!');
 			}
 		} else {
-			const mintValue = toBigInt(baseCost) + BigInt(tx.operatorTip);
+			const mintValue = toBigInt(baseCost) + BigInt(tx.operatorTip ?? 0);
 			if ((await this.getAllowanceL1(baseTokenAddress)) < mintValue) {
 				throw new Error('Not enough base token allowance to cover the deposit!');
 			}
@@ -1173,7 +1013,7 @@ export class AdapterL1 implements TxSender {
 		const fullCost: FullDepositFee = {
 			baseCost: toBigInt(baseCost),
 			l1GasLimit,
-			l2GasLimit: BigInt(tx.l2GasLimit),
+			l2GasLimit: BigInt(tx.l2GasLimit ?? DEFAULT_GAS_PER_PUBDATA_LIMIT),
 		};
 
 		if (tx.overrides.gasPrice) {
@@ -1262,7 +1102,10 @@ export class AdapterL1 implements TxSender {
 		const { log, l1BatchTxId } = await this._getWithdrawalLog(withdrawalHash, index);
 		const { l2ToL1LogIndex } = await this._getWithdrawalL2ToL1Log(withdrawalHash, index);
 		const sender = log?.topics && dataSlice(toBytes(log?.topics[1]), 12);
-		const proof = await this._contextL2().getL2ToL1LogProof(toHex(withdrawalHash), l2ToL1LogIndex);
+		const proof = await this._contextL2().getL2ToL1LogProof(
+			toHex(withdrawalHash),
+			l2ToL1LogIndex,
+		);
 		if (!proof) {
 			throw new Error('Log proof not found!');
 		}
@@ -1330,7 +1173,10 @@ export class AdapterL1 implements TxSender {
 		// `getLogProof` is called not to get proof but
 		// to get the index of the corresponding L2->L1 log,
 		// which is returned as `proof.id`.
-		const proof = await this._contextL2().getL2ToL1LogProof(toHex(withdrawalHash), l2ToL1LogIndex);
+		const proof = await this._contextL2().getL2ToL1LogProof(
+			toHex(withdrawalHash),
+			l2ToL1LogIndex,
+		);
 		if (!proof) {
 			throw new Error('Log proof not found!');
 		}
@@ -1366,13 +1212,16 @@ export class AdapterL1 implements TxSender {
 		depositHash: web3Types.Bytes,
 		overrides?: TransactionOverrides,
 	): Promise<TransactionReceipt> {
-		const receipt = await this._contextL2().getZKTransactionReceipt(web3Utils.toHex(depositHash));
+		const receipt = await this._contextL2().getZKTransactionReceipt(
+			web3Utils.toHex(depositHash),
+		);
 		if (!receipt) {
 			throw new Error('Transaction not found!');
 		}
 		const successL2ToL1LogIndex = receipt.l2ToL1Logs.findIndex(
 			l2ToL1log =>
-				isAddressEq(l2ToL1log.sender, BOOTLOADER_FORMAL_ADDRESS) && l2ToL1log.key === depositHash,
+				isAddressEq(l2ToL1log.sender, BOOTLOADER_FORMAL_ADDRESS) &&
+				l2ToL1log.key === depositHash,
 		);
 		const successL2ToL1Log = receipt.l2ToL1Logs[successL2ToL1LogIndex];
 		if (successL2ToL1Log.value !== ZeroHash) {
@@ -1439,18 +1288,7 @@ export class AdapterL1 implements TxSender {
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 * @returns A promise that resolves to the response of the execution request.
 	 */
-	async requestExecute(transaction: {
-		contractAddress: Address;
-		calldata: string;
-		l2GasLimit?: web3Types.Numbers;
-		mintValue?: web3Types.Numbers;
-		l2Value?: web3Types.Numbers;
-		factoryDeps?: web3Types.Bytes[];
-		operatorTip?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<PriorityOpResponse> {
+	async requestExecute(transaction: RequestExecuteDetails): Promise<PriorityOpResponse> {
 		const tx = (await this.getRequestExecuteTx(transaction)) as TransactionRequest;
 		return this.signAndSend(tx);
 	}
@@ -1459,7 +1297,11 @@ export class AdapterL1 implements TxSender {
 		const populated = await context.populateTransaction(tx);
 		const signed = await context.signTransaction(populated);
 
-		return getPriorityOpResponse(context, context.sendRawTransaction(signed), this._contextL2());
+		return getPriorityOpResponse(
+			context,
+			context.sendRawTransaction(signed),
+			this._contextL2(),
+		);
 	}
 	async signTransaction(tx: TransactionRequest): Promise<string> {
 		return this._contextL1().signTransaction(tx);
@@ -1485,18 +1327,7 @@ export class AdapterL1 implements TxSender {
 	 * If the transaction fails, it will also be the address to receive `l2Value`.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L1 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	async estimateGasRequestExecute(transaction: {
-		contractAddress: Address;
-		calldata: string;
-		l2GasLimit?: web3Types.Numbers;
-		mintValue?: web3Types.Numbers;
-		l2Value?: web3Types.Numbers;
-		factoryDeps?: web3Types.Bytes[];
-		operatorTip?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<bigint> {
+	async estimateGasRequestExecute(transaction: RequestExecuteDetails): Promise<bigint> {
 		const { method, overrides } = await this.getRequestExecuteContractMethod(transaction);
 
 		delete overrides.gasPrice;
@@ -1512,17 +1343,9 @@ export class AdapterL1 implements TxSender {
 	 *
 	 * @param transaction The request execute transaction on which approval parameters are calculated.
 	 */
-	async getRequestExecuteAllowanceParams(transaction: {
-		contractAddress: Address;
-		calldata: string;
-		l2GasLimit?: web3Types.Numbers;
-		l2Value?: web3Types.Numbers;
-		factoryDeps?: web3Types.Bytes[];
-		operatorTip?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}): Promise<{ token: Address; allowance: web3Types.Numbers }> {
+	async getRequestExecuteAllowanceParams(
+		transaction: RequestExecuteDetails,
+	): Promise<{ token: Address; allowance: web3Types.Numbers }> {
 		const bridgehub = await this.getBridgehubContract();
 		const chainId = await this._contextL2().eth.getChainId();
 		const isETHBaseToken = isAddressEq(
@@ -1561,18 +1384,7 @@ export class AdapterL1 implements TxSender {
 			allowance: baseCost + BigInt(operatorTip) + BigInt(l2Value),
 		};
 	}
-	async getRequestExecuteContractMethod(transaction: {
-		contractAddress: Address;
-		calldata: string;
-		l2GasLimit?: web3Types.Numbers;
-		mintValue?: web3Types.Numbers;
-		l2Value?: web3Types.Numbers;
-		factoryDeps?: web3Types.Bytes[];
-		operatorTip?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}) {
+	async getRequestExecuteContractMethod(transaction: RequestExecuteDetails) {
 		const bridgehub = await this.getBridgehubContract();
 		const chainId = await this._contextL2().eth.getChainId();
 		const isETHBaseToken = isAddressEq(
@@ -1652,18 +1464,7 @@ export class AdapterL1 implements TxSender {
 	 * If the transaction fails, it will also be the address to receive `l2Value`.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L1 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	async getRequestExecuteTx(transaction: {
-		contractAddress: Address;
-		calldata: string;
-		l2GasLimit?: web3Types.Numbers;
-		mintValue?: web3Types.Numbers;
-		l2Value?: web3Types.Numbers;
-		factoryDeps?: web3Types.Bytes[];
-		operatorTip?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-	}) {
+	async getRequestExecuteTx(transaction: RequestExecuteDetails) {
 		const { method, overrides } = await this.getRequestExecuteContractMethod(transaction);
 		return method.populateTransaction(overrides as PayableTxOptions);
 	}
@@ -1734,11 +1535,7 @@ export class AdapterL2 implements TxSender {
 	/**
 	 * Returns L2 bridge contracts.
 	 */
-	async getL2BridgeContracts(): Promise<{
-		erc20: Web3.Contract<typeof IL2BridgeABI>;
-		weth: Web3.Contract<typeof IL2BridgeABI>;
-		shared: Web3.Contract<typeof IL2BridgeABI>;
-	}> {
+	async getL2BridgeContracts(): Promise<L2BridgeContractsResult> {
 		const addresses = await this._contextL2().getDefaultBridgeAddresses();
 		const erc20 = new Web3.Contract(IL2BridgeABI, addresses.erc20L2);
 		const weth = new Web3.Contract(IL2BridgeABI, addresses.wethL2);
@@ -1768,14 +1565,7 @@ export class AdapterL2 implements TxSender {
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 * @returns A Promise resolving to a withdrawal transaction response.
 	 */
-	async withdraw(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		bridgeAddress?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async withdraw(transaction: WithdrawTransactionDetails) {
 		const tx = await this._contextL2().getWithdrawTx({
 			...transaction,
 			from: this.getAddress(),
@@ -1850,7 +1640,8 @@ async function insertGasPrice(
 
 		// ethers.js by default uses multiplication by 2, but since the price for the L2 part
 		// will depend on the L1 part, doubling base fee is typically too much.
-		overrides.maxFeePerGas = (baseFee * 3n) / 2n + (BigInt(l1FeeData.maxPriorityFeePerGas!) ?? 0n);
+		overrides.maxFeePerGas =
+			(baseFee * 3n) / 2n + (BigInt(l1FeeData.maxPriorityFeePerGas!) ?? 0n);
 		overrides.maxPriorityFeePerGas =
 			l1FeeData.maxPriorityFeePerGas && toHex(l1FeeData.maxPriorityFeePerGas);
 	}

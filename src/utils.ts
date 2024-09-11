@@ -631,7 +631,6 @@ export async function getERC20DefaultBridgeData(
 		? 18
 		: await token.methods.decimals().call();
 
-
 	const nameBytes = web3Abi.encodeParameters(['string'], [name]);
 	const symbolBytes = web3Abi.encodeParameters(['string'], [symbol]);
 	const decimalsBytes = web3Abi.encodeParameters(['uint256'], [decimals]);
@@ -1031,18 +1030,19 @@ const customGetTransactionReceipt = async (
 	web3Context: Web3Context<EthExecutionAPI>,
 	transactionHash: Bytes,
 	returnFormat: typeof DEFAULT_RETURN_FORMAT = DEFAULT_RETURN_FORMAT,
-): Promise<any> => {
+): Promise<TransactionReceipt> => {
 	const response = await ethRpcMethods.getTransactionReceipt(
 		web3Context.requestManager,
 		transactionHash as HexString,
 	);
-	return isNullish(response)
-		? response
-		: web3Utils.format(
-				ZKTransactionReceiptSchema,
-				response as unknown as TransactionReceipt,
-				returnFormat ?? web3Context.defaultReturnFormat,
-			);
+	if (isNullish(response)) {
+		throw new Error(`Transaction with hash ${transactionHash} not found`);
+	}
+	return web3Utils.format(
+		ZKTransactionReceiptSchema,
+		response as unknown as TransactionReceipt,
+		returnFormat ?? web3Context.defaultReturnFormat,
+	);
 };
 export async function waitTxReceipt(web3Eth: Web3Eth, txHash: string): Promise<TransactionReceipt> {
 	const receipt = await waitForTransactionReceipt(

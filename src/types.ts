@@ -21,6 +21,7 @@ import type { IERC1271ABI } from './contracts/IERC1271';
 import type { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
 import type { INonceHolderABI } from './contracts/INonceHolder';
 import type * as web3Types from 'web3-types';
+import * as Web3 from 'web3';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -653,8 +654,77 @@ export type WithdrawTransactionDetails = {
 
 export type TransferTransactionDetails = {
 	to: Address;
+	from?: Address;
 	amount: web3Types.Numbers;
 	token?: Address;
 	paymasterParams?: PaymasterParams;
 	overrides?: TransactionOverrides;
+};
+
+export type L2GasLimitDetails = {
+	token: Address;
+	amount: web3Types.Numbers;
+	to?: Address;
+	operatorTip?: web3Types.Numbers;
+	bridgeAddress?: Address;
+	l2GasLimit?: web3Types.Numbers;
+	gasPerPubdataByte?: web3Types.Numbers;
+	customBridgeData?: web3Types.Bytes;
+	refundRecipient?: Address;
+	overrides?: TransactionOverrides;
+};
+
+export type FullRequiredDepositFeeDetails = {
+	token: Address;
+	to?: Address;
+	bridgeAddress?: Address;
+	customBridgeData?: web3Types.Bytes;
+	gasPerPubdataByte?: web3Types.Numbers;
+	overrides?: TransactionOverrides;
+};
+
+export type BaseCostDetails = {
+	gasLimit: web3Types.Numbers;
+	gasPerPubdataByte?: web3Types.Numbers;
+	gasPrice?: web3Types.Numbers;
+	chainId?: web3Types.Numbers;
+};
+
+export type TokenAllowanceResult = { token: Address; allowance: web3Types.Numbers };
+
+export type RequestExecuteDetails = {
+	contractAddress: Address;
+	calldata: string;
+	l2GasLimit?: web3Types.Numbers;
+	mintValue?: web3Types.Numbers;
+	l2Value?: web3Types.Numbers;
+	factoryDeps?: web3Types.Bytes[];
+	operatorTip?: web3Types.Numbers;
+	gasPerPubdataByte?: web3Types.Numbers;
+	refundRecipient?: Address;
+	overrides?: TransactionOverrides;
+};
+export type EstimateL1ToL2ExecuteDetails = {
+	contractAddress: web3Types.Address;
+	calldata: string;
+	caller?: web3Types.Address;
+	l2Value?: web3Types.Numbers;
+	factoryDeps?: web3Types.Bytes[];
+	gasPerPubdataByte?: web3Types.Numbers;
+	overrides?: TransactionOverrides;
+};
+
+export type L2BridgeContractsResult = {
+	erc20: Web3.Contract<typeof IL2BridgeABI>;
+	weth: Web3.Contract<typeof IL2BridgeABI>;
+	shared: Web3.Contract<typeof IL2BridgeABI>;
+};
+
+export type DefaultBridgeAddressesResult = {
+	erc20L1: string;
+	erc20L2: string;
+	wethL1: string;
+	wethL2: string;
+	sharedL1: string;
+	sharedL2: string;
 };

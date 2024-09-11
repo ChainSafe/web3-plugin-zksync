@@ -56,35 +56,6 @@ export class Web3ZkSync extends Web3.Web3 {
 		this._contractAddresses = {};
 	}
 
-	// /**
-	//  * Returns `tx` as a normalized JSON-RPC transaction request, which has all values `hexlified` and any numeric
-	//  * values converted to Quantity values.
-	//  * @param tx The transaction request that should be normalized.
-	//  */
-	// override getRpcTransaction(tx: TransactionRequest): JsonRpcTransactionRequest {
-	// 	const result: any = super.getRpcTransaction(tx);
-	// 	if (!tx.customData) {
-	// 		return result;
-	// 	}
-	// 	result.type = ethers.toBeHex(EIP712_TX_TYPE);
-	// 	result.eip712Meta = {
-	// 		gasPerPubdata: ethers.toBeHex(tx.customData.gasPerPubdata ?? 0),
-	// 	} as any;
-	// 	if (tx.customData.factoryDeps) {
-	// 		result.eip712Meta.factoryDeps = tx.customData.factoryDeps.map((dep: ethers.BytesLike) =>
-	// 			// TODO (SMA-1605): we arraify instead of hexlifying because server expects Vec<u8>.
-	// 			//  We should change deserialization there.
-	// 			Array.from(ethers.getBytes(dep)),
-	// 		);
-	// 	}
-	// 	if (tx.customData.paymasterParams) {
-	// 		result.eip712Meta.paymasterParams = {
-	// 			paymaster: ethers.hexlify(tx.customData.paymasterParams.paymaster),
-	// 			paymasterInput: Array.from(ethers.getBytes(tx.customData.paymasterParams.paymasterInput)),
-	// 		};
-	// 	}
-	// 	return result;
-	// }
 	async getTokenBalance(token: Address, walletAddress: Address): Promise<bigint> {
 		const erc20 = new this.eth.Contract(IERC20ABI, token);
 
@@ -172,7 +143,10 @@ export class Web3ZkSync extends Web3.Web3 {
 			populated.type = toHex(transaction.type === undefined ? 2n : transaction.type);
 		}
 
-		const formatted = web3Utils.format(EIP712TransactionSchema, populated) as TransactionRequest;
+		const formatted = web3Utils.format(
+			EIP712TransactionSchema,
+			populated,
+		) as TransactionRequest;
 
 		delete formatted.input;
 		delete formatted.chain;
@@ -188,7 +162,8 @@ export class Web3ZkSync extends Web3.Web3 {
 		}
 		formatted.gasLimit = formatted.gasLimit ?? (await this.estimateGas(formatted));
 		if (toBigInt(formatted.type) === 0n) {
-			formatted.gasPrice = formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
+			formatted.gasPrice =
+				formatted.gasPrice ?? (await getGasPrice(this, DEFAULT_RETURN_FORMAT));
 			return formatted;
 		}
 		if (toBigInt(formatted.type) === 2n && formatted.gasPrice) {
@@ -204,7 +179,8 @@ export class Web3ZkSync extends Web3.Web3 {
 		const gasFees = await this.eth.calculateFeeData();
 		if (gasFees.maxFeePerGas && gasFees.maxPriorityFeePerGas) {
 			if (toBigInt(formatted.type) !== BigInt(EIP712_TX_TYPE)) {
-				formatted.maxFeePerGas = formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
+				formatted.maxFeePerGas =
+					formatted.maxFeePerGas ?? web3Utils.toBigInt(gasFees.maxFeePerGas);
 				formatted.maxPriorityFeePerGas =
 					formatted.maxPriorityFeePerGas ??
 					(web3Utils.toBigInt(formatted.maxFeePerGas) >

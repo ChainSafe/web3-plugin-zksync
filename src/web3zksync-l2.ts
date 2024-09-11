@@ -5,7 +5,7 @@
 
 import { Block } from 'web3';
 import { type BlockNumberOrTag, DEFAULT_RETURN_FORMAT, ETH_DATA_FORMAT } from 'web3-types';
-import type { Bytes, DataFormat, Numbers, TransactionReceipt } from 'web3-types';
+import type { Bytes, DataFormat, TransactionReceipt } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
@@ -25,8 +25,11 @@ import {
 	WalletBalances,
 	StorageProof,
 	WithdrawTransactionDetails,
+	DefaultBridgeAddressesResult,
+	EstimateL1ToL2ExecuteDetails,
+	TransferTransactionDetails,
 } from './types';
-import type { Address, TransactionOverrides, PaymasterParams, ZKTransactionReceipt } from './types';
+import type { Address, TransactionOverrides, ZKTransactionReceipt } from './types';
 import { Web3ZkSync } from './web3zksync';
 import { ZKTransactionReceiptSchema } from './schemas';
 import { Abi as IEthTokenAbi } from './contracts/IEthToken';
@@ -76,7 +79,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					ZKTransactionReceiptSchema,
 					response as unknown as ZKTransactionReceipt,
 					returnFormat ?? this.defaultReturnFormat,
-			  );
+				);
 	}
 
 	/**
@@ -221,14 +224,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 *
 	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getbridgecontracts zks_getBridgeContracts} JSON-RPC method.
 	 */
-	async getDefaultBridgeAddresses(): Promise<{
-		erc20L1: string;
-		erc20L2: string;
-		wethL1: string;
-		wethL2: string;
-		sharedL1: string;
-		sharedL2: string;
-	}> {
+	async getDefaultBridgeAddresses(): Promise<DefaultBridgeAddressesResult> {
 		if (!this.contractAddresses().erc20BridgeL1) {
 			const addresses = await this._rpc.getBridgeContracts();
 
@@ -355,9 +351,8 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		if (!this.contractAddresses().bridgehubContract) {
-			this.contractAddresses().bridgehubContract = await this._rpc.getBridgehubContractAddress(
-				returnFormat,
-			);
+			this.contractAddresses().bridgehubContract =
+				await this._rpc.getBridgehubContractAddress(returnFormat);
 		}
 		return this.contractAddresses().bridgehubContract!;
 	}
@@ -376,15 +371,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 */
 	// TODO (EVM-3): support refundRecipient for fee estimation
 	async estimateL1ToL2Execute(
-		transaction: {
-			contractAddress: web3Types.Address;
-			calldata: string;
-			caller?: web3Types.Address;
-			l2Value?: web3Types.Numbers;
-			factoryDeps?: web3Types.Bytes[];
-			gasPerPubdataByte?: web3Types.Numbers;
-			overrides?: TransactionOverrides;
-		},
+		transaction: EstimateL1ToL2ExecuteDetails,
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<web3Types.Numbers> {
 		transaction.gasPerPubdataByte ??= REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT;
@@ -559,7 +546,10 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			tx.token = L2_BASE_TOKEN_ADDRESS;
 		}
 
-		if ((tx.to === null || tx.to === undefined) && (tx.from === null || tx.from === undefined)) {
+		if (
+			(tx.to === null || tx.to === undefined) &&
+			(tx.from === null || tx.from === undefined)
+		) {
 			throw new Error('Withdrawal target address is undefined!');
 		}
 
@@ -626,14 +616,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * @param [transaction.paymasterParams] Paymaster parameters.
 	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	async getTransferTx(transaction: {
-		to: Address;
-		amount: Numbers;
-		from?: Address;
-		token?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async getTransferTx(transaction: TransferTransactionDetails) {
 		const { ...tx } = transaction;
 		tx.amount = format({ format: 'uint' }, tx.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();
