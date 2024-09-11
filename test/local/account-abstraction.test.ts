@@ -10,7 +10,7 @@ import { getPaymasterParams, ContractFactory } from '../../src';
 import { Address } from 'web3';
 import { Eip712TxData } from '../../src/types';
 import { Transaction } from 'web3-types';
-import { L2_CHAIN_URL } from 'test/utils';
+import { L2_CHAIN_URL } from '../utils';
 const { ETH_ADDRESS } = constants;
 const accounts = getAccounts();
 

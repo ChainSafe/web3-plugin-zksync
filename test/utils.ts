@@ -14,10 +14,10 @@ export const PAYMASTER = '0x13D0D8550769f59aa241a41897D4859c87f7Dd46'; // Crown 
 
 // To setup a local test network refer to: https://github.com/matter-labs/local-setup/blob/main/README.md
 // Set the following variable to `true` when the test network is bootstrapped with `./start.sh`.
-// But set it to `false` when `./start-zk-chains.sh` is used. 
+// But set it to `false` when `./start-zk-chains.sh` is used.
 const IS_BOOTSTRAPPED_NETWORK = true;
 
-export const IS_ETH_BASED = false;
+export const IS_ETH_BASED = true;
 
 export const L2_CHAIN_URL = IS_BOOTSTRAPPED_NETWORK
 	? 'http://127.0.0.1:3050'

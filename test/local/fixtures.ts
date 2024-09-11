@@ -8,7 +8,7 @@ export const DAI_L2 = '0xf5F299B7A29f08b533BbDD19C2Bb2b3e1D975bD2';
 
 import accountsData from './rich-wallets.json';
 import { abi as TokenAbi } from './files/Token.json';
-import { L2_CHAIN_URL, L1_CHAIN_URL } from 'test/utils';
+import { L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';
 export const getAccounts = () => accountsData;
 
 export const prepareAccount = async (privateKey: string) => {

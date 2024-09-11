@@ -2,7 +2,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import { Web3 } from 'web3';
 import * as constants from '../../src/constants';
 import * as utils from '../../src/utils';
-import { L2_CHAIN_URL } from 'test/utils';
+import { L2_CHAIN_URL } from '../utils';
 
 describe('utils', () => {
 	describe('#isTypedDataSignatureCorrect()', () => {
