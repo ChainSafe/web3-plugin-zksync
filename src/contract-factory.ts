@@ -260,7 +260,7 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		}
 	> {
 		let modArgs = args;
-		if (!Array.isArray(args)) {
+		if (args && !Array.isArray(args)) {
 			// tolerate if there was only one parameter for deploy,
 			// which was passed as-is without wrapping it inside an array.
 			modArgs = [args] as any;
