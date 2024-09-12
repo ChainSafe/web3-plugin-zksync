@@ -552,12 +552,7 @@ describe('Wallet', () => {
 				});
 				result.to = result.to.toLowerCase();
 				const { data: a, maxFeePerGas: b, maxPriorityFeePerGas: c, ...otherTx } = tx;
-				const {
-					data: d,
-					maxFeePerGas: e,
-					maxPriorityFeePerGas: f,
-					...otherResult
-				} = result;
+				const { data: d, maxFeePerGas: e, maxPriorityFeePerGas: f, ...otherResult } = result;
 
 				expect(otherResult).toEqual(otherTx);
 				expect(web3Utils.toBigInt(result.maxPriorityFeePerGas) > 0n).toEqual(true);
@@ -709,8 +704,7 @@ describe('Wallet', () => {
 					const l2Hash = (error as ReceiptError).hash!;
 					while (!blockNumber) {
 						try {
-							blockNumber = (await wallet.provider!.eth.getTransaction(l2Hash))
-								.blockNumber!;
+							blockNumber = (await wallet.provider!.eth.getTransaction(l2Hash)).blockNumber!;
 						} catch (e) {
 							console.log('e', e);
 						}
@@ -784,9 +778,7 @@ describe('Wallet', () => {
 						to: wallet.getAddress(),
 					});
 				} catch (e) {
-					expect((e as Error).message).toEqual(
-						'Not enough allowance to cover the deposit!',
-					);
+					expect((e as Error).message).toEqual('Not enough allowance to cover the deposit!');
 				}
 			});
 
@@ -894,10 +886,7 @@ describe('Wallet', () => {
 				);
 
 				// mint base token to random wallet
-				const baseToken = new ethProvider.eth.Contract(
-					IERC20ABI,
-					await wallet.getBaseToken(),
-				);
+				const baseToken = new ethProvider.eth.Contract(IERC20ABI, await wallet.getBaseToken());
 
 				await baseToken.methods
 					.mint(randomWallet.getAddress(), web3Utils.toWei('0.5', 'ether'))
@@ -919,9 +908,7 @@ describe('Wallet', () => {
 						to: wallet.getAddress(),
 					});
 				} catch (e) {
-					expect((e as Error).message).toEqual(
-						'Not enough token allowance to cover the deposit!',
-					);
+					expect((e as Error).message).toEqual('Not enough token allowance to cover the deposit!');
 				}
 			});
 		}
@@ -1108,12 +1095,8 @@ describe('Wallet', () => {
 					PAYMASTER,
 				);
 				const senderBalanceBeforeTransfer = await wallet.getBalance(token);
-				const senderApprovalTokenBalanceBeforeTransfer =
-					await wallet.getBalance(APPROVAL_TOKEN);
-				const receiverBalanceBeforeTransfer = await provider.getTokenBalance(
-					token,
-					ADDRESS2,
-				);
+				const senderApprovalTokenBalanceBeforeTransfer = await wallet.getBalance(APPROVAL_TOKEN);
+				const receiverBalanceBeforeTransfer = await provider.getTokenBalance(token, ADDRESS2);
 
 				const result = await wallet.transfer({
 					token: token,
@@ -1133,19 +1116,13 @@ describe('Wallet', () => {
 					PAYMASTER,
 				);
 				const senderBalanceAfterTransfer = await wallet.getBalance(token);
-				const senderApprovalTokenBalanceAfterTransfer =
-					await wallet.getBalance(APPROVAL_TOKEN);
-				const receiverBalanceAfterTransfer = await provider.getTokenBalance(
-					token,
-					ADDRESS2,
-				);
+				const senderApprovalTokenBalanceAfterTransfer = await wallet.getBalance(APPROVAL_TOKEN);
+				const receiverBalanceAfterTransfer = await provider.getTokenBalance(token, ADDRESS2);
 
-				expect(
-					paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-				).toEqual(true);
-				expect(
-					paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer,
-				).toEqual(minimalAllowance);
+				expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toEqual(true);
+				expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toEqual(
+					minimalAllowance,
+				);
 
 				expect(senderBalanceBeforeTransfer - senderBalanceAfterTransfer).toEqual(amount);
 				expect(
@@ -1154,9 +1131,7 @@ describe('Wallet', () => {
 				).toEqual(true);
 
 				expect(result).not.toBeNull();
-				expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toEqual(
-					amount,
-				);
+				expect(receiverBalanceAfterTransfer - receiverBalanceBeforeTransfer).toEqual(amount);
 			});
 		}
 
@@ -1190,13 +1165,8 @@ describe('Wallet', () => {
 				APPROVAL_TOKEN,
 			);
 			const senderBalanceBeforeTransfer = await wallet.getBalance(l2DAI);
-			const senderApprovalTokenBalanceBeforeTransfer =
-				await wallet.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceBeforeTransfer = await provider.getBalance(
-				toAddress,
-				'latest',
-				l2DAI,
-			);
+			const senderApprovalTokenBalanceBeforeTransfer = await wallet.getBalance(APPROVAL_TOKEN);
+			const receiverBalanceBeforeTransfer = await provider.getBalance(toAddress, 'latest', l2DAI);
 			const tx = await wallet.transfer({
 				token: l2DAI,
 				to: toAddress,
@@ -1218,15 +1188,9 @@ describe('Wallet', () => {
 			);
 			const senderBalanceAfterTransfer = await wallet.getBalance(l2DAI);
 			const senderApprovalTokenBalanceAfterTransfer = await wallet.getBalance(APPROVAL_TOKEN);
-			const receiverBalanceAfterTransfer = await provider.getBalance(
-				toAddress,
-				'latest',
-				l2DAI,
-			);
+			const receiverBalanceAfterTransfer = await provider.getBalance(toAddress, 'latest', l2DAI);
 
-			expect(
-				paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n,
-			).toBeTruthy();
+			expect(paymasterBalanceBeforeTransfer - paymasterBalanceAfterTransfer >= 0n).toBeTruthy();
 			expect(paymasterTokenBalanceAfterTransfer - paymasterTokenBalanceBeforeTransfer).toBe(
 				minimalAllowance,
 			);
@@ -1275,9 +1239,7 @@ describe('Wallet', () => {
 				const result = await wallet.finalizeWithdrawal(txHash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance();
 				expect(result).not.toBeNull();
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
-					true,
-				);
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(true);
 			});
 		} else {
 			it('should withdraw ETH to the L1 network', async () => {
@@ -1290,16 +1252,12 @@ describe('Wallet', () => {
 					amount: amount,
 				});
 				const withdrawTx = await tx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(
-					false,
-				);
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance(token);
 				expect(result).not.toBeNull();
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
-					true,
-				);
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(true);
 			});
 
 			it('should withdraw base token to the L1 network', async () => {
@@ -1312,16 +1270,12 @@ describe('Wallet', () => {
 					amount: amount,
 				});
 				const withdrawTx = await tx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(
-					false,
-				);
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance();
 				expect(result).not.toBeNull();
-				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(
-					true,
-				);
+				expect(l2BalanceBeforeWithdrawal - l2BalanceAfterWithdrawal >= amount).toEqual(true);
 			});
 
 			it('should withdraw ETH to the L1 network using paymaster to cover fee', async () => {
@@ -1335,8 +1289,7 @@ describe('Wallet', () => {
 					PAYMASTER,
 				);
 				const l2BalanceBeforeWithdrawal = await wallet.getBalance(token);
-				const l2ApprovalTokenBalanceBeforeWithdrawal =
-					await wallet.getBalance(APPROVAL_TOKEN);
+				const l2ApprovalTokenBalanceBeforeWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
 
 				const tx = await wallet.withdraw({
 					token: token,
@@ -1350,9 +1303,7 @@ describe('Wallet', () => {
 					}),
 				});
 				const withdrawTx = await tx.waitFinalize();
-				expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(
-					false,
-				);
+				expect(await wallet.isWithdrawalFinalized(withdrawTx.transactionHash)).toEqual(false);
 
 				const result = await wallet.finalizeWithdrawal(withdrawTx.transactionHash);
 
@@ -1362,12 +1313,11 @@ describe('Wallet', () => {
 					PAYMASTER,
 				);
 				const l2BalanceAfterWithdrawal = await wallet.getBalance(token);
-				const l2ApprovalTokenBalanceAfterWithdrawal =
-					await wallet.getBalance(APPROVAL_TOKEN);
+				const l2ApprovalTokenBalanceAfterWithdrawal = await wallet.getBalance(APPROVAL_TOKEN);
 
-				expect(
-					paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n,
-				).toEqual(true);
+				expect(paymasterBalanceBeforeWithdrawal - paymasterBalanceAfterWithdrawal >= 0n).toEqual(
+					true,
+				);
 				expect(
 					paymasterTokenBalanceAfterWithdrawal - paymasterTokenBalanceBeforeWithdrawal,
 				).toEqual(minimalAllowance);

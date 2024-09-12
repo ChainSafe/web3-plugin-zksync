@@ -5,7 +5,7 @@
 
 import { Block } from 'web3';
 import { type BlockNumberOrTag, DEFAULT_RETURN_FORMAT, ETH_DATA_FORMAT } from 'web3-types';
-import type { Bytes, DataFormat, Numbers, Transaction, TransactionReceipt } from 'web3-types';
+import type { Bytes, DataFormat, TransactionReceipt } from 'web3-types';
 import { format, toHex } from 'web3-utils';
 import { ethRpcMethods } from 'web3-rpc-methods';
 import { isNullish } from 'web3-validator';
@@ -17,15 +17,19 @@ import {
 	BridgeAddresses,
 	EstimateFee,
 	L2ToL1Proof,
-	Network as ZkSyncNetwork,
+	Network as ZKsyncNetwork,
 	RawBlockTransaction,
 	TransactionDetails,
 	TransactionRequest,
 	TransactionStatus,
 	WalletBalances,
 	StorageProof,
+	WithdrawTransactionDetails,
+	DefaultBridgeAddressesResult,
+	EstimateL1ToL2ExecuteDetails,
+	TransferTransactionDetails,
 } from './types';
-import type { Address, TransactionOverrides, PaymasterParams, ZKTransactionReceipt } from './types';
+import type { Address, TransactionOverrides, ZKTransactionReceipt } from './types';
 import { Web3ZkSync } from './web3zksync';
 import { ZKTransactionReceiptSchema } from './schemas';
 import { Abi as IEthTokenAbi } from './contracts/IEthToken';
@@ -44,6 +48,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Utils from 'web3-utils';
 import * as Web3 from 'web3';
 import type { Web3ContextInitOptions } from 'web3-core';
+import { PayableTxOptions } from 'web3-eth-contract';
 
 // Equivalent to both Provider and Signer in zksync-ethers
 export class Web3ZKsyncL2 extends Web3ZkSync {
@@ -219,14 +224,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 *
 	 * Calls the {@link https://docs.zksync.io/build/api.html#zks-getbridgecontracts zks_getBridgeContracts} JSON-RPC method.
 	 */
-	async getDefaultBridgeAddresses(): Promise<{
-		erc20L1: string;
-		erc20L2: string;
-		wethL1: string;
-		wethL2: string;
-		sharedL1: string;
-		sharedL2: string;
-	}> {
+	async getDefaultBridgeAddresses(): Promise<DefaultBridgeAddressesResult> {
 		if (!this.contractAddresses().erc20BridgeL1) {
 			const addresses = await this._rpc.getBridgeContracts();
 
@@ -363,25 +361,10 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * Returns gas estimation for an L1 to L2 execute operation.
 	 *
 	 * @param transaction The transaction details.
-	 * @param transaction.contractAddress The address of the contract.
-	 * @param transaction.calldata The transaction call data.
-	 * @param [transaction.caller] The caller's address.
-	 * @param [transaction.l2Value] The current L2 gas value.
-	 * @param [transaction.factoryDeps] An array of bytes containing contract bytecode.
-	 * @param [transaction.gasPerPubdataByte] The current gas per byte value.
-	 * @param [transaction.overrides] Transaction overrides including `gasLimit`, `gasPrice`, and `value`.
 	 */
 	// TODO (EVM-3): support refundRecipient for fee estimation
 	async estimateL1ToL2Execute(
-		transaction: {
-			contractAddress: web3Types.Address;
-			calldata: string;
-			caller?: web3Types.Address;
-			l2Value?: web3Types.Numbers;
-			factoryDeps?: web3Types.Bytes[];
-			gasPerPubdataByte?: web3Types.Numbers;
-			overrides?: TransactionOverrides;
-		},
+		transaction: EstimateL1ToL2ExecuteDetails,
 		returnFormat: web3Types.DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<web3Types.Numbers> {
 		transaction.gasPerPubdataByte ??= REQUIRED_L1_TO_L2_GAS_PER_PUBDATA_LIMIT;
@@ -535,23 +518,8 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * Returns the populated withdrawal transaction.
 	 *
 	 * @param transaction The transaction details.
-	 * @param transaction.token The token address.
-	 * @param transaction.amount The amount of token.
-	 * @param [transaction.from] The sender's address.
-	 * @param [transaction.to] The recipient's address.
-	 * @param [transaction.bridgeAddress] The bridge address.
-	 * @param [transaction.paymasterParams] Paymaster parameters.
-	 * @param [transaction.overrides] Transaction overrides including `gasLimit`, `gasPrice`, and `value`.
 	 */
-	async getWithdrawTx(transaction: {
-		token: Address;
-		amount: Numbers;
-		from?: Address;
-		to?: Address;
-		bridgeAddress?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async getWithdrawTx(transaction: WithdrawTransactionDetails) {
 		const { ...tx } = transaction;
 		tx.amount = format({ format: 'uint' }, transaction.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();
@@ -591,8 +559,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 			const ethL2Token = new this.eth.Contract(IEthTokenAbi, L2_BASE_TOKEN_ADDRESS);
 			const populatedTx = ethL2Token.methods
 				.withdraw(tx.to)
-				// @ts-ignore
-				.populateTransaction(tx.overrides);
+				.populateTransaction(tx.overrides as PayableTxOptions);
 			if (tx.paymasterParams) {
 				return {
 					...populatedTx,
@@ -612,8 +579,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 
 		const populatedTx = bridge.methods
 			.withdraw(tx.to, tx.token, tx.amount)
-			// @ts-ignore
-			.populateTransaction(tx.overrides);
+			.populateTransaction(tx.overrides as PayableTxOptions);
 
 		if (tx.paymasterParams) {
 			return {
@@ -630,20 +596,8 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * Returns the populated transfer transaction.
 	 *
 	 * @param transaction Transfer transaction request.
-	 * @param transaction.to The address of the recipient.
-	 * @param transaction.amount The amount of the token to transfer.
-	 * @param [transaction.token] The address of the token. Defaults to ETH.
-	 * @param [transaction.paymasterParams] Paymaster parameters.
-	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	async getTransferTx(transaction: {
-		to: Address;
-		amount: Numbers;
-		from?: Address;
-		token?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async getTransferTx(transaction: TransferTransactionDetails) {
 		const { ...tx } = transaction;
 		tx.amount = format({ format: 'uint' }, tx.amount, ETH_DATA_FORMAT);
 		const isEthBasedChain = await this.isEthBasedChain();
@@ -668,7 +622,7 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					value: tx.amount,
 					customData: {
 						paymasterParams: tx.paymasterParams,
-					} as Transaction,
+					},
 				};
 			}
 
@@ -676,13 +630,12 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 				...tx.overrides,
 				to: tx.to,
 				value: tx.amount,
-			} as Transaction;
+			} as TransactionRequest;
 		} else {
 			const token = new this.eth.Contract(IERC20ABI, tx.token);
 			const populatedTx = token.methods
 				.transfer(tx.to, tx.amount)
-				// @ts-ignore
-				.populateTransaction(tx.overrides);
+				.populateTransaction(tx.overrides as PayableTxOptions);
 
 			if (tx.paymasterParams) {
 				return {
@@ -692,32 +645,32 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 					},
 				};
 			}
-			return populatedTx as Transaction;
+			return populatedTx as TransactionRequest;
 		}
 	}
 
 	/**
 	 * Creates a new `Provider` from provided URL or network name.
 	 *
-	 * @param zksyncNetwork The type of ZKsync network.
+	 * @param ZKsyncNetwork The type of ZKsync network.
 	 *
 	 * @example
 	 *
 	 * import { initWithDefaultProvider, types } from "web3-plugin-zksync";
 	 *
-	 * const provider = ZkSyncNetwork.initWithDefaultProvider(types.Network.Sepolia);
+	 * const provider = ZKsyncNetwork.initWithDefaultProvider(types.Network.Sepolia);
 	 */
 	static initWithDefaultProvider(
-		zksyncNetwork: ZkSyncNetwork = ZkSyncNetwork.Localhost,
+		zksyncNetwork: ZKsyncNetwork = ZKsyncNetwork.Localhost,
 	): Web3ZKsyncL2 {
 		switch (zksyncNetwork) {
-			case ZkSyncNetwork.Localhost:
+			case ZKsyncNetwork.Localhost:
 				return new Web3ZKsyncL2('http://localhost:3050');
-			case ZkSyncNetwork.Sepolia:
+			case ZKsyncNetwork.Sepolia:
 				return new Web3ZKsyncL2('https://sepolia.era.zksync.dev');
-			case ZkSyncNetwork.Mainnet:
+			case ZKsyncNetwork.Mainnet:
 				return new Web3ZKsyncL2('https://mainnet.era.zksync.io');
-			case ZkSyncNetwork.EraTestNode:
+			case ZKsyncNetwork.EraTestNode:
 				return new Web3ZKsyncL2('http://localhost:8011');
 			default:
 				return new Web3ZKsyncL2('http://localhost:3050');

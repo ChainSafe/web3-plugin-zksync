@@ -1,11 +1,16 @@
 import type { Web3Account } from 'web3-eth-accounts';
 import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
-import type { Transaction } from 'web3-types';
 import type { Web3ZKsyncL2 } from './web3zksync-l2';
 import type { Web3ZKsyncL1 } from './web3zksync-l1';
 import { AdapterL1, AdapterL2 } from './adapters';
-import type { Address, Eip712TxData, PaymasterParams, TransactionOverrides } from './types';
+import {
+	Address,
+	DepositTransactionDetails,
+	TransactionRequest,
+	TransferTransactionDetails,
+	WithdrawTransactionDetails,
+} from './types';
 import { getPriorityOpResponse, isAddressEq } from './utils';
 
 class Adapters extends AdapterL1 {
@@ -24,9 +29,7 @@ class Adapters extends AdapterL1 {
 		return this.adapterL2.getAllBalances();
 	}
 
-	async populateTransaction(
-		tx: web3Types.Transaction,
-	): Promise<web3Types.Transaction | Eip712TxData> {
+	async populateTransaction(tx: TransactionRequest): Promise<TransactionRequest> {
 		return this.adapterL2.populateTransaction(tx);
 	}
 
@@ -42,34 +45,12 @@ class Adapters extends AdapterL1 {
 	 * from the associated account on L2 network to the target account on L1 network.
 	 *
 	 * @param transaction Withdrawal transaction request.
-	 * @param transaction.token The address of the token. Defaults to ETH.
-	 * @param transaction.amount The amount of the token to withdraw.
-	 * @param [transaction.to] The address of the recipient on L1.
-	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * @param [transaction.paymasterParams] Paymaster parameters.
-	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
-	withdraw(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		bridgeAddress?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	withdraw(transaction: WithdrawTransactionDetails) {
 		return this.adapterL2.withdraw(transaction);
 	}
-	async transfer(transaction: {
-		to: Address;
-		amount: web3Types.Numbers;
-		token?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
-		return this.signAndSend(
-			(await this.adapterL2.transferTx(transaction)) as Transaction,
-			this._contextL2(),
-		);
+	async transfer(transaction: TransferTransactionDetails) {
+		return this.signAndSend(await this.adapterL2.transferTx(transaction), this._contextL2());
 	}
 }
 
@@ -125,14 +106,6 @@ export class ZKsyncWallet extends Adapters {
 			);
 		}
 		this.provider = provider;
-		// TODO: needs to check when used with ports 15100 and 15200 for the error that would happen for every rpc call (like: get chain id):
-		// 	 FetchError {
-		//     message: 'request to http://127.0.0.1:15100/ failed, reason: connect ECONNREFUSED 127.0.0.1:15100',
-		//     type: 'system',
-		//     errno: 'ECONNREFUSED',
-		//     code: 'ECONNREFUSED'
-		//   }
-
 		return this;
 	}
 	public connectToL1(provider: Web3ZKsyncL1) {
@@ -158,28 +131,13 @@ export class ZKsyncWallet extends Adapters {
 	getBalance(token?: Address, blockTag: web3Types.BlockNumberOrTag = 'latest') {
 		return super.getBalance(token, blockTag);
 	}
-	getAddress(): any {
+	getAddress(): Address {
 		return this.account.address;
 	}
-	get address() {
+	get address(): Address {
 		return this.getAddress();
 	}
-	deposit(transaction: {
-		token: Address;
-		amount: web3Types.Numbers;
-		to?: Address;
-		operatorTip?: web3Types.Numbers;
-		bridgeAddress?: Address;
-		approveERC20?: boolean;
-		approveBaseERC20?: boolean;
-		l2GasLimit?: web3Types.Numbers;
-		gasPerPubdataByte?: web3Types.Numbers;
-		refundRecipient?: Address;
-		overrides?: TransactionOverrides;
-		approveOverrides?: TransactionOverrides;
-		approveBaseOverrides?: TransactionOverrides;
-		customBridgeData?: web3Types.Bytes;
-	}) {
+	deposit(transaction: DepositTransactionDetails) {
 		return super.deposit(transaction);
 	}
 	getNonce(blockNumber?: web3Types.BlockNumberOrTag) {
@@ -189,8 +147,8 @@ export class ZKsyncWallet extends Adapters {
 		const acc = createAccount();
 		return new ZKsyncWallet(acc.privateKey, provider, providerL1);
 	}
-	async signTransaction(transaction: web3Types.Transaction): Promise<string> {
-		const populated = (await this.populateTransaction(transaction)) as Transaction;
+	async signTransaction(transaction: TransactionRequest): Promise<string> {
+		const populated = await this.populateTransaction(transaction);
 		if (!isAddressEq(populated.from!, this.getAddress())) {
 			throw new Error('Transaction from mismatch');
 		}
@@ -229,7 +187,7 @@ export class ZKsyncWallet extends Adapters {
 	 *   });
 	 * }
 	 */
-	async populateTransaction(tx: web3Types.Transaction) {
+	async populateTransaction(tx: TransactionRequest) {
 		tx.from = tx.from ?? this.getAddress();
 		return this._contextL2().populateTransaction(tx);
 	}
@@ -238,7 +196,7 @@ export class ZKsyncWallet extends Adapters {
 		return this._contextL2().getBridgehubContractAddress();
 	}
 
-	async sendTransaction(transaction: web3Types.Transaction) {
+	async sendTransaction(transaction: TransactionRequest) {
 		const signed = await this.signTransaction(transaction);
 		return getPriorityOpResponse(this._contextL2(), this.sendRawTransaction(signed));
 	}

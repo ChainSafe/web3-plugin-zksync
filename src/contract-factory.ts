@@ -11,7 +11,7 @@ import {
 	EIP712_TX_TYPE,
 	ZERO_HASH,
 } from './constants';
-import type { DeploymentType } from './types';
+import type { DeploymentType, TransactionRequest } from './types';
 import { AccountAbstractionVersion } from './types';
 import type { ZKsyncWallet } from './zksync-wallet';
 
@@ -89,29 +89,16 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 		bytecodeHash: web3Types.Bytes,
 		constructorCalldata: web3Types.Bytes,
 	): string {
-		const contractDeploymentArgs = [
-			salt,
-			web3Utils.bytesToHex(bytecodeHash),
-			constructorCalldata,
-		];
-		const accountDeploymentArgs = [
-			...contractDeploymentArgs,
-			AccountAbstractionVersion.Version1,
-		];
+		const contractDeploymentArgs = [salt, web3Utils.bytesToHex(bytecodeHash), constructorCalldata];
+		const accountDeploymentArgs = [...contractDeploymentArgs, AccountAbstractionVersion.Version1];
 
 		switch (this.deploymentType) {
 			case 'create':
-				return ContractDeployerContract.methods
-					.create(...contractDeploymentArgs)
-					.encodeABI();
+				return ContractDeployerContract.methods.create(...contractDeploymentArgs).encodeABI();
 			case 'createAccount':
-				return ContractDeployerContract.methods
-					.createAccount(...accountDeploymentArgs)
-					.encodeABI();
+				return ContractDeployerContract.methods.createAccount(...accountDeploymentArgs).encodeABI();
 			case 'create2':
-				return ContractDeployerContract.methods
-					.create2(...contractDeploymentArgs)
-					.encodeABI();
+				return ContractDeployerContract.methods.create2(...contractDeploymentArgs).encodeABI();
 			case 'create2Account':
 				return ContractDeployerContract.methods
 					.create2Account(...accountDeploymentArgs)
@@ -136,10 +123,7 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 				throw new Error('Salt is required for CREATE2 deployment!');
 			}
 
-			if (
-				!overrides.customData.salt.startsWith('0x') ||
-				overrides.customData.salt.length !== 66
-			) {
+			if (!overrides.customData.salt.startsWith('0x') || overrides.customData.salt.length !== 66) {
 				throw new Error('Invalid salt provided!');
 			}
 		}
@@ -158,19 +142,18 @@ export class ContractFactory<Abi extends ContractAbi> extends Web3Context {
 	async getDeployTransaction(
 		args: web3Types.ContractConstructorArgs<Abi> = [] as web3Types.ContractConstructorArgs<Abi>,
 		overrides?: Overrides,
-	): Promise<Omit<web3Types.Transaction, 'to'>> {
+	): Promise<TransactionRequest> {
 		let constructorArgs: any[];
 
 		// The overrides will be popped out in this call:
-		const txRequest: web3Types.TransactionCall & { customData?: any } =
-			this.contractToBeDeployed
-				.deploy({
-					data: this.bytecode,
-					arguments: args,
-				})
-				.populateTransaction({
-					from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
-				});
+		const txRequest: web3Types.TransactionCall & { customData?: any } = this.contractToBeDeployed
+			.deploy({
+				data: this.bytecode,
+				arguments: args,
+			})
+			.populateTransaction({
+				from: this.zkWallet.getAddress() ?? this.defaultAccount ?? undefined,
+			});
 
 		this.checkOverrides(overrides);
 		let overridesCopy: Overrides = overrides ?? {

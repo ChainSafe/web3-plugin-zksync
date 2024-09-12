@@ -1,6 +1,5 @@
-import { TransactionFactory } from 'web3-eth-accounts';
 import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
-import { EIP712_TX_TYPE, ETH_ADDRESS } from '../../src/constants';
+import { ETH_ADDRESS } from '../../src/constants';
 import * as utils from '../../src/utils';
 import { getAccounts } from './fixtures';
 import { L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';

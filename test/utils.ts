@@ -22,8 +22,8 @@ export const IS_ETH_BASED = true;
 export const L2_CHAIN_URL = IS_BOOTSTRAPPED_NETWORK
 	? 'http://127.0.0.1:3050'
 	: IS_ETH_BASED
-		? 'http://127.0.0.1:15100'
-		: 'http://127.0.0.1:15200';
+	? 'http://127.0.0.1:15100'
+	: 'http://127.0.0.1:15200';
 
 export const L1_CHAIN_URL = IS_BOOTSTRAPPED_NETWORK
 	? 'http://127.0.0.1:8545'
