@@ -48,7 +48,7 @@ import * as web3Accounts from 'web3-eth-accounts';
 import * as web3Utils from 'web3-utils';
 import * as Web3 from 'web3';
 import type { Web3ContextInitOptions } from 'web3-core';
-import { PayableTxOptions } from 'web3-eth-contract/lib/commonjs/types';
+import { PayableTxOptions } from 'web3-eth-contract';
 
 // Equivalent to both Provider and Signer in zksync-ethers
 export class Web3ZKsyncL2 extends Web3ZkSync {
