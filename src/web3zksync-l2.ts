@@ -361,13 +361,6 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * Returns gas estimation for an L1 to L2 execute operation.
 	 *
 	 * @param transaction The transaction details.
-	 * @param transaction.contractAddress The address of the contract.
-	 * @param transaction.calldata The transaction call data.
-	 * @param [transaction.caller] The caller's address.
-	 * @param [transaction.l2Value] The current L2 gas value.
-	 * @param [transaction.factoryDeps] An array of bytes containing contract bytecode.
-	 * @param [transaction.gasPerPubdataByte] The current gas per byte value.
-	 * @param [transaction.overrides] Transaction overrides including `gasLimit`, `gasPrice`, and `value`.
 	 */
 	// TODO (EVM-3): support refundRecipient for fee estimation
 	async estimateL1ToL2Execute(
@@ -525,13 +518,6 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * Returns the populated withdrawal transaction.
 	 *
 	 * @param transaction The transaction details.
-	 * @param transaction.token The token address.
-	 * @param transaction.amount The amount of token.
-	 * @param [transaction.from] The sender's address.
-	 * @param [transaction.to] The recipient's address.
-	 * @param [transaction.bridgeAddress] The bridge address.
-	 * @param [transaction.paymasterParams] Paymaster parameters.
-	 * @param [transaction.overrides] Transaction overrides including `gasLimit`, `gasPrice`, and `value`.
 	 */
 	async getWithdrawTx(transaction: WithdrawTransactionDetails) {
 		const { ...tx } = transaction;
@@ -610,11 +596,6 @@ export class Web3ZKsyncL2 extends Web3ZkSync {
 	 * Returns the populated transfer transaction.
 	 *
 	 * @param transaction Transfer transaction request.
-	 * @param transaction.to The address of the recipient.
-	 * @param transaction.amount The amount of the token to transfer.
-	 * @param [transaction.token] The address of the token. Defaults to ETH.
-	 * @param [transaction.paymasterParams] Paymaster parameters.
-	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
 	async getTransferTx(transaction: TransferTransactionDetails) {
 		const { ...tx } = transaction;

@@ -45,12 +45,6 @@ class Adapters extends AdapterL1 {
 	 * from the associated account on L2 network to the target account on L1 network.
 	 *
 	 * @param transaction Withdrawal transaction request.
-	 * @param transaction.token The address of the token. Defaults to ETH.
-	 * @param transaction.amount The amount of the token to withdraw.
-	 * @param [transaction.to] The address of the recipient on L1.
-	 * @param [transaction.bridgeAddress] The address of the bridge contract to be used.
-	 * @param [transaction.paymasterParams] Paymaster parameters.
-	 * @param [transaction.overrides] Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
 	 */
 	withdraw(transaction: WithdrawTransactionDetails) {
 		return this.adapterL2.withdraw(transaction);
