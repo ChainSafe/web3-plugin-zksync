@@ -651,14 +651,14 @@ export type DepositTransactionDetails = {
 	bridgeAddress?: Address;
 	/**
 	 * Whether or not token approval should be performed under the hood.
-	 * Set this flag to true if you bridge an ERC20 token and didn't call the {@link approveERC20}
+	 * Set this flag to true if you bridge an ERC20 token and didn't call the `approveERC20`
 	 * function beforehand.
 	 */
 	approveERC20?: boolean;
 	/**
 	 * Whether or not base token approval should be performed under the hood.
-	 * Set this flag to true if you bridge a base token and didn't call the {@link approveERC20}
-	 * function beforehand.
+	 * Set this flag to true if you bridge a base token and didn't call the `approveERC20` function
+	 * beforehand.
 	 */
 	approveBaseERC20?: boolean;
 	/**
