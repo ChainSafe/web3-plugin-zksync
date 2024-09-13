@@ -297,34 +297,43 @@ export const ZKTransactionReceiptSchema = {
 export const RawTransactionWithDetailedOutputSchema = {
 	type: 'object',
 	properties: {
-		transactionHash: 'bytes32',
+		transactionHash: { format: 'bytes32' },
 		storageLogs: {
 			type: 'array',
 			items: {
-				address: 'address',
-				key: 'bytes32',
-				writtenValue: 'bytes32',
+				type: 'object',
+				properties: {
+					address: { format: 'address' },
+					key: { format: 'bytes32' },
+					writtenValue: { format: 'bytes32' },
+				},
 			},
-			events: {
-				type: 'array',
-				items: {
-					address: 'address',
+		},
+		events: {
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					address: { format: 'address' },
 					topics: {
 						type: 'array',
 						items: {
-							topic: 'bytes32',
+							type: 'object',
+							properties: {
+								topic: { format: 'bytes32' },
+							},
 						},
 					},
-					data: 'bytes',
-					blockHash: 'bytes32',
-					blockNumber: 'uint',
-					l1BatchNumber: 'uint',
-					transactionHash: 'bytes32',
-					transactionIndex: 'uint',
-					logIndex: 'uint',
-					transactionLogIndex: 'uint',
-					logType: 'string',
-					removed: 'bool',
+					data: { format: 'bytes' },
+					blockHash: { format: 'bytes32' },
+					blockNumber: { format: 'uint' },
+					l1BatchNumber: { format: 'uint' },
+					transactionHash: { format: 'bytes32' },
+					transactionIndex: { format: 'uint' },
+					logIndex: { format: 'uint' },
+					transactionLogIndex: { format: 'uint' },
+					logType: { format: 'string' },
+					removed: { format: 'bool' },
 				},
 			},
 		},

@@ -18,6 +18,7 @@ import type {
 	ProtocolVersion,
 	FeeParams,
 	Token,
+	RawTransactionWithDetailedOutput,
 } from './types';
 import {
 	AddressSchema,
@@ -34,7 +35,6 @@ import {
 	ProofSchema,
 	ProtocolVersionSchema,
 	RawBlockTransactionSchema,
-	RawTransactionWithDetailedOutput,
 	RawTransactionWithDetailedOutputSchema,
 	TransactionDetailsSchema,
 	UintSchema,
@@ -424,14 +424,27 @@ export class RpcMethods {
 	/**
 	 * Retrieves the proof for an L2 to L1 message.
 	 *
+	 * @param l2BlockNumber - The L2 block number.
+	 * @param senderAddress - The sender address.
+	 * @param messageHash - The message hash.
+	 * @param l2LogPosition - The log position in L2.
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getL2ToL1MsgProof(
+		l2BlockNumber: web3Types.Numbers,
+		senderAddress: web3Types.Address,
+		messageHash: web3Types.Bytes,
+		l2LogPosition?: web3Types.Numbers,
 		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
 	): Promise<Address> {
 		return web3Utils.format(
 			AddressSchema,
-			await this._send('zks_getL2ToL1MsgProof', []),
+			await this._send('zks_getL2ToL1MsgProof', [
+				l2BlockNumber,
+				senderAddress,
+				messageHash,
+				l2LogPosition,
+			]),
 			returnFormat,
 		) as Address;
 	}
@@ -499,6 +512,6 @@ export class RpcMethods {
 			RawTransactionWithDetailedOutputSchema,
 			await this._send('zks_sendRawTransactionWithDetailedOutput', [data]),
 			returnFormat,
-		);
+		) as RawTransactionWithDetailedOutput;
 	}
 }
