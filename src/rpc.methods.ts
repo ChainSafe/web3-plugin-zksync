@@ -431,22 +431,17 @@ export class RpcMethods {
 	 * @param returnFormat - The format of the return value.
 	 */
 	public async getL2ToL1MsgProof(
-		l2BlockNumber: web3Types.Numbers,
+		l2BlockNumber: number,
 		senderAddress: web3Types.Address,
 		messageHash: web3Types.Bytes,
-		l2LogPosition?: web3Types.Numbers,
-		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
-	): Promise<Address> {
-		return web3Utils.format(
-			AddressSchema,
-			await this._send('zks_getL2ToL1MsgProof', [
-				l2BlockNumber,
-				senderAddress,
-				messageHash,
-				l2LogPosition,
-			]),
-			returnFormat,
-		) as Address;
+		l2LogPosition?: number,
+	): Promise<unknown> {
+		return this._send('zks_getL2ToL1MsgProof', [
+			l2BlockNumber,
+			senderAddress,
+			messageHash,
+			l2LogPosition || 0,
+		]);
 	}
 
 	/**

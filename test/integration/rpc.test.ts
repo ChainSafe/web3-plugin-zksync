@@ -6,17 +6,13 @@ import {
 	getRawBlockTransactionsData,
 	getTransactionDetailsData,
 } from '../fixtures';
-import { PRIVATE_KEY1 } from '../utils';
-import { privateKeyToAccount } from 'web3-eth-accounts';
-const PRIVATE_KEY = (process.env.PRIVATE_KEY as string) || PRIVATE_KEY1;
-const mainAccount = privateKeyToAccount(PRIVATE_KEY);
+
 describe('ZkSyncPlugin rpc tests', () => {
 	let web3: Web3;
 
 	beforeAll(() => {
 		web3 = new Web3();
 		web3.registerPlugin(new ZKsyncPlugin('https://sepolia.era.zksync.dev'));
-		web3.ZKsync.L2.eth.accounts.wallet.add(mainAccount);
 	});
 
 	it('l1ChainId', async () => {
@@ -104,24 +100,23 @@ describe('ZkSyncPlugin rpc tests', () => {
 		expect(res).toBeGreaterThan(0n);
 	});
 	it('getL2ToL1MsgProof', async () => {
-		// const res = await web3.ZKsync.rpc.getL2ToL1MsgProof();
-		// expect(res).toBeDefined();
-		// expect(res).toBeGreaterThan(0n);
+		const res = await web3.ZKsync.rpc.getL2ToL1MsgProof(
+			3773029,
+			'0x81d3ce1a567389f6cb1178a68eb33aa6f081dc52',
+			'0x3c53e10c5339a1f9b703de025de094f20c825c2fb3e9373776b9f6bb4fd355e0',
+			0,
+		);
+		console.log('res', res);
 	});
 	it('getConfirmedTokens', async () => {
-		// const res = await web3.ZKsync.rpc.getConfirmedTokens();
-		// expect(res).toBeDefined();
-		// expect(res).toBeGreaterThan(0n);
-	});
-	it('sendRawTransactionWithDetailedOutput', async () => {
-		const populated = web3.ZKsync.L2.populateTransaction({
-			from: mainAccount.address,
-			to: '0x9a6de0f62aa270a8bcb1e2610078650d539b1ef9',
-			value: 1n,
-		});
-		const signed = web3.ZKsync.L2.signTransaction(populated);
-		const res = await web3.ZKsync.rpc.sendRawTransactionWithDetailedOutput(signed);
-		// expect(res).toBeDefined();
-		// expect(res).toBeGreaterThan(0n);
+		const res = await web3.ZKsync.rpc.getConfirmedTokens(0, 10);
+		expect(res).toBeDefined();
+		expect(Array.isArray(res)).toBeTruthy();
+		expect(res.length).toBeGreaterThan(0);
+		expect(res[0].decimals).toBeGreaterThan(0n);
+		expect(res[0].l1Address).toBeDefined();
+		expect(res[0].l2Address).toBeDefined();
+		expect(res[0].name).toBeDefined();
+		expect(res[0].symbol).toBeDefined();
 	});
 });
