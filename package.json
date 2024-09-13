@@ -14,7 +14,7 @@
 		"build": "tsc --project tsconfig.build.json",
 		"test:prepare": "ts-node test/setup.ts",
 		"test:wait": "ts-node test/wait.ts",
-		"build:docs": "npx -y typedoc src/index.ts",
+		"build:docs": "npx -y typedoc src/index.ts --tsconfig tsconfig.build.json",
 		"test": "jest --config=./test/jest.config.js",
 		"test:unit": "jest --config=./test/jest.config.js test/unit",
 		"test:local": "jest --config=./test/jest.config.js --runInBand --maxConcurrency=1 test/local",

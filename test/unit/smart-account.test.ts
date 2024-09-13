@@ -7,12 +7,12 @@ import {
 	signPayloadWithMultipleECDSA,
 } from '../../src';
 import { ADDRESS1, PRIVATE_KEY1, ADDRESS2, deepEqualExcluding } from '../utils';
-import { Eip712TxData } from '../../src/types';
 import { TypedDataEncoder } from '../../src/TypedDataEncoder';
+import { TransactionRequest } from '../../lib/types';
 
 describe('signPayloadWithECDSA()', () => {
 	it('should return signature by signing EIP712 transaction hash', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270,
 			from: ADDRESS1,
 			to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
@@ -31,9 +31,7 @@ describe('signPayloadWithECDSA()', () => {
 	it('should return signature by signing message hash', async () => {
 		const message = 'Hello World!';
 		const messageHash = hashMessage(message);
-		expect(messageHash).toBe(
-			'0xec3608877ecbf8084c29896b7eab2a368b2b3c8d003288584d145613dfa4706c',
-		);
+		expect(messageHash).toBe('0xec3608877ecbf8084c29896b7eab2a368b2b3c8d003288584d145613dfa4706c');
 		const result = signPayloadWithECDSA(messageHash, PRIVATE_KEY1);
 		expect(result).toBe(
 			'0x7c15eb760c394b0ca49496e71d841378d8bfd4f9fb67e930eb5531485329ab7c67068d1f8ef4b480ec327214ee6ed203687e3fbe74b92367b259281e340d16fd1c',
@@ -69,7 +67,7 @@ describe('signPayloadWithMultipleECDSA()', () => {
 	const PRIVATE_KEY2 = '0xac1e735be8536c6534bb4f17f06f6afc73b2b5ba84ac2cfb12f7461b20c0bbe3';
 
 	it('should return signature by signing EIP712 transaction hash', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270n,
 			from: ADDRESS1,
 			to: ADDRESS2,
@@ -105,10 +103,7 @@ describe('signPayloadWithMultipleECDSA()', () => {
 			},
 			{ name: 'John', age: 30 },
 		);
-		const result = await signPayloadWithMultipleECDSA(typedDataHash, [
-			PRIVATE_KEY1,
-			PRIVATE_KEY2,
-		]);
+		const result = await signPayloadWithMultipleECDSA(typedDataHash, [PRIVATE_KEY1, PRIVATE_KEY2]);
 		expect(result).toBe(
 			'0xbcaf0673c0c2b0e120165d207d42281d0c6e85f0a7f6b8044b0578a91cf5bda66b4aeb62aca4ae17012a38d71c9943e27285792fa7d788d848f849e3ea2e614b1b8231ec20acfc86483b908e8f1e88c917b244465c7e73202b6f2643377a6e54f5640f0d3e2f5902695faec96668b2e998148c49a4de613bb7bc4325a3c855cf6a1b',
 		);
@@ -119,7 +114,7 @@ describe('populateTransaction()', () => {
 	const provider = Web3ZKsyncL2.initWithDefaultProvider(types.Network.Sepolia);
 
 	it('should populate `tx.from` to address derived from private key if it not set', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270n,
 			to: '0xa61464658AfeAf65CccaaFD3a512b69A83B77618',
 			value: 7_000_000_000n,
@@ -154,7 +149,7 @@ describe('populateTransaction()', () => {
 	});
 
 	it('should throw an error when provider is not set', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270,
 			from: ADDRESS1,
 			to: ADDRESS2,
@@ -171,7 +166,7 @@ describe('populateTransaction()', () => {
 
 describe('populateTransactionMultisig()', () => {
 	it('should throw an error when multiple keys are not provided', async () => {
-		const tx: Eip712TxData = {
+		const tx: TransactionRequest = {
 			chainId: 270,
 			from: ADDRESS1,
 			to: ADDRESS2,
@@ -181,9 +176,7 @@ describe('populateTransactionMultisig()', () => {
 		try {
 			await populateTransactionMultisigECDSA(tx, PRIVATE_KEY1);
 		} catch (error) {
-			expect((error as Error).message).toBe(
-				'Multiple keys are required to build the transaction!',
-			);
+			expect((error as Error).message).toBe('Multiple keys are required to build the transaction!');
 		}
 	});
 });

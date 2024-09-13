@@ -1,10 +1,10 @@
 import {
-	IS_ETH_BASED,
 	deepEqualExcluding,
 	PRIVATE_KEY2,
 	ADDRESS2,
 	L1_CHAIN_URL,
 	L2_CHAIN_URL,
+	IS_ETH_BASED,
 } from '../utils';
 import { PAYMASTER, APPROVAL_TOKEN, DAI_L1, getAccounts, prepareAccount } from './fixtures';
 import MultisigAccount from './files/TwoUserMultisig.json';

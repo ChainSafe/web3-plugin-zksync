@@ -12,12 +12,13 @@ import {
 	EIP712_TYPES,
 	ZERO_ADDRESS,
 } from './constants';
-import type {
+import {
 	Eip712Meta,
 	Eip712SignedInput,
 	Eip712TxData,
 	EthereumSignature,
 	PaymasterParams,
+	TransactionRequest,
 } from './types';
 import { SignatureLike } from './utils';
 import { concat, hashBytecode, SignatureObject, toBytes } from './utils';
@@ -233,7 +234,7 @@ export class EIP712 {
 
 		return new Uint8Array([...r, ...s, v]);
 	}
-	static raw(transaction: Eip712TxData, signature?: SignatureLike) {
+	static raw(transaction: TransactionRequest, signature?: SignatureLike) {
 		if (!transaction.chainId) {
 			throw Error("Transaction chainId isn't set!");
 		}
@@ -244,7 +245,7 @@ export class EIP712 {
 			);
 		}
 		const from = transaction.from;
-		const meta: Eip712Meta = transaction.customData ?? {};
+		const meta: Eip712Meta = (transaction.customData ?? {}) as Eip712Meta;
 		const maxFeePerGas = toHex(transaction.maxFeePerGas || transaction.gasPrice || 0);
 		const maxPriorityFeePerGas = toHex(transaction.maxPriorityFeePerGas || maxFeePerGas);
 
@@ -303,7 +304,7 @@ export class EIP712 {
 		}
 		return fields;
 	}
-	static serialize(transaction: Eip712TxData, signature?: SignatureLike): string {
+	static serialize(transaction: TransactionRequest, signature?: SignatureLike): string {
 		const fields = EIP712.raw(transaction, signature);
 		return concat([new Uint8Array([EIP712_TX_TYPE]), RLP.encode(fields)]);
 	}
@@ -340,12 +341,12 @@ export class EIP712Signer {
 	 *
 	 * @throws {Error} If `transaction.chainId` is not set.
 	 */
-	static getSignedDigest(transaction: Eip712TxData): Bytes {
+	static getSignedDigest(transaction: TransactionRequest): Bytes {
 		if (!transaction.chainId) {
 			throw Error("Transaction chainId isn't set!");
 		}
 
-		return web3Abi.getEncodedEip712Data(EIP712.txTypedData(transaction), true);
+		return web3Abi.getEncodedEip712Data(EIP712.txTypedData(transaction as Eip712TxData), true);
 	}
 
 	/**

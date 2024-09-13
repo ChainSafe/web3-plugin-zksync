@@ -1,17 +1,16 @@
 import {
 	Address,
 	BlockTag,
-	Eip712TxData,
-	Numbers,
 	PayloadSigner,
-	PaymasterParams,
 	PriorityOpResponse,
 	SmartAccountSigner,
 	TransactionBuilder,
-	type TransactionOverrides,
+	TransactionRequest,
+	TransferTransactionDetails,
 	TypedDataDomain,
 	TypedDataField,
 	type WalletBalances,
+	WithdrawTransactionDetails,
 } from './types';
 
 import {
@@ -104,7 +103,7 @@ export class SmartAccount extends AdapterL2 {
 	get address() {
 		return this._address;
 	}
-	getAddress() {
+	getAddress(): Address {
 		return this.address;
 	}
 	getNonce(blockNumber: web3Types.BlockNumberOrTag = 'latest') {
@@ -243,12 +242,10 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: 7_000_000_000,
 	 * });
 	 */
-	override async populateTransaction(
-		tx: Eip712TxData | web3Types.Transaction,
-	): Promise<web3Types.Transaction | Eip712TxData> {
+	override async populateTransaction(tx: TransactionRequest): Promise<TransactionRequest> {
 		return this.transactionBuilder(
 			{
-				...(tx as Eip712TxData),
+				...tx,
 				from: tx.from ?? this.getAddress(),
 			},
 			this.secret,
@@ -282,8 +279,8 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: 7_000_000_000,
 	 * });
 	 */
-	async signTransaction(tx: web3Types.Transaction | Eip712TxData): Promise<string> {
-		const populatedTx = (await this.populateTransaction(tx)) as Eip712TxData;
+	async signTransaction(tx: TransactionRequest): Promise<string> {
+		const populatedTx = await this.populateTransaction(tx);
 		const populatedTxHash = EIP712Signer.getSignedDigest(populatedTx);
 
 		populatedTx.customData = {
@@ -317,7 +314,7 @@ export class SmartAccount extends AdapterL2 {
 	 *   value: 7_000_000_000,
 	 * });
 	 */
-	async sendTransaction(tx: web3Types.Transaction) {
+	async sendTransaction(tx: TransactionRequest) {
 		checkProvider(this, 'broadcastTransaction');
 		const signedTx = await this.signTransaction(tx);
 		return getPriorityOpResponse(
@@ -413,12 +410,6 @@ export class SmartAccount extends AdapterL2 {
 	 * from the associated account on L2 network to the target account on L1 network.
 	 *
 	 * @param transaction - Withdrawal transaction request.
-	 * @param transaction.token - The address of the token. ETH by default.
-	 * @param transaction.amount - The amount of the token to withdraw.
-	 * @param [transaction.to] - The address of the recipient on L1.
-	 * @param [transaction.bridgeAddress] - The address of the bridge contract to be used.
-	 * @param [transaction.paymasterParams] - Paymaster parameters.
-	 * @param [transaction.overrides] - Transaction's overrides which may be used to pass l2 gasLimit, gasPrice, value, etc.
 	 *
 	 * @returns A Promise resolving to a withdrawal transaction response.
 	 *
@@ -467,14 +458,7 @@ export class SmartAccount extends AdapterL2 {
 	 *   }),
 	 * });
 	 */
-	async withdraw(transaction: {
-		token: Address;
-		amount: Numbers;
-		to?: Address;
-		bridgeAddress?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}) {
+	async withdraw(transaction: WithdrawTransactionDetails) {
 		checkProvider(this, 'withdraw');
 		return super.withdraw(transaction);
 	}
@@ -483,11 +467,6 @@ export class SmartAccount extends AdapterL2 {
 	 * Transfer ETH or any ERC20 token within the same interface.
 	 *
 	 * @param transaction - Transfer transaction request.
-	 * @param transaction.to - The address of the recipient.
-	 * @param transaction.amount - The address of the recipient.
-	 * @param [transaction.token] - The address of the recipient.
-	 * @param [transaction.paymasterParams] - The address of the recipient.
-	 * @param [transaction.overrides] - The address of the recipient.
 	 *
 	 * @returns A Promise resolving to a transfer transaction response.
 	 *
@@ -545,15 +524,9 @@ export class SmartAccount extends AdapterL2 {
 	 *
 	 * console.log(`The sum of ${receipt.value} ETH was transferred to ${receipt.to}`);
 	 */
-	async transfer(transaction: {
-		to: Address;
-		amount: Numbers;
-		token?: Address;
-		paymasterParams?: PaymasterParams;
-		overrides?: TransactionOverrides;
-	}): Promise<PriorityOpResponse> {
+	async transfer(transaction: TransferTransactionDetails): Promise<PriorityOpResponse> {
 		const transferTx = await super.transferTx(transaction);
-		return this.sendTransaction(transferTx as web3Types.Transaction);
+		return this.sendTransaction(transferTx);
 	}
 }
 

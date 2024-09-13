@@ -1,4 +1,3 @@
-// import { FMT_BYTES, FMT_NUMBER, TransactionReceipt, Web3Eth } from 'web3';
 import type { FeeMarketEIP1559TxData } from 'web3-eth-accounts';
 import type { Contract } from 'web3-eth-contract';
 import type {
@@ -6,7 +5,6 @@ import type {
 	HexString,
 	Numbers,
 	Transaction,
-	TransactionWithSenderAPI,
 	TransactionReceipt,
 	Log,
 	TransactionReceiptBase,
@@ -22,6 +20,8 @@ import type { IL1MessengerABI } from './contracts/IL1Messenger';
 import type { IERC1271ABI } from './contracts/IERC1271';
 import type { IL1BridgeABI } from './contracts/IL1ERC20Bridge';
 import type { INonceHolderABI } from './contracts/INonceHolder';
+import type * as web3Types from 'web3-types';
+import * as Web3 from 'web3';
 
 export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
@@ -149,369 +149,6 @@ export interface zkSyncTxData extends FeeMarketEIP1559TxData {
 	readonly l1BatchTxIndex: null | number;
 }
 
-// /**
-//  * A `TransactionResponse` is an extension of {@link TransactionResponse} with additional features for
-//  * interacting with zkSync Era.
-//  */
-// export class TransactionResponse extends FeeMarketEIP1559Transaction {
-// 	private web3Eth: Web3Eth;
-
-// 	/** The batch number on the L1 network. */
-// 	readonly l1BatchNumber: null | number;
-// 	/** The transaction index within the batch on the L1 network. */
-// 	readonly l1BatchTxIndex: null | number;
-
-// 	constructor(txData: zkSyncTxData, provider: EIP1193Provider<RpcMethods>, opts?: TxOptions) {
-// 		super(txData, opts);
-// 		this.web3Eth = new Web3Eth(provider);
-// 		this.l1BatchNumber = txData.l1BatchNumber;
-// 		this.l1BatchTxIndex = txData.l1BatchTxIndex;
-
-// 		// copied from old base ethers.TransactionResponse!
-// 		// this.blockNumber = tx.blockNumber != null ? tx.blockNumber : null;
-// 		// this.blockHash = tx.blockHash != null ? tx.blockHash : null;
-
-// 		// this.hash = tx.hash;
-// 		// this.index = tx.index;
-
-// 		// this.type = tx.type;
-
-// 		// this.from = tx.from;
-// 		// this.to = tx.to || null;
-
-// 		// this.gasLimit = tx.gasLimit;
-// 		// this.nonce = tx.nonce;
-// 		// this.data = tx.data;
-// 		// this.value = tx.value;
-
-// 		// this.gasPrice = tx.gasPrice;
-// 		// this.maxPriorityFeePerGas = tx.maxPriorityFeePerGas != null ? tx.maxPriorityFeePerGas : null;
-// 		// this.maxFeePerGas = tx.maxFeePerGas != null ? tx.maxFeePerGas : null;
-// 		// this.maxFeePerBlobGas = tx.maxFeePerBlobGas != null ? tx.maxFeePerBlobGas : null;
-
-// 		// this.chainId = tx.chainId;
-// 		// this.signature = tx.signature;
-
-// 		// this.accessList = tx.accessList != null ? tx.accessList : null;
-// 		// this.blobVersionedHashes = tx.blobVersionedHashes != null ? tx.blobVersionedHashes : null;
-
-// 		// this.#startBlock = -1;
-// 	}
-
-// 	/**
-// 	 * Waits for this transaction to be mined and have a specified number of confirmation blocks.
-// 	 * Resolves once the transaction has `confirmations` blocks including it.
-// 	 * If `confirmations` is 0 and the transaction has not been mined, it resolves to `null`.
-// 	 * Otherwise, it waits until enough confirmations have completed.
-// 	 *
-// 	 * @param confirmations The number of confirmation blocks. Defaults to 1.
-// 	 * @returns A promise that resolves to the transaction receipt.
-// 	 */
-// 	async wait(confirmations?: number): Promise<TransactionReceipt> {
-// 		// eslint-disable-next-line no-constant-condition
-// 		while (true) {
-// 			// // it needs to be replaced with something like:
-
-// 			// // const receipt = await this.web3Eth.getTransactionReceipt(this.hash);
-// 			// // eth.setConfig({ transactionConfirmationBlocks: waitConfirmations });
-// 			// // watchTransactionForConfirmations(this.web3Eth, , receipt, this.hash, 'hex');
-
-// 			// // Or far better: to be replaced with a wait for confirmations on the PromiEvent of the sent transaction
-
-// 			// const receipt = (await super.wait(confirmations)) as TransactionReceipt;
-
-// 			// if (receipt && receipt.blockNumber) {
-// 			// 	return receipt;
-// 			// }
-// 			await sleep(500);
-// 		}
-// 	}
-
-// 	async getTransaction() {
-// 		return await this.web3Eth.getTransaction(this.data, {
-// 			number: FMT_NUMBER.BIGINT,
-// 			bytes: FMT_BYTES.HEX,
-// 		});
-// 	}
-
-// 	// replaceableTransaction(startBlock: number): TransactionResponse {
-// 	// 	return new TransactionResponse(super.replaceableTransaction(startBlock), this.provider);
-// 	// }
-
-// 	// async getBlock(): Promise<Block> {
-// 	// 	return await base.getBlock(this.hash);
-// 	// }
-
-// 	// /** Waits for transaction to be finalized. */
-// 	// async waitFinalize(): Promise<TransactionReceipt> {
-// 	// 	// eslint-disable-next-line no-constant-condition
-// 	// 	while (true) {
-// 	// 		const receipt = await this.wait();
-// 	// 		if (receipt && receipt.blockNumber) {
-// 	// 			const block = await this.provider.getBlock('finalized');
-// 	// 			if (receipt.blockNumber <= block!.number) {
-// 	// 				return (await this.provider.getTransactionReceipt(receipt.hash)) as TransactionReceipt;
-// 	// 			}
-// 	// 		} else {
-// 	// 			await sleep(500);
-// 	// 		}
-// 	// 	}
-// 	// }
-
-// 	override toJSON(): any {
-// 		const { l1BatchNumber, l1BatchTxIndex } = this;
-
-// 		return {
-// 			...super.toJSON(),
-// 			l1BatchNumber,
-// 			l1BatchTxIndex,
-// 		};
-// 	}
-// }
-
-// /**
-//  * A `TransactionReceipt` is an extension of {@link ethers.TransactionReceipt} with additional features for
-//  * interacting with zkSync Era.
-//  */
-// export class TransactionReceipt extends FeeMarketEIP1559Transaction {
-// 	private web3Eth: Web3Eth;
-
-// 	/** The batch number on the L1 network. */
-// 	readonly l1BatchNumber: null | number;
-// 	/** The transaction index within the batch on the L1 network. */
-// 	readonly l1BatchTxIndex: null | number;
-// 	/** The logs of L2 to L1 messages. */
-// 	readonly l2ToL1Logs: L2ToL1Log[];
-// 	/** All logs included in the transaction receipt. */
-// 	readonly _logs: ReadonlyArray<Log>;
-
-// 	constructor(params: any, provider: EIP1193Provider<RpcMethods>) {
-// 		super(params);
-// 		this.web3Eth = new Web3Eth(provider);
-// 		this.l1BatchNumber = params.l1BatchNumber;
-// 		this.l1BatchTxIndex = params.l1BatchTxIndex;
-// 		this.l2ToL1Logs = params.l2ToL1Logs;
-// 		this._logs = Object.freeze(
-// 			params.logs.map((log: Log) => {
-// 				return new Log(log, provider);
-// 			}),
-// 		);
-// 	}
-
-// 	// override get logs(): ReadonlyArray<Log> {
-// 	// 	return this._logs;
-// 	// }
-
-// 	// override getBlock(): Promise<Block> {
-// 	// 	return super.getBlock(this.hash()) as Promise<Block>;
-// 	// }
-
-// 	// override getTransaction(): Promise<TransactionResponse> {
-// 	// 	return super.getTransaction() as Promise<TransactionResponse>;
-// 	// }
-
-// 	override toJSON(): any {
-// 		const { l1BatchNumber, l1BatchTxIndex, l2ToL1Logs } = this;
-// 		return {
-// 			...super.toJSON(),
-// 			l1BatchNumber,
-// 			l1BatchTxIndex,
-// 			l2ToL1Logs,
-// 		};
-// 	}
-// }
-
-// /** A `Block` is an extension of {@link ethers.Block} with additional features for interacting with zkSync Era. */
-// export class Block extends ethers.Block {
-// 	/** The batch number on L1. */
-// 	readonly l1BatchNumber: null | number;
-// 	/** The timestamp of the batch on L1. */
-// 	readonly l1BatchTimestamp: null | number;
-
-// 	constructor(params: any, provider: ethers.Provider) {
-// 		super(params, provider);
-// 		this.l1BatchNumber = params.l1BatchNumber;
-// 		this.l1BatchTimestamp = params.l1BatchTxIndex;
-// 	}
-
-// 	override toJSON(): any {
-// 		const { l1BatchNumber, l1BatchTimestamp: l1BatchTxIndex } = this;
-// 		return {
-// 			...super.toJSON(),
-// 			l1BatchNumber,
-// 			l1BatchTxIndex,
-// 		};
-// 	}
-
-// 	override get prefetchedTransactions(): TransactionResponse[] {
-// 		return super.prefetchedTransactions as TransactionResponse[];
-// 	}
-
-// 	override getTransaction(indexOrHash: number | string): Promise<TransactionResponse> {
-// 		return super.getTransaction(indexOrHash) as Promise<TransactionResponse>;
-// 	}
-// }
-
-// /** A `LogParams` is an extension of {@link ethers.LogParams} with additional features for interacting with zkSync Era. */
-// export interface LogParams extends ethers.LogParams {
-// 	/** The batch number on L1. */
-// 	readonly l1BatchNumber: null | number;
-// }
-
-// /** A `Log` is an extension of {@link ethers.Log} with additional features for interacting with zkSync Era. */
-// export class Log extends ethers.Log {
-// 	/** The batch number on L1. */
-// 	readonly l1BatchNumber: null | number;
-
-// 	constructor(params: LogParams, provider: ethers.Provider) {
-// 		super(params, provider);
-// 		this.l1BatchNumber = params.l1BatchNumber;
-// 	}
-
-// 	override toJSON(): any {
-// 		const { l1BatchNumber } = this;
-// 		return {
-// 			...super.toJSON(),
-// 			l1BatchNumber,
-// 		};
-// 	}
-
-// 	override async getBlock(): Promise<Block> {
-// 		return (await super.getBlock()) as Block;
-// 	}
-
-// 	override async getTransaction(): Promise<TransactionResponse> {
-// 		return (await super.getTransaction()) as TransactionResponse;
-// 	}
-
-// 	override async getTransactionReceipt(): Promise<TransactionReceipt> {
-// 		return (await super.getTransactionReceipt()) as TransactionReceipt;
-// 	}
-// }
-
-// /**
-//  * A `Transaction` is an extension of {@link ethers.Transaction} with additional features for interacting
-//  * with zkSync Era.
-//  */
-// export class Transaction extends ethers.Transaction {
-// 	/** The custom data for EIP712 transaction metadata. */
-// 	customData?: null | Eip712Meta;
-// 	// super.#type is private and there is no way to override which enforced to
-// 	// introduce following variable
-// 	#type?: null | number;
-// 	#from?: null | string;
-
-// 	override get type(): number | null {
-// 		return this.#type === EIP712_TX_TYPE ? this.#type : super.type;
-// 	}
-
-// 	override set type(value: number | string | null) {
-// 		switch (value) {
-// 			case EIP712_TX_TYPE:
-// 			case 'eip-712':
-// 				this.#type = EIP712_TX_TYPE;
-// 				break;
-// 			default:
-// 				super.type = value;
-// 		}
-// 	}
-
-// 	static override from(tx: string | TransactionLike): Transaction {
-// 		if (typeof tx === 'string') {
-// 			const payload = ethers.getBytes(tx);
-// 			if (payload[0] !== EIP712_TX_TYPE) {
-// 				return Transaction.from(ethers.Transaction.from(tx));
-// 			} else {
-// 				return Transaction.from(parseEip712(payload));
-// 			}
-// 		} else {
-// 			const result = new Transaction();
-// 			if (tx.type === EIP712_TX_TYPE) {
-// 				result.type = EIP712_TX_TYPE;
-// 				result.customData = tx.customData;
-// 				result.from = tx.from!;
-// 			}
-// 			if (tx.type !== null && tx.type !== undefined) result.type = tx.type;
-// 			if (tx.to) result.to = tx.to;
-// 			if (tx.nonce) result.nonce = tx.nonce;
-// 			if (tx.gasLimit) result.gasLimit = tx.gasLimit;
-// 			if (tx.gasPrice) result.gasPrice = tx.gasPrice;
-// 			if (tx.maxPriorityFeePerGas) result.maxPriorityFeePerGas = tx.maxPriorityFeePerGas;
-// 			if (tx.maxFeePerGas) result.maxFeePerGas = tx.maxFeePerGas;
-// 			if (tx.data) result.data = tx.data;
-// 			if (tx.value) result.value = tx.value;
-// 			if (tx.chainId) result.chainId = tx.chainId;
-// 			if (tx.signature) result.signature = EthersSignature.from(tx.signature);
-// 			result.accessList = null;
-
-// 			if (tx.from) {
-// 				assertArgument(result.isSigned(), 'unsigned transaction cannot define from', 'tx', tx);
-// 				assertArgument(isAddressEq(result.from, tx.from), 'from mismatch', 'tx', tx);
-// 			}
-
-// 			if (tx.hash) {
-// 				assertArgument(result.isSigned(), 'unsigned transaction cannot define hash', 'tx', tx);
-// 				assertArgument(result.hash === tx.hash, 'hash mismatch', 'tx', tx);
-// 			}
-
-// 			return result;
-// 		}
-// 	}
-
-// 	override get serialized(): string {
-// 		if (!this.customData && this.#type !== EIP712_TX_TYPE) {
-// 			return super.serialized;
-// 		}
-// 		return serializeEip712(this, this.signature!);
-// 	}
-
-// 	override get unsignedSerialized(): string {
-// 		if (!this.customData && this.type !== EIP712_TX_TYPE) {
-// 			return super.unsignedSerialized;
-// 		}
-// 		return serializeEip712(this);
-// 	}
-
-// 	override toJSON(): any {
-// 		const { customData } = this;
-// 		return {
-// 			...super.toJSON(),
-// 			type: !this.#type ? this.type : this.#type,
-// 			customData,
-// 		};
-// 	}
-
-// 	override get typeName(): string | null {
-// 		return this.#type === EIP712_TX_TYPE ? 'zksync' : super.typeName;
-// 	}
-
-// 	override isSigned(): this is Transaction & {
-// 		type: number;
-// 		typeName: string;
-// 		from: string;
-// 		signature: Signature;
-// 	} {
-// 		return this.#type === EIP712_TX_TYPE
-// 			? this.customData?.customSignature !== null
-// 			: super.isSigned();
-// 	}
-
-// 	override get hash(): string | null {
-// 		if (this.#type === EIP712_TX_TYPE) {
-// 			return this.customData?.customSignature !== null ? eip712TxHash(this) : null;
-// 		} else {
-// 			return super.hash;
-// 		}
-// 	}
-
-// 	override get from(): string | null {
-// 		return this.#type === EIP712_TX_TYPE ? this.#from! : super.from;
-// 	}
-// 	override set from(value: string | null) {
-// 		this.#from = value;
-// 	}
-// }
-
 /**
  * Represents a L2 to L1 transaction log.
  */
@@ -533,10 +170,10 @@ export interface L2ToL1Log {
  * A transaction request that includes additional features for interacting with ZKsync Era.
  */
 export declare type TransactionRequest = DeepWriteable<
-	TransactionWithSenderAPI & {
+	Transaction & {
 		/** The custom data for EIP712 transaction metadata. */
 		customData?: null | Eip712Meta;
-		type?: TransactionWithSenderAPI['type'] & Numbers;
+		type?: Numbers;
 	}
 >;
 
@@ -789,10 +426,10 @@ export interface WalletBalances {
  * @returns A promise that resolves to the populated transaction.
  */
 export type TransactionBuilder = (
-	transaction: Eip712TxData,
+	transaction: TransactionRequest,
 	secret?: any,
 	provider?: Web3ZKsyncL2,
-) => Promise<Eip712TxData>;
+) => Promise<TransactionRequest>;
 
 /**
  * Encapsulates the required input parameters for creating a signer for `SmartAccount`.
@@ -1042,4 +679,275 @@ export type FeeParams = {
 		l1_gas_price: Numbers;
 		l1_pubdata_price: Numbers;
 	};
+};
+export type DepositTransactionDetails = {
+	/**
+	 * The address of the token to deposit.
+	 */
+	token: Address;
+	/**
+	 * The amount of the token to deposit.
+	 */
+	amount: web3Types.Numbers;
+	/**
+	 * The address that will receive the deposited tokens on L2.
+	 */
+	to?: Address;
+	/**
+	 * If the ETH value passed with the transaction is not explicitly stated in the overrides, this
+	 * field will be equal to the tip the operator will receive on top of the base cost of the
+	 * transaction.
+	 */
+	operatorTip?: web3Types.Numbers;
+	/**
+	 * The address of the bridge contract to be used.
+	 * Defaults to the default ZKsync Era bridge (either `L1EthBridge` or `L1Erc20Bridge`).
+	 */
+	bridgeAddress?: Address;
+	/**
+	 * Whether or not token approval should be performed under the hood.
+	 * Set this flag to true if you bridge an ERC20 token and didn't call the `approveERC20`
+	 * function beforehand.
+	 */
+	approveERC20?: boolean;
+	/**
+	 * Whether or not base token approval should be performed under the hood.
+	 * Set this flag to true if you bridge a base token and didn't call the `approveERC20` function
+	 * beforehand.
+	 */
+	approveBaseERC20?: boolean;
+	/**
+	 * Maximum amount of L2 gas that the transaction can consume during execution on L2.
+	 */
+	l2GasLimit?: web3Types.Numbers;
+	/**
+	 * The L2 gas price for each published L1 calldata byte.
+	 */
+	gasPerPubdataByte?: web3Types.Numbers;
+	/**
+	 * The address on L2 that will receive the refund for the transaction.
+	 * If the transaction fails, it will also be the address to receive `l2Value`.
+	 */
+	refundRecipient?: Address;
+	/**
+	 * Transaction's overrides for deposit which may be used to pass L1 `gasLimit`, `gasPrice`,
+	 * `value`, etc.
+	 */
+	overrides?: TransactionOverrides;
+	/**
+	 * Transaction's overrides for approval of an ERC20 token which may be used to pass L1
+	 * `gasLimit`, `gasPrice`, `value`, etc.
+	 */
+	approveOverrides?: TransactionOverrides;
+	/**
+	 * Transaction's overrides for approval of a base token which may be used to pass L1
+	 * `gasLimit`, `gasPrice`, `value`, etc.
+	 */
+	approveBaseOverrides?: TransactionOverrides;
+	/**
+	 * Additional data that can be sent to a bridge.
+	 */
+	customBridgeData?: web3Types.Bytes;
+};
+
+export type WithdrawTransactionDetails = {
+	/**
+	 * The address of the token.
+	 */
+	token: Address;
+	/**
+	 * The amount of the token to withdraw.
+	 */
+	amount: web3Types.Numbers;
+	/**
+	 * The address of the recipient on L1.
+	 */
+	to?: Address;
+	from?: Address;
+	/**
+	 * The address of the bridge contract to be used.
+	 */
+	bridgeAddress?: Address;
+	/**
+	 * Paymaster parameters.
+	 */
+	paymasterParams?: PaymasterParams;
+	/**
+	 * Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
+	 */
+	overrides?: TransactionOverrides;
+};
+
+export type TransferTransactionDetails = {
+	/**
+	 * The address of the recipient.
+	 */
+	to: Address;
+	from?: Address;
+	/**
+	 * The amount of the token to transfer.
+	 */
+	amount: web3Types.Numbers;
+	/**
+	 * The address of the token. Defaults to ETH.
+	 */
+	token?: Address;
+	/**
+	 * Paymaster parameters.
+	 */
+	paymasterParams?: PaymasterParams;
+	/**
+	 * Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
+	 */
+	overrides?: TransactionOverrides;
+};
+
+export type L2GasLimitDetails = {
+	token: Address;
+	amount: web3Types.Numbers;
+	to?: Address;
+	operatorTip?: web3Types.Numbers;
+	bridgeAddress?: Address;
+	l2GasLimit?: web3Types.Numbers;
+	gasPerPubdataByte?: web3Types.Numbers;
+	customBridgeData?: web3Types.Bytes;
+	refundRecipient?: Address;
+	overrides?: TransactionOverrides;
+};
+
+export type FullRequiredDepositFeeDetails = {
+	/**
+	 * The address of the token to deposit.
+	 */
+	token: Address;
+	/**
+	 * The address that will receive the deposited tokens on L2.
+	 */
+	to?: Address;
+	/**
+	 * The address of the bridge contract to be used. Defaults to the default ZKsync Era bridge
+	 * (either `L1EthBridge` or `L1Erc20Bridge`).
+	 */
+	bridgeAddress?: Address;
+	/**
+	 * Additional data that can be sent to a bridge.
+	 */
+	customBridgeData?: web3Types.Bytes;
+	/**
+	 * The L2 gas price for each published L1 calldata byte.
+	 */
+	gasPerPubdataByte?: web3Types.Numbers;
+	/**
+	 * Transaction's overrides which may be used to pass L1 `gasLimit`, `gasPrice`, `value`, etc.
+	 */
+	overrides?: TransactionOverrides;
+};
+
+export type BaseCostDetails = {
+	/**
+	 * The gasLimit for the L2 contract call.
+	 */
+	gasLimit: web3Types.Numbers;
+	/**
+	 * The L2 gas price for each published L1 calldata byte.
+	 */
+	gasPerPubdataByte?: web3Types.Numbers;
+	/**
+	 * The L1 gas price of the L1 transaction that will send the request for an execute call.
+	 */
+	gasPrice?: web3Types.Numbers;
+	chainId?: web3Types.Numbers;
+};
+
+export type TokenAllowanceResult = { token: Address; allowance: web3Types.Numbers };
+
+export type RequestExecuteDetails = {
+	/**
+	 * The L2 contract to be called.
+	 */
+	contractAddress: Address;
+	/**
+	 * The input of the L2 transaction.
+	 */
+	calldata: string;
+	/**
+	 * Maximum amount of L2 gas that transaction can consume during execution on L2.
+	 */
+	l2GasLimit?: web3Types.Numbers;
+	/**
+	 * The amount of base token that needs to be minted on non-ETH-based L2.
+	 */
+	mintValue?: web3Types.Numbers;
+	/**
+	 * `msg.value` of L2 transaction.
+	 */
+	l2Value?: web3Types.Numbers;
+	/**
+	 * An array of L2 bytecodes that will be marked as known on L2.
+	 */
+	factoryDeps?: web3Types.Bytes[];
+	/**
+	 * If the ETH value passed with the transaction is not explicitly stated in the overrides, this
+	 * field will be equal to the tip the operator will receive on top of the base cost of the
+	 * transaction.
+	 */
+	operatorTip?: web3Types.Numbers;
+	/**
+	 * The L2 gas price for each published L1 calldata byte.
+	 */
+	gasPerPubdataByte?: web3Types.Numbers;
+	/**
+	 * The address on L2 that will receive the refund for the transaction. If the transaction
+	 * fails, it will also be the address to receive `l2Value`.
+	 */
+	refundRecipient?: Address;
+	/**
+	 * Transaction's overrides which may be used to pass L2 `gasLimit`, `gasPrice`, `value`, etc.
+	 */
+	overrides?: TransactionOverrides;
+};
+export type EstimateL1ToL2ExecuteDetails = {
+	/**
+	 * The address of the contract.
+	 */
+	contractAddress: web3Types.Address;
+	/**
+	 * The transaction call data.
+	 */
+	calldata: string;
+	/**
+	 * The caller's address.
+	 */
+	caller?: web3Types.Address;
+	/**
+	 * The current L2 gas value.
+	 */
+	l2Value?: web3Types.Numbers;
+	/**
+	 * An array of bytes containing contract bytecode.
+	 */
+	factoryDeps?: web3Types.Bytes[];
+	/**
+	 * The current gas per byte value.
+	 */
+	gasPerPubdataByte?: web3Types.Numbers;
+	/**
+	 * Transaction overrides including `gasLimit`, `gasPrice`, and `value`.
+	 */
+	overrides?: TransactionOverrides;
+};
+
+export type L2BridgeContractsResult = {
+	erc20: Web3.Contract<typeof IL2BridgeABI>;
+	weth: Web3.Contract<typeof IL2BridgeABI>;
+	shared: Web3.Contract<typeof IL2BridgeABI>;
+};
+
+export type DefaultBridgeAddressesResult = {
+	erc20L1: string;
+	erc20L2: string;
+	wethL1: string;
+	wethL2: string;
+	sharedL1: string;
+	sharedL2: string;
 };
