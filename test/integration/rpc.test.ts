@@ -101,12 +101,17 @@ describe('ZkSyncPlugin rpc tests', () => {
 	});
 	it('getL2ToL1MsgProof', async () => {
 		const res = await web3.ZKsync.rpc.getL2ToL1MsgProof(
-			3773029,
-			'0x81d3ce1a567389f6cb1178a68eb33aa6f081dc52',
-			'0x3c53e10c5339a1f9b703de025de094f20c825c2fb3e9373776b9f6bb4fd355e0',
-			0,
+			2610857,
+			'0x466ff3c5C76445823b49dF047d72663B8eAe9272',
+			'0x4ba6379f4d5c7f9eae393022467be6d05f2426b51efeb0011705d9bb5c3ce263',
+			3,
 		);
-		console.log('res', res);
+		expect(res).toBeDefined();
+		expect(res.id).toBeDefined();
+		expect(res.proof).toBeDefined();
+		expect(res.root).toBeDefined();
+		expect(Array.isArray(res.proof)).toBeTruthy();
+		expect(res.proof.length > 0).toBeTruthy();
 	});
 	it('getConfirmedTokens', async () => {
 		const res = await web3.ZKsync.rpc.getConfirmedTokens(0, 10);

@@ -3,7 +3,7 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
-import type {
+import {
 	BatchDetails,
 	BlockDetails,
 	BridgeAddresses,
@@ -19,6 +19,7 @@ import type {
 	FeeParams,
 	Token,
 	RawTransactionWithDetailedOutput,
+	MessageProof,
 } from './types';
 import {
 	AddressSchema,
@@ -435,13 +436,18 @@ export class RpcMethods {
 		senderAddress: web3Types.Address,
 		messageHash: web3Types.Bytes,
 		l2LogPosition?: number,
-	): Promise<unknown> {
-		return this._send('zks_getL2ToL1MsgProof', [
-			l2BlockNumber,
-			senderAddress,
-			messageHash,
-			l2LogPosition || 0,
-		]);
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<MessageProof> {
+		return web3Utils.format(
+			L2ToL1ProofSchema,
+			await this._send('zks_getL2ToL1MsgProof', [
+				l2BlockNumber,
+				senderAddress,
+				messageHash,
+				l2LogPosition || 0,
+			]),
+			returnFormat,
+		) as MessageProof;
 	}
 
 	/**
