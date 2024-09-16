@@ -20,4 +20,4 @@ jobs:
             - run: yarn build
             - run: export PRIVATE_KEY=${{secrets.PRIVATE_KEY}}
             - run: yarn test:unit
-            - run: yarn test test/integration/rpc test/integration/mainnet test/integration/zksync test/integration/utils
+            - run: yarn test test/integration/rpc.test test/integration/mainnet test/integration/zksync test/integration/utils
