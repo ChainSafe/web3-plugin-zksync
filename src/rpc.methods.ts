@@ -480,8 +480,6 @@ export class RpcMethods {
 
 	/**
 	 * Gets the protocol version.
-	 * Parameter
-	 * uint16 - Optional. Specific version ID.
 	 *
 	 * @param versionId - The version ID.
 	 * @param returnFormat - The format of the return value.
