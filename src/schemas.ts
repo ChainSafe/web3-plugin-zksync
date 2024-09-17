@@ -293,3 +293,117 @@ export const ZKTransactionReceiptSchema = {
 		},
 	},
 };
+
+export const RawTransactionWithDetailedOutputSchema = {
+	type: 'object',
+	properties: {
+		transactionHash: { format: 'bytes32' },
+		storageLogs: {
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					address: { format: 'address' },
+					key: { format: 'bytes32' },
+					writtenValue: { format: 'bytes32' },
+				},
+			},
+		},
+		events: {
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					address: { format: 'address' },
+					topics: {
+						type: 'array',
+						items: {
+							type: 'object',
+							properties: {
+								topic: { format: 'bytes32' },
+							},
+						},
+					},
+					data: { format: 'bytes' },
+					blockHash: { format: 'bytes32' },
+					blockNumber: { format: 'uint' },
+					l1BatchNumber: { format: 'uint' },
+					transactionHash: { format: 'bytes32' },
+					transactionIndex: { format: 'uint' },
+					logIndex: { format: 'uint' },
+					transactionLogIndex: { format: 'uint' },
+					logType: { format: 'string' },
+					removed: { format: 'bool' },
+				},
+			},
+		},
+	},
+};
+
+export const ProtocolVersionSchema = {
+	type: 'object',
+	properties: {
+		version_id: { format: 'uint' },
+		timestamp: { format: 'uint' },
+		verification_keys_hashes: {
+			type: 'object',
+			properties: {
+				params: {
+					type: 'object',
+					properties: {
+						recursion_node_level_vk_hash: { format: 'bytes32' },
+						recursion_leaf_level_vk_hash: { format: 'bytes32' },
+						recursion_circuits_set_vks_hash: { format: 'bytes32' },
+					},
+				},
+				recursion_scheduler_level_vk_hash: { format: 'bytes32' },
+			},
+		},
+		base_system_contracts: {
+			type: 'object',
+			properties: {
+				bootloader: { format: 'bytes32' },
+				default_aa: { format: 'bytes32' },
+			},
+		},
+		l2_system_upgrade_tx_hash: { format: 'bytes32' },
+	},
+};
+
+export const FeeParamsSchema = {
+	type: 'object',
+	properties: {
+		V2: {
+			type: 'object',
+			properties: {
+				config: {
+					type: 'object',
+					properties: {
+						minimal_l2_gas_price: { format: 'uint' },
+						compute_overhead_part: { format: 'uint' },
+						pubdata_overhead_part: { format: 'uint' },
+						batch_overhead_l1_gas: { format: 'uint' },
+						max_gas_per_batch: { format: 'uint' },
+						max_pubdata_per_batch: { format: 'uint' },
+					},
+				},
+				l1_gas_price: { format: 'uint' },
+				l1_pubdata_price: { format: 'uint' },
+			},
+		},
+	},
+};
+
+export const ConfirmedTokensSchema = {
+	type: 'array',
+	items: {
+		type: 'object',
+		properties: {
+			l1Address: { format: 'address' },
+			l2Address: { format: 'address' },
+			name: { format: 'string' },
+			symbol: { format: 'string' },
+			decimals: { format: 'uint' },
+		},
+	},
+};

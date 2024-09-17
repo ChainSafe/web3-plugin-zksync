@@ -3,7 +3,7 @@ import * as web3Utils from 'web3-utils';
 import type * as web3Types from 'web3-types';
 import { DEFAULT_RETURN_FORMAT } from 'web3';
 import type { DataFormat } from 'web3-types/src/data_format_types';
-import type {
+import {
 	BatchDetails,
 	BlockDetails,
 	BridgeAddresses,
@@ -15,6 +15,11 @@ import type {
 	WalletBalances,
 	TransactionRequest,
 	Address,
+	ProtocolVersion,
+	FeeParams,
+	Token,
+	RawTransactionWithDetailedOutput,
+	MessageProof,
 } from './types';
 import {
 	AddressSchema,
@@ -23,11 +28,15 @@ import {
 	BridgeAddressesSchema,
 	BytesArraySchema,
 	BytesSchema,
+	ConfirmedTokensSchema,
 	EstimateFeeSchema,
+	FeeParamsSchema,
 	IntSchema,
 	L2ToL1ProofSchema,
 	ProofSchema,
+	ProtocolVersionSchema,
 	RawBlockTransactionSchema,
+	RawTransactionWithDetailedOutputSchema,
 	TransactionDetailsSchema,
 	UintSchema,
 } from './schemas';
@@ -391,5 +400,117 @@ export class RpcMethods {
 			await this._send('zks_getBridgehubContract', []),
 			returnFormat,
 		) as Address;
+	}
+
+	/**
+	 * Lists confirmed tokens. Confirmed in the method name means any token bridged to ZKsync Era via the official bridge.
+	 * The tokens are returned in alphabetical order by their symbol. This means the token id is its position in an alphabetically sorted array of tokens.
+	 *
+	 * @param fromTokenId - The token id to start from.
+	 * @param limit - The number of tokens to return.
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async getConfirmedTokens(
+		fromTokenId: number,
+		limit: number,
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<Token[]> {
+		return web3Utils.format(
+			ConfirmedTokensSchema,
+			await this._send('zks_getConfirmedTokens', [fromTokenId, limit]),
+			returnFormat,
+		) as Token[];
+	}
+
+	/**
+	 * Retrieves the proof for an L2 to L1 message.
+	 *
+	 * @param l2BlockNumber - The L2 block number.
+	 * @param senderAddress - The sender address.
+	 * @param messageHash - The message hash.
+	 * @param l2LogPosition - The log position in L2.
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async getL2ToL1MsgProof(
+		l2BlockNumber: number,
+		senderAddress: web3Types.Address,
+		messageHash: web3Types.Bytes,
+		l2LogPosition?: number,
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<MessageProof> {
+		return web3Utils.format(
+			L2ToL1ProofSchema,
+			await this._send('zks_getL2ToL1MsgProof', [
+				l2BlockNumber,
+				senderAddress,
+				messageHash,
+				l2LogPosition || 0,
+			]),
+			returnFormat,
+		) as MessageProof;
+	}
+
+	/**
+	 * Retrieves the current L1 gas price.
+	 *
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async getL1GasPrice(returnFormat: DataFormat = DEFAULT_RETURN_FORMAT): Promise<BigInt> {
+		return web3Utils.format(
+			{ format: 'uint' },
+			await this._send('zks_getL1GasPrice', []),
+			returnFormat,
+		) as BigInt;
+	}
+
+	/**
+	 * Retrieves the current fee parameters.
+	 *
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async getFeeParams(
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<FeeParams> {
+		return web3Utils.format(
+			FeeParamsSchema,
+			await this._send('zks_getFeeParams', []),
+			returnFormat,
+		) as FeeParams;
+	}
+
+	/**
+	 * Gets the protocol version.
+	 *
+	 * @param versionId - The version ID.
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async getProtocolVersion(
+		versionId?: number,
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<ProtocolVersion> {
+		return web3Utils.format(
+			ProtocolVersionSchema,
+			await this._send('zks_getProtocolVersion', [versionId]),
+			returnFormat,
+		) as ProtocolVersion;
+	}
+
+	/**
+	 * Executes a transaction and returns its hash, storage logs, and events that would have been generated if the transaction had already been included in the block. The API has a similar behaviour to eth_sendRawTransaction but with some extra data returned from it.
+	 * With this API Consumer apps can apply "optimistic" events in their applications instantly without having to wait for ZKsync block confirmation time.
+	 * It’s expected that the optimistic logs of two uncommitted transactions that modify the same state will not have causal relationships between each other.
+	 *
+	 * @param data - The transaction data.
+	 * @param returnFormat - The format of the return value.
+	 */
+	public async sendRawTransactionWithDetailedOutput(
+		data: web3Types.Bytes,
+		returnFormat: DataFormat = DEFAULT_RETURN_FORMAT,
+	): Promise<RawTransactionWithDetailedOutput> {
+		return web3Utils.format(
+			RawTransactionWithDetailedOutputSchema,
+			await this._send('zks_sendRawTransactionWithDetailedOutput', [data]),
+			returnFormat,
+		) as RawTransactionWithDetailedOutput;
 	}
 }

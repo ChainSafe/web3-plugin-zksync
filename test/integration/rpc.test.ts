@@ -72,4 +72,56 @@ describe('ZkSyncPlugin rpc tests', () => {
 		const res = await web3.ZKsync.rpc.getBridgehubContractAddress();
 		expect(res).toEqual('0x35a54c8c757806eb6820629bc82d90e056394c92'); // @todo: set bridge hub contract address
 	});
+
+	it('getProtocolVersion', async () => {
+		const res = await web3.ZKsync.rpc.getProtocolVersion();
+		expect(res.version_id).toBe(24n);
+		expect(res.timestamp).toBeDefined();
+		expect(res.base_system_contracts).toBeDefined();
+		expect(res.l2_system_upgrade_tx_hash).toBeDefined();
+		expect(res.verification_keys_hashes).toBeDefined();
+	});
+	it('getFeeParams', async () => {
+		const res = await web3.ZKsync.rpc.getFeeParams();
+		expect(res.V2).toBeDefined();
+		expect(res.V2.config).toBeDefined();
+		expect(res.V2.config.compute_overhead_part).toBeDefined();
+		expect(res.V2.config.batch_overhead_l1_gas).toBeGreaterThan(0n);
+		expect(res.V2.config.max_gas_per_batch).toBeGreaterThan(0n);
+		expect(res.V2.config.max_pubdata_per_batch).toBeGreaterThan(0n);
+		expect(res.V2.config.minimal_l2_gas_price).toBeGreaterThan(0n);
+		expect(res.V2.config.pubdata_overhead_part).toBeGreaterThan(0n);
+		expect(res.V2.l1_gas_price).toBeGreaterThan(0n);
+		expect(res.V2.l1_pubdata_price).toBeGreaterThan(0n);
+	});
+	it('getL1GasPrice', async () => {
+		const res = await web3.ZKsync.rpc.getL1GasPrice();
+		expect(res).toBeDefined();
+		expect(res).toBeGreaterThan(0n);
+	});
+	it('getL2ToL1MsgProof', async () => {
+		const res = await web3.ZKsync.rpc.getL2ToL1MsgProof(
+			2610857,
+			'0x466ff3c5C76445823b49dF047d72663B8eAe9272',
+			'0x4ba6379f4d5c7f9eae393022467be6d05f2426b51efeb0011705d9bb5c3ce263',
+			3,
+		);
+		expect(res).toBeDefined();
+		expect(res.id).toBeDefined();
+		expect(res.proof).toBeDefined();
+		expect(res.root).toBeDefined();
+		expect(Array.isArray(res.proof)).toBeTruthy();
+		expect(res.proof.length > 0).toBeTruthy();
+	});
+	it('getConfirmedTokens', async () => {
+		const res = await web3.ZKsync.rpc.getConfirmedTokens(0, 10);
+		expect(res).toBeDefined();
+		expect(Array.isArray(res)).toBeTruthy();
+		expect(res.length).toBeGreaterThan(0);
+		expect(res[0].decimals).toBeGreaterThan(0n);
+		expect(res[0].l1Address).toBeDefined();
+		expect(res[0].l2Address).toBeDefined();
+		expect(res[0].name).toBeDefined();
+		expect(res[0].symbol).toBeDefined();
+	});
 });

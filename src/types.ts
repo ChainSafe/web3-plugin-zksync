@@ -625,6 +625,61 @@ export type ZKSyncContractsCollection = {
 	};
 };
 
+export type RawTransactionWithDetailedOutput = {
+	transactionHash: string;
+	storageLogs: {
+		address: string;
+		key: string;
+		writtenValue: string;
+	}[];
+	events: {
+		address: string;
+		topics: string[];
+		data: string;
+		blockHash: string;
+		blockNumber: Numbers;
+		l1BatchNumber: Numbers;
+		transactionHash: string;
+		transactionIndex: Numbers;
+		logIndex: Numbers;
+		transactionLogIndex: Numbers;
+		logType: string;
+		removed: boolean;
+	}[];
+};
+
+export type ProtocolVersion = {
+	version_id: number;
+	timestamp: number;
+	verification_keys_hashes: {
+		params: {
+			recursion_node_level_vk_hash: string;
+			recursion_leaf_level_vk_hash: string;
+			recursion_circuits_set_vks_hash: string;
+		};
+		recursion_scheduler_level_vk_hash: string;
+	};
+	base_system_contracts: {
+		bootloader: string;
+		default_aa: string;
+	};
+	l2_system_upgrade_tx_hash: string;
+};
+
+export type FeeParams = {
+	V2: {
+		config: {
+			minimal_l2_gas_price: Numbers;
+			compute_overhead_part: Numbers;
+			pubdata_overhead_part: Numbers;
+			batch_overhead_l1_gas: Numbers;
+			max_gas_per_batch: Numbers;
+			max_pubdata_per_batch: Numbers;
+		};
+		l1_gas_price: Numbers;
+		l1_pubdata_price: Numbers;
+	};
+};
 export type DepositTransactionDetails = {
 	/**
 	 * The address of the token to deposit.
