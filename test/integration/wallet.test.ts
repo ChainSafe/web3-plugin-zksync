@@ -224,6 +224,7 @@ describe('Wallet', () => {
 				to: ADDRESS2,
 				value: web3Utils.toHex(7_000_000_000),
 			});
+			console.log('result', result);
 			deepEqualExcluding(result, tx, [
 				'gasLimit',
 				'gasPrice',
@@ -232,9 +233,9 @@ describe('Wallet', () => {
 			]);
 			expect(toBigInt(result.gasLimit) > 0n).toEqual(true);
 			expect(
-				toBigInt(result.maxPriorityFeePerGas) > 0n ||
-					toBigInt(result.maxFeePerGas) > 0n ||
-					toBigInt(result.gasPrice) > 0n,
+				(result.maxPriorityFeePerGas && toBigInt(result.maxPriorityFeePerGas) > 0n) ||
+					(result.maxFeePerGas && toBigInt(result.maxFeePerGas) > 0n) ||
+					(result.gasPrice && toBigInt(result.gasPrice) > 0n),
 			).toEqual(true);
 		});
 		it('should return a populated transaction with default values if are omitted', async () => {
@@ -1311,6 +1312,11 @@ describe('Wallet', () => {
 				const l2BalanceAfterExecution = await wallet.getBalance();
 				const l1BalanceAfterExecution = await wallet.getBalanceL1();
 				expect(result).not.toBeNull();
+				console.log({
+					l2BalanceAfterExecution,
+					l2BalanceBeforeExecution,
+					amount,
+				});
 				expect(l2BalanceAfterExecution - l2BalanceBeforeExecution >= amount).toEqual(true);
 				expect(l1BalanceBeforeExecution - l1BalanceAfterExecution >= amount).toEqual(true);
 			});

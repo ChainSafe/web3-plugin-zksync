@@ -1,6 +1,5 @@
 import { Web3ZKsyncL2, Web3ZKsyncL1, ZKsyncWallet } from '../../src';
 import { ETH_ADDRESS } from '../../src/constants';
-import * as utils from '../../src/utils';
 import { getAccounts } from './fixtures';
 import { L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';
 
@@ -11,8 +10,6 @@ import { L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';
 
 jest.setTimeout(60000);
 describe('wallet', () => {
-	// @ts-ignore
-	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
 	const l1Provider = new Web3ZKsyncL1(L1_CHAIN_URL);
 	const accounts = getAccounts();
 	const l2Provider = new Web3ZKsyncL2(L2_CHAIN_URL);
