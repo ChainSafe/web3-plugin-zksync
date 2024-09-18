@@ -23,7 +23,7 @@ import {
 } from '../../src';
 import { Address } from 'web3';
 
-jest.setTimeout(50000);
+jest.setTimeout(60000);
 const accounts = getAccounts();
 const mainAccount = accounts[0];
 const PRIVATE_KEY = mainAccount.privateKey;

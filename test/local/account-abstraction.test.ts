@@ -14,14 +14,12 @@ import { L2_CHAIN_URL } from '../utils';
 const { ETH_ADDRESS } = constants;
 const accounts = getAccounts();
 
-jest.setTimeout(300000);
+jest.setTimeout(60000);
 describe('Account Abstraction', () => {
 	const l2Provider = new Web3ZKsyncL2(L2_CHAIN_URL);
 	const PRIVATE_KEY1 = accounts[0].privateKey;
 	const ADDRESS1 = accounts[0].address;
 	const wallet = new ZKsyncWallet(PRIVATE_KEY1, l2Provider);
-	const acc = l2Provider.eth.accounts.privateKeyToAccount(PRIVATE_KEY1);
-	l2Provider.eth.accounts.wallet.add(acc);
 	it('use the ERC20 token for paying transaction fee', async () => {
 		const InitMintAmount = 10n;
 		const mintAmount = 3n;
