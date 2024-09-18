@@ -10,7 +10,7 @@ import {
 	prepareAccount,
 } from './fixtures';
 import { toWei } from 'web3-utils';
-jest.setTimeout(600000);
+jest.setTimeout(60000);
 
 const accounts = getAccounts();
 const mainAccount = accounts[0];

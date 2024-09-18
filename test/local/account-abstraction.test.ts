@@ -14,7 +14,7 @@ import { L2_CHAIN_URL } from '../utils';
 const { ETH_ADDRESS } = constants;
 const accounts = getAccounts();
 
-jest.setTimeout(300000);
+jest.setTimeout(60000);
 describe('Account Abstraction', () => {
 	const l2Provider = new Web3ZKsyncL2(L2_CHAIN_URL);
 	const PRIVATE_KEY1 = accounts[0].privateKey;

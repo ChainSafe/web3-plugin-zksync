@@ -1036,11 +1036,11 @@ const customGetTransactionReceipt = async (
 		transactionHash as HexString,
 	);
 	if (isNullish(response)) {
-		throw new Error(`Transaction with hash ${transactionHash} not found`);
+		return response as unknown as TransactionReceipt;
 	}
 	return web3Utils.format(
 		ZKTransactionReceiptSchema,
-		response as unknown as TransactionReceipt,
+		response as TransactionReceipt,
 		returnFormat ?? web3Context.defaultReturnFormat,
 	);
 };

@@ -10,7 +10,7 @@ import {
 	getPreparedWallet,
 } from './fixtures';
 
-jest.setTimeout(600000);
+jest.setTimeout(60000);
 
 const accounts = getAccounts();
 const mainAccount = accounts[0];

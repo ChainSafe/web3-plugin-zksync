@@ -9,7 +9,7 @@ import { L1_CHAIN_URL, L2_CHAIN_URL } from '../utils';
 // to be able to run the test.
 // Additionally, the test needs to be fixed as `wallet.deposit` throws an internal exception.
 
-jest.setTimeout(10000);
+jest.setTimeout(60000);
 describe('wallet', () => {
 	// @ts-ignore
 	TransactionFactory.registerTransactionType(EIP712_TX_TYPE, utils.EIP712Transaction);
