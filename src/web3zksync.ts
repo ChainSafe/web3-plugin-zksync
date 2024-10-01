@@ -241,4 +241,7 @@ export class Web3ZkSync extends Web3.Web3 {
 	async sendRawTransaction(signedTx: string) {
 		return ethRpcMethods.sendRawTransaction(this.requestManager, signedTx);
 	}
+	async sendTransaction(tx: TransactionRequest) {
+		return this.eth.sendTransaction(tx as Transaction);
+	}
 }
