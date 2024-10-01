@@ -1,7 +1,7 @@
 import type { Web3Account } from 'web3-eth-accounts';
 import { privateKeyToAccount, create as createAccount } from 'web3-eth-accounts';
 import type * as web3Types from 'web3-types';
-import type { Web3ZKsyncL2 } from './web3zksync-l2';
+import { Web3ZKsyncL2 } from './web3zksync-l2';
 import type { Web3ZKsyncL1 } from './web3zksync-l1';
 import { AdapterL1, AdapterL2 } from './adapters';
 import {
@@ -58,7 +58,8 @@ class Adapters extends AdapterL1 {
  * Capabilities for integrating, creating, and managing ZKsync wallets.
  */
 export class ZKsyncWallet extends Adapters {
-	provider?: Web3ZKsyncL2;
+	// @ts-ignore - Property 'provider' assigned in the connect method which called in the constructor.
+	provider: Web3ZKsyncL2;
 	providerL1?: Web3ZKsyncL1;
 	public account: Web3Account;
 	/**
@@ -92,9 +93,7 @@ export class ZKsyncWallet extends Adapters {
 		super();
 
 		this.account = privateKeyToAccount(privateKey);
-		if (providerL2) {
-			this.connect(providerL2);
-		}
+		this.connect(providerL2 ?? new Web3ZKsyncL2());
 		if (providerL1) {
 			this.connectToL1(providerL1);
 		}

@@ -1002,7 +1002,7 @@ describe('Wallet', () => {
 			try {
 				await wallet.signTransaction({
 					type: EIP712_TX_TYPE,
-					from: ADDRESS2,
+					from: accounts[4].address,
 					to: ADDRESS2,
 					value: 1,
 				});
