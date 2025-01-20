@@ -1,5 +1,7 @@
 # ZKsync Plugin for Web3.js
 
+#### Web3.js libraries are being sunset on March 4th, 2025. For migration guides and more details please refer to [Chainsafe blog](https://blog.chainsafe.io/web3-js-sunset/)
+
 Use [Web3.js](https://web3js.org/) to interact with the [ZKsync Era](https://zksync.io/) network.
 
 ## Documentation
