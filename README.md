@@ -26,7 +26,7 @@ as part of the [official Web3.js plugin for ZKsync SDK docs](https://sdk.zksync.
   [`utils` package](https://chainsafe.github.io/web3-plugin-zksync/modules/utils.html) exposes
   helpful functions and contract definitions that can be used with the Web3.js plugin for ZKsync.
 - [Wallet](https://sdk.zksync.io/js/web3js/wallet): The
-  [`ZKSyncWallet` class](https://chainsafe.github.io/web3-plugin-zksync/classes/ZKSyncWallet.html)
+  [`ZKsyncWallet` class](https://chainsafe.github.io/web3-plugin-zksync/classes/ZKsyncWallet.html)
   allows developers to create, manage, and use ZKsync accounts.
 - [Paymasters](https://sdk.zksync.io/js/web3js/paymasters): The plugin includes a number of
   helpful utilities for working with
